@@ -1,0 +1,67 @@
+[
+    {
+        "id": "maquillaje",
+        "name": "Maquillaje",
+        "slug": "maquillaje",
+        "description": "Descubre nuestra colección completa de maquillaje: labiales, sombras, bases y más para realzar tu belleza natural.",
+        "image": "https://images.unsplash.com/photo-1512496015851-a90fb38ba796?w=800",
+        "productCount": 8,
+        "subcategories": [
+            {
+                "id": "labios",
+                "name": "Labios",
+                "slug": "labios"
+            },
+            {
+                "id": "ojos",
+                "name": "Ojos",
+                "slug": "ojos"
+            },
+            {
+                "id": "rostro",
+                "name": "Rostro",
+                "slug": "rostro"
+            }
+        ]
+    },
+    {
+        "id": "accesorios",
+        "name": "Accesorios",
+        "slug": "accesorios",
+        "description": "Complementa tu look con nuestros accesorios: joyería, brochas profesionales y más.",
+        "image": "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800",
+        "productCount": 3,
+        "subcategories": [
+            {
+                "id": "joyeria",
+                "name": "Joyería",
+                "slug": "joyeria"
+            },
+            {
+                "id": "brochas",
+                "name": "Brochas",
+                "slug": "brochas"
+            }
+        ]
+    },
+    {
+        "id": "ropa",
+        "name": "Ropa",
+        "slug": "ropa",
+        "description": "Ropa femenina elegante y moderna para cada ocasión. Calidad y estilo garantizados.",
+        "image": "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=800",
+        "productCount": 2,
+        "subcategories": [
+            {
+                "id": "blusas",
+                "name": "Blusas",
+                "slug": "blusas"
+            },
+            {
+                "id": "vestidos",
+                "name": "Vestidos",
+                "slug": "vestidos"
+            }
+        ]
+    }
+]
