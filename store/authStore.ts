@@ -48,20 +48,20 @@ export const useAuthStore = create<AuthStore>()(
                         .single();
 
                     if (profileError) {
-                        set({ isLoading: false });
-                        return { success: false, error: 'Error al cargar perfil' };
+                        console.warn('Profile not found or error loading profile:', profileError);
+                        // No bloquear el login, usar datos básicos si no hay perfil
                     }
 
                     const user: User = {
                         id: data.user.id,
                         email: data.user.email!,
-                        name: profile.full_name || '',
-                        phone: profile.phone || undefined,
-                        role: profile.role,
+                        name: profile?.full_name || data.user.user_metadata?.full_name || '',
+                        phone: profile?.phone || undefined,
+                        role: profile?.role || 'customer', // Default to customer
                         addresses: [],
                         orders: [],
                         wishlist: [],
-                        createdAt: profile.created_at,
+                        createdAt: profile?.created_at || new Date().toISOString(),
                     };
 
                     set({ user, isAuthenticated: true, isLoading: false });
