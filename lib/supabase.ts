@@ -1,59 +1,64 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// Lazy initialization to avoid SSR issues
-let supabaseInstance: SupabaseClient | null = null;
+// Get environment variables with fallbacks
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
-function getSupabaseUrl(): string {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (!url) {
-        throw new Error('NEXT_PUBLIC_SUPABASE_URL is not defined');
-    }
-    return url;
-}
+// Singleton instance for browser
+let _supabaseClient: SupabaseClient | null = null;
 
-function getSupabaseAnonKey(): string {
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!key) {
-        throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is not defined');
-    }
-    return key;
-}
-
-// Getter for the public Supabase client (use this in client components)
+/**
+ * Get the Supabase client for browser/client-side usage.
+ * Uses lazy initialization to avoid SSR issues.
+ */
 export function getSupabase(): SupabaseClient {
-    if (typeof window === 'undefined') {
-        // During SSR, create a new instance each time (safe for server)
-        return createClient(getSupabaseUrl(), getSupabaseAnonKey());
+    if (!supabaseUrl || !supabaseAnonKey) {
+        console.error('Supabase environment variables are missing:', {
+            hasUrl: !!supabaseUrl,
+            hasAnonKey: !!supabaseAnonKey,
+        });
+        throw new Error(
+            'Missing Supabase configuration. Please check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.'
+        );
     }
 
-    // In browser, reuse the singleton instance
-    if (!supabaseInstance) {
-        supabaseInstance = createClient(getSupabaseUrl(), getSupabaseAnonKey());
+    if (!_supabaseClient) {
+        _supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
     }
-    return supabaseInstance;
+    return _supabaseClient;
 }
 
-// For backwards compatibility - creates client lazily only in browser
-// This prevents SSR crashes when env vars aren't available during static generation
-export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
-    get(_, prop) {
-        const client = getSupabase();
-        const value = client[prop as keyof SupabaseClient];
-        if (typeof value === 'function') {
-            return value.bind(client);
+/**
+ * Supabase client singleton for client-side use.
+ * Creates the client immediately if env vars are available,
+ * otherwise creates a lazy proxy.
+ */
+export const supabase: SupabaseClient = supabaseUrl && supabaseAnonKey
+    ? createClient(supabaseUrl, supabaseAnonKey)
+    : new Proxy({} as SupabaseClient, {
+        get(_target, prop: string | symbol) {
+            const client = getSupabase();
+            const key = prop as keyof SupabaseClient;
+            const value = client[key];
+            if (typeof value === 'function') {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                return (value as (...args: unknown[]) => unknown).bind(client);
+            }
+            return value;
         }
-        return value;
-    }
-});
+    });
 
-// Cliente para operaciones del servidor con service role
-export const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-    {
+/**
+ * Admin client for server-side operations (API routes).
+ * Uses service role key for elevated privileges.
+ * Falls back to regular client if service key not available.
+ */
+export const supabaseAdmin: SupabaseClient = supabaseUrl && supabaseServiceKey
+    ? createClient(supabaseUrl, supabaseServiceKey, {
         auth: {
             autoRefreshToken: false,
             persistSession: false,
         },
-    }
-);
+    })
+    : supabase; // Fall back to regular client if no service key
