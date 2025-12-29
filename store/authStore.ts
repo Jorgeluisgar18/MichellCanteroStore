@@ -174,6 +174,20 @@ export const useAuthStore = create<AuthStore>()(
                         };
 
                         set({ user, isAuthenticated: true });
+                    } else {
+                        // Fallback if profile missing
+                        const user: User = {
+                            id: session.user.id,
+                            email: session.user.email!,
+                            name: session.user.user_metadata?.full_name || '',
+                            phone: undefined,
+                            role: 'customer', // Default role
+                            addresses: [],
+                            orders: [],
+                            wishlist: [],
+                            createdAt: new Date().toISOString(),
+                        };
+                        set({ user, isAuthenticated: true });
                     }
                 } catch (error) {
                     console.error('Session check error:', error);
