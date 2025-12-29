@@ -123,7 +123,19 @@ export const useAuthStore = create<AuthStore>()(
 
                         set({ user, isAuthenticated: true, isLoading: false });
                     } else {
-                        set({ isLoading: false });
+                        // Resilient Fallback for missing profile
+                        const user: User = {
+                            id: data.user.id,
+                            email: data.user.email!,
+                            name: name,
+                            phone: undefined,
+                            role: 'customer',
+                            addresses: [],
+                            orders: [],
+                            wishlist: [],
+                            createdAt: new Date().toISOString(),
+                        };
+                        set({ user, isAuthenticated: true, isLoading: false });
                     }
 
                     return { success: true };
