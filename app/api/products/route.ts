@@ -12,6 +12,8 @@ export async function GET(request: Request) {
         const featured = searchParams.get('featured');
         const isNew = searchParams.get('new');
         const inStock = searchParams.get('inStock');
+        const slug = searchParams.get('slug');
+        const limit = searchParams.get('limit');
 
         let query = supabase
             .from('products')
@@ -19,6 +21,14 @@ export async function GET(request: Request) {
             .order('created_at', { ascending: false });
 
         // Aplicar filtros
+        if (slug) {
+            query = query.eq('slug', slug);
+        }
+
+        if (limit) {
+            query = query.limit(parseInt(limit));
+        }
+
         if (category) {
             query = query.eq('category', category);
         }

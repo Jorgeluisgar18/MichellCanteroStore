@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
@@ -11,6 +12,8 @@ import { useCartStore } from '@/store/cartStore';
 import { formatPrice } from '@/lib/utils';
 
 export default function CarritoClient() {
+    const [isMounted, setIsMounted] = useState(false);
+
     const {
         items,
         updateQuantity,
@@ -20,6 +23,22 @@ export default function CarritoClient() {
         getShipping,
         getTotal,
     } = useCartStore();
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
+    if (!isMounted) {
+        return (
+            <>
+                <Header />
+                <main className="min-h-screen bg-neutral-50 flex flex-col items-center justify-center">
+                    <p className="text-neutral-500 font-medium">Cargando carrito...</p>
+                </main>
+                <Footer />
+            </>
+        );
+    }
 
     const subtotal = getSubtotal();
     const tax = getTax();
@@ -173,16 +192,12 @@ export default function CarritoClient() {
                                             <span>{formatPrice(subtotal)}</span>
                                         </div>
                                         <div className="flex justify-between text-neutral-600">
-                                            <span>IVA (19%)</span>
-                                            <span>{formatPrice(tax)}</span>
-                                        </div>
-                                        <div className="flex justify-between text-neutral-600">
                                             <span>Envío</span>
                                             <span>{shipping === 0 ? 'Gratis' : formatPrice(shipping)}</span>
                                         </div>
                                         {shipping > 0 && (
                                             <p className="text-xs text-primary-600">
-                                                Agrega {formatPrice(150000 - subtotal)} más para envío gratis
+                                                Agrega {formatPrice(200000 - subtotal)} más para envío gratis
                                             </p>
                                         )}
                                     </div>

@@ -77,8 +77,8 @@ export async function POST(request: Request) {
 
         // Calcular totales si no vienen
         const subtotal = items.reduce((acc: number, item: { product_price: number; quantity: number }) => acc + (item.product_price * item.quantity), 0);
-        const tax = subtotal * 0.19;
-        const shipping = subtotal > 150000 ? 0 : 12000;
+        const tax = 0; // Tax included in price
+        const shipping = subtotal >= 200000 ? 0 : 12000;
         const total = subtotal + tax + shipping;
 
         // Generar número de orden (MC-YYYYMMDD-XXXX)

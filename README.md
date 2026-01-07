@@ -92,11 +92,6 @@ El proyecto utiliza un sistema de diseño personalizado con:
 Crea un archivo `.env.local` en la raíz del proyecto:
 
 ```env
-# Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-anon-key
-SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key
-
 # API URLs (para integración futura)
 NEXT_PUBLIC_API_URL=https://api.tudominio.com
 
@@ -106,18 +101,6 @@ NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
 # Payment Gateway (para integración futura)
 NEXT_PUBLIC_STRIPE_KEY=pk_test_xxxxx
 ```
-
-### Configuración de Supabase
-
-Para configurar Supabase, consulta el archivo `supabase/README.md` que contiene instrucciones detalladas sobre:
-- Creación del proyecto en Supabase
-- Configuración de variables de entorno
-- Ejecución del schema SQL
-- Migración de productos
-
-### MCP Supabase (Opcional)
-
-Para integrar MCP Supabase con Cursor y permitir que la IA interactúe con tu base de datos, consulta `MCP_SUPABASE_SETUP.md` para instrucciones completas de configuración.
 
 ## 📱 Responsive Breakpoints
 
@@ -172,4 +155,4 @@ Este proyecto es privado y confidencial.
 
 ---
 
-Desarrollado con ❤️ para Michell Cantero Store
+Desarrollado con Amor para Michell Cantero Store

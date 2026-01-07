@@ -85,13 +85,12 @@ export const useCartStore = create<CartStore>()(
             },
 
             getTax: () => {
-                const subtotal = get().getSubtotal();
-                return subtotal * 0.19; // 19% IVA in Colombia
+                return 0; // Tax included in price
             },
 
             getShipping: () => {
                 const subtotal = get().getSubtotal();
-                return subtotal >= 150000 ? 0 : 15000; // Free shipping over 150k COP
+                return subtotal >= 200000 ? 0 : 15000; // Free shipping over 200k COP
             },
 
             getTotal: () => {

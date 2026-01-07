@@ -43,6 +43,14 @@ export default function ProductPage() {
                     const foundProduct = data.data[0];
                     setProduct(foundProduct);
 
+                    // Auto-select first in-stock variant
+                    if (foundProduct.variants && foundProduct.variants.length > 0) {
+                        const firstInStock = foundProduct.variants.find((v: ProductVariant) => v.inStock);
+                        if (firstInStock) {
+                            setSelectedVariant(firstInStock);
+                        }
+                    }
+
                     // Fetch related products
                     const relatedRes = await fetch(`/api/products?category=${foundProduct.category}&limit=5`);
                     const relatedData = await relatedRes.json();
@@ -96,8 +104,15 @@ export default function ProductPage() {
         : 0;
 
     const handleAddToCart = () => {
-        addItem(product, quantity, selectedVariant);
-        alert('Producto agregado al carrito');
+        if (product && product.variants && product.variants.length > 0 && !selectedVariant) {
+            alert('Por favor selecciona una opción');
+            return;
+        }
+
+        if (product) {
+            addItem(product, quantity, selectedVariant);
+            alert('Producto agregado al carrito');
+        }
     };
 
     return (

@@ -292,10 +292,6 @@ export default function CheckoutClient() {
                                                 <span>{formatPrice(getSubtotal())}</span>
                                             </div>
                                             <div className="flex justify-between text-neutral-600">
-                                                <span>IVA (19%)</span>
-                                                <span>{formatPrice(getTax())}</span>
-                                            </div>
-                                            <div className="flex justify-between text-neutral-600">
                                                 <span>Envío</span>
                                                 <span>
                                                     {getShipping() === 0 ? 'Gratis' : formatPrice(getShipping())}
