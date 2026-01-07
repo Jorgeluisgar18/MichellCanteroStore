@@ -41,7 +41,6 @@ export default function CarritoClient() {
     }
 
     const subtotal = getSubtotal();
-    const tax = getTax();
     const shipping = getShipping();
     const total = getTotal();
 

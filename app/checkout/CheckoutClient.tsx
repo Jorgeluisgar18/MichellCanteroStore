@@ -13,7 +13,7 @@ import { CreditCard, CheckCircle } from 'lucide-react';
 
 export default function CheckoutClient() {
     const router = useRouter();
-    const { items, getSubtotal, getTax, getShipping, getTotal, clearCart } = useCartStore();
+    const { items, getSubtotal, getShipping, getTotal, clearCart } = useCartStore();
     const [isProcessing, setIsProcessing] = useState(false);
 
     const [formData, setFormData] = useState({
