@@ -78,7 +78,7 @@ export async function GET(request: Request) {
         // Successful authentication, redirect to next URL
         const redirectUrl = new URL(next, request.url);
         return NextResponse.redirect(redirectUrl);
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Callback route error:', error);
         const errorUrl = new URL('/cuenta/login', request.url);
         errorUrl.searchParams.set('error', 'unexpected_error');

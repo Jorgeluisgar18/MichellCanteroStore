@@ -59,7 +59,7 @@ export default function LoginPage() {
                 setError(result.error || 'Error al iniciar sesión');
                 setIsLoading(false);
             }
-        } catch (err) {
+        } catch {
             setError('Ocurrió un error inesperado');
             setIsLoading(false);
         }
