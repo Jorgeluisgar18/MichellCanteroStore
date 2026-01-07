@@ -29,11 +29,11 @@ export default function LoginPage() {
 
         if (errorParam) {
             setError(
-                messageParam || 
-                errorParam === 'auth_error' ? 'Error al autenticar. Por favor intenta de nuevo.' :
-                errorParam === 'config_error' ? 'Error de configuración. Contacta al administrador.' :
-                errorParam === 'exchange_error' ? 'Error al procesar la autenticación.' :
-                'Ocurrió un error. Por favor intenta de nuevo.'
+                messageParam ||
+                    errorParam === 'auth_error' ? 'Error al autenticar. Por favor intenta de nuevo.' :
+                    errorParam === 'config_error' ? 'Error de configuración. Contacta al administrador.' :
+                        errorParam === 'exchange_error' ? 'Error al procesar la autenticación.' :
+                            'Ocurrió un error. Por favor intenta de nuevo.'
             );
             // Clean URL
             router.replace('/cuenta/login', { scroll: false });
@@ -53,6 +53,7 @@ export default function LoginPage() {
         try {
             const result = await login(formData.email, formData.password);
             if (result.success) {
+                // We keep it loading while the router pushes
                 router.push('/cuenta');
             } else {
                 setError(result.error || 'Error al iniciar sesión');
@@ -93,7 +94,7 @@ export default function LoginPage() {
                                 </div>
                             )}
 
-                            <form onSubmit={handleSubmit} className="space-y-4">
+                            <form onSubmit={handleSubmit} method="POST" className="space-y-4">
                                 <Input
                                     label="Correo Electrónico"
                                     type="email"

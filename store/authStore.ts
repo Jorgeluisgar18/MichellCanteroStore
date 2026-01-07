@@ -1,43 +1,16 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { createBrowserClient } from '@supabase/auth-helpers-nextjs';
 import type { User } from '@/types';
 import { getAuthErrorMessage } from '@/lib/errors';
 import { getSiteUrl } from '@/lib/env';
 
-// Get environment variables safely
-const getSupabaseUrl = () => {
-    if (typeof window === 'undefined') return '';
-    return process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-};
-
-const getSupabaseAnonKey = () => {
-    if (typeof window === 'undefined') return '';
-    return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-};
+import { supabase } from '@/lib/supabase';
 
 // Initialize the client component client - lazy initialization
-let supabaseInstance: ReturnType<typeof createBrowserClient> | null = null;
+// Removed local supabaseInstance to use shared one from @/lib/supabase
 
 const getSupabaseClient = () => {
-    if (typeof window === 'undefined') {
-        throw new Error('Supabase client can only be used in browser');
-    }
-
-    if (!supabaseInstance) {
-        const url = getSupabaseUrl();
-        const key = getSupabaseAnonKey();
-
-        if (!url || !key) {
-            throw new Error(
-                'Missing Supabase configuration. Please check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.'
-            );
-        }
-
-        supabaseInstance = createBrowserClient(url, key);
-    }
-
-    return supabaseInstance;
+    return supabase;
 };
 
 interface AuthStore {
