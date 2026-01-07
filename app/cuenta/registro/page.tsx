@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
@@ -13,7 +13,7 @@ import { Mail, Lock, User } from 'lucide-react';
 
 export default function RegistroPage() {
     const router = useRouter();
-    const register = useAuthStore((state) => state.register);
+    const { register, isAuthenticated } = useAuthStore();
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -22,10 +22,18 @@ export default function RegistroPage() {
     });
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [successMessage, setSuccessMessage] = useState('');
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            router.push('/cuenta');
+        }
+    }, [isAuthenticated, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setErrors({});
+        setSuccessMessage('');
 
         // Validation
         const newErrors: Record<string, string> = {};
@@ -48,7 +56,11 @@ export default function RegistroPage() {
         const result = await register(formData.name, formData.email, formData.password);
 
         if (result.success) {
-            router.push('/cuenta');
+            if (result.confirmationRequired) {
+                setSuccessMessage(result.error || 'Por favor verifica tu correo electrónico.');
+            } else {
+                router.push('/cuenta');
+            }
         } else {
             setErrors({ general: result.error || 'Error al crear la cuenta' });
         }
@@ -82,6 +94,12 @@ export default function RegistroPage() {
                             {errors.general && (
                                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
                                     <p className="text-sm text-red-600">{errors.general}</p>
+                                </div>
+                            )}
+
+                            {successMessage && (
+                                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                                    <p className="text-sm text-green-600 font-medium">{successMessage}</p>
                                 </div>
                             )}
 

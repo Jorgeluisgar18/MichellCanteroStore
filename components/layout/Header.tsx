@@ -10,10 +10,15 @@ import { useWishlistStore } from '@/store/wishlistStore';
 const Header: React.FC = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [isMounted, setIsMounted] = useState(false);
 
     const itemCount = useCartStore((state) => state.getItemCount());
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
     const wishlistCount = useWishlistStore((state) => state.items.length);
+
+    React.useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     const categories = [
         { name: 'Maquillaje', href: '/tienda/maquillaje' },
@@ -100,7 +105,7 @@ const Header: React.FC = () => {
 
                         {/* User */}
                         <Link
-                            href={isAuthenticated ? '/cuenta' : '/cuenta/login'}
+                            href={isMounted && isAuthenticated ? '/cuenta' : '/cuenta/login'}
                             className="hidden sm:block p-2 text-neutral-600 hover:text-neutral-900 transition-colors"
                             aria-label="Cuenta"
                         >
@@ -173,7 +178,7 @@ const Header: React.FC = () => {
                         </Link>
                         <div className="pt-4 border-t border-neutral-200">
                             <Link
-                                href={isAuthenticated ? '/cuenta' : '/cuenta/login'}
+                                href={isMounted && isAuthenticated ? '/cuenta' : '/cuenta/login'}
                                 className="block py-2 text-neutral-700 hover:text-primary-600 font-medium"
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >

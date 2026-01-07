@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
@@ -13,7 +13,7 @@ import { Mail, Lock } from 'lucide-react';
 
 export default function LoginPage() {
     const router = useRouter();
-    const login = useAuthStore((state) => state.login);
+    const { login, isAuthenticated } = useAuthStore();
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -21,20 +21,47 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
+    useEffect(() => {
+        // Check for error parameters from callback
+        const params = new URLSearchParams(window.location.search);
+        const errorParam = params.get('error');
+        const messageParam = params.get('message');
+
+        if (errorParam) {
+            setError(
+                messageParam || 
+                errorParam === 'auth_error' ? 'Error al autenticar. Por favor intenta de nuevo.' :
+                errorParam === 'config_error' ? 'Error de configuración. Contacta al administrador.' :
+                errorParam === 'exchange_error' ? 'Error al procesar la autenticación.' :
+                'Ocurrió un error. Por favor intenta de nuevo.'
+            );
+            // Clean URL
+            router.replace('/cuenta/login', { scroll: false });
+        }
+
+        if (isAuthenticated) {
+            const redirect = params.get('redirect') || '/cuenta';
+            router.push(redirect);
+        }
+    }, [isAuthenticated, router]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setIsLoading(true);
 
-        const result = await login(formData.email, formData.password);
-
-        if (result.success) {
-            router.push('/cuenta');
-        } else {
-            setError(result.error || 'Error al iniciar sesión');
+        try {
+            const result = await login(formData.email, formData.password);
+            if (result.success) {
+                router.push('/cuenta');
+            } else {
+                setError(result.error || 'Error al iniciar sesión');
+                setIsLoading(false);
+            }
+        } catch (err) {
+            setError('Ocurrió un error inesperado');
+            setIsLoading(false);
         }
-
-        setIsLoading(false);
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

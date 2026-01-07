@@ -4,62 +4,85 @@ import { NextResponse, type NextRequest } from 'next/server';
 export async function middleware(req: NextRequest) {
     const res = NextResponse.next();
 
-    // Create authenticated Supabase Client
-    const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-            cookies: {
-                get(name) {
-                    return req.cookies.get(name)?.value
-                },
-                set(name, value, options) {
-                    req.cookies.set({ name, value, ...options })
-                    res.cookies.set({ name, value, ...options })
-                },
-                remove(name, options) {
-                    req.cookies.set({ name, value: '', ...options })
-                    res.cookies.set({ name, value: '', ...options })
-                },
-            },
-        }
-    );
+    // Validate environment variables
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    // Refresh session if expired
-    const {
-        data: { session },
-    } = await supabase.auth.getSession();
-
-    // Proteger rutas de admin
-    if (req.nextUrl.pathname.startsWith('/admin')) {
-        if (!session) {
-            const redirectUrl = new URL('/cuenta/login', req.url);
-            redirectUrl.searchParams.set('redirect', req.nextUrl.pathname);
-            return NextResponse.redirect(redirectUrl);
-        }
-
-        // Verificar que el usuario sea admin
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', session.user.id)
-            .single();
-
-        if (profile?.role !== 'admin') {
-            return NextResponse.redirect(new URL('/', req.url));
-        }
+    if (!supabaseUrl || !supabaseAnonKey) {
+        console.error('Missing Supabase environment variables in middleware');
+        return res;
     }
 
-    // Proteger rutas de cuenta (requieren autenticación)
-    if (req.nextUrl.pathname.startsWith('/cuenta') &&
-        !req.nextUrl.pathname.includes('/login') &&
-        !req.nextUrl.pathname.includes('/registro')) {
-        if (!session) {
-            return NextResponse.redirect(new URL('/cuenta/login', req.url));
-        }
-    }
+    try {
+        // Create authenticated Supabase Client
+        const supabase = createServerClient(
+            supabaseUrl,
+            supabaseAnonKey,
+            {
+                cookies: {
+                    get(name: string) {
+                        return req.cookies.get(name)?.value;
+                    },
+                    set(name: string, value: string, options: any) {
+                        req.cookies.set({ name, value, ...options });
+                        res.cookies.set({ name, value, ...options });
+                    },
+                    remove(name: string, options: any) {
+                        req.cookies.set({ name, value: '', ...options });
+                        res.cookies.set({ name, value: '', ...options });
+                    },
+                },
+            }
+        );
 
-    return res;
+        // Refresh session if expired
+        const {
+            data: { session },
+            error: sessionError,
+        } = await supabase.auth.getSession();
+
+        if (sessionError) {
+            console.error('Session error in middleware:', sessionError);
+        }
+
+        // Proteger rutas de admin
+        if (req.nextUrl.pathname.startsWith('/admin')) {
+            if (!session) {
+                const redirectUrl = new URL('/cuenta/login', req.url);
+                redirectUrl.searchParams.set('redirect', req.nextUrl.pathname);
+                return NextResponse.redirect(redirectUrl);
+            }
+
+            // Verificar que el usuario sea admin
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', session.user.id)
+                .single();
+
+            if (profileError || profile?.role !== 'admin') {
+                return NextResponse.redirect(new URL('/', req.url));
+            }
+        }
+
+        // Proteger rutas de cuenta (requieren autenticación)
+        if (req.nextUrl.pathname.startsWith('/cuenta') &&
+            !req.nextUrl.pathname.includes('/login') &&
+            !req.nextUrl.pathname.includes('/registro') &&
+            !req.nextUrl.pathname.includes('/recuperar')) {
+            if (!session) {
+                const redirectUrl = new URL('/cuenta/login', req.url);
+                redirectUrl.searchParams.set('redirect', req.nextUrl.pathname);
+                return NextResponse.redirect(redirectUrl);
+            }
+        }
+
+        return res;
+    } catch (error) {
+        console.error('Middleware error:', error);
+        // En caso de error, permitir continuar pero loguear el error
+        return res;
+    }
 }
 
 export const config = {

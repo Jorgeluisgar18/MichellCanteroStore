@@ -60,7 +60,8 @@ export default function ProductFormPage() {
         if (isEditing) {
             fetchProduct();
         }
-    }, [productId]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [productId, isEditing]);
 
     const fetchProduct = async () => {
         try {
