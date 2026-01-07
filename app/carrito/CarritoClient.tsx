@@ -19,7 +19,6 @@ export default function CarritoClient() {
         updateQuantity,
         removeItem,
         getSubtotal,
-        getTax,
         getShipping,
         getTotal,
     } = useCartStore();
