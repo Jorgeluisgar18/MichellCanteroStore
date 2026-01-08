@@ -43,11 +43,14 @@ export default function ProductPage() {
                     const foundProduct = data.data[0];
                     setProduct(foundProduct);
 
-                    // Auto-select first in-stock variant
+                    // Auto-select first in-stock variant if none selected
                     if (foundProduct.variants && foundProduct.variants.length > 0) {
                         const firstInStock = foundProduct.variants.find((v: ProductVariant) => v.inStock);
                         if (firstInStock) {
                             setSelectedVariant(firstInStock);
+                        } else {
+                            // If none in stock, select the first one anyway so the user sees something
+                            setSelectedVariant(foundProduct.variants[0]);
                         }
                     }
 
@@ -291,7 +294,7 @@ export default function ProductPage() {
                             <div className="border-t border-neutral-200 pt-6 space-y-3">
                                 <div className="flex items-center gap-3 text-sm text-neutral-600">
                                     <Truck className="w-5 h-5 text-primary-600" />
-                                    <span>Envío gratis en compras superiores a $150.000</span>
+                                    <span>Envío gratis en compras superiores a $200.000</span>
                                 </div>
                                 <div className="flex items-center gap-3 text-sm text-neutral-600">
                                     <Shield className="w-5 h-5 text-primary-600" />
