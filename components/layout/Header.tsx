@@ -32,7 +32,7 @@ const Header: React.FC = () => {
             <div className="bg-gradient-primary text-white py-2">
                 <div className="container-custom">
                     <p className="text-center text-sm font-medium">
-                        ✨ Envío gratis en compras superiores a $150.000 COP
+                        ✨ Envío gratis en compras superiores a $200.000 COP
                     </p>
                 </div>
             </div>
@@ -142,53 +142,55 @@ const Header: React.FC = () => {
             </div>
 
             {/* Mobile Menu */}
-            {isMobileMenuOpen && (
-                <div className="md:hidden border-t border-neutral-200 bg-white animate-slide-down">
-                    <nav className="container-custom py-4 space-y-2">
-                        <Link
-                            href="/tienda"
-                            className="block py-2 text-neutral-700 hover:text-primary-600 font-medium"
-                            onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                            Tienda
-                        </Link>
-                        {categories.map((category) => (
+            {
+                isMobileMenuOpen && (
+                    <div className="md:hidden border-t border-neutral-200 bg-white animate-slide-down">
+                        <nav className="container-custom py-4 space-y-2">
                             <Link
-                                key={category.href}
-                                href={category.href}
+                                href="/tienda"
                                 className="block py-2 text-neutral-700 hover:text-primary-600 font-medium"
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
-                                {category.name}
+                                Tienda
                             </Link>
-                        ))}
-                        <Link
-                            href="/nosotros"
-                            className="block py-2 text-neutral-700 hover:text-primary-600 font-medium"
-                            onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                            Nosotros
-                        </Link>
-                        <Link
-                            href="/contacto"
-                            className="block py-2 text-neutral-700 hover:text-primary-600 font-medium"
-                            onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                            Contacto
-                        </Link>
-                        <div className="pt-4 border-t border-neutral-200">
+                            {categories.map((category) => (
+                                <Link
+                                    key={category.href}
+                                    href={category.href}
+                                    className="block py-2 text-neutral-700 hover:text-primary-600 font-medium"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                >
+                                    {category.name}
+                                </Link>
+                            ))}
                             <Link
-                                href={isMounted && isAuthenticated ? '/cuenta' : '/cuenta/login'}
+                                href="/nosotros"
                                 className="block py-2 text-neutral-700 hover:text-primary-600 font-medium"
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
-                                Mi Cuenta
+                                Nosotros
                             </Link>
-                        </div>
-                    </nav>
-                </div>
-            )}
-        </header>
+                            <Link
+                                href="/contacto"
+                                className="block py-2 text-neutral-700 hover:text-primary-600 font-medium"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                Contacto
+                            </Link>
+                            <div className="pt-4 border-t border-neutral-200">
+                                <Link
+                                    href={isMounted && isAuthenticated ? '/cuenta' : '/cuenta/login'}
+                                    className="block py-2 text-neutral-700 hover:text-primary-600 font-medium"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                >
+                                    Mi Cuenta
+                                </Link>
+                            </div>
+                        </nav>
+                    </div>
+                )
+            }
+        </header >
     );
 };
 

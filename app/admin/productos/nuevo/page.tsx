@@ -12,7 +12,34 @@ import {
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import { createBrowserClient } from '@supabase/auth-helpers-nextjs';
 import Image from 'next/image';
+
+// Utilidad para subir imagen
+const uploadImage = async (file: File) => {
+    const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+        .from('products')
+        .upload(filePath, file);
+
+    if (uploadError) {
+        throw uploadError;
+    }
+
+    const { data } = supabase.storage
+        .from('products')
+        .getPublicUrl(filePath);
+
+    return data.publicUrl;
+};
 
 interface ProductFormData {
     name: string;
@@ -108,6 +135,29 @@ export default function ProductFormPage() {
                 ...prev,
                 images: [...prev.images, url]
             }));
+        }
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            setLoading(true);
+            const publicUrl = await uploadImage(file);
+
+            setFormData((prev: ProductFormData) => ({
+                ...prev,
+                images: [...prev.images, publicUrl]
+            }));
+
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            alert('Error al subir imagen');
+        } finally {
+            setLoading(false);
+            // Reset input
+            e.target.value = '';
         }
     };
 
@@ -299,14 +349,28 @@ export default function ProductFormPage() {
                                             </button>
                                         </div>
                                     ))}
-                                    <button
-                                        type="button"
-                                        onClick={handleImageAdd}
-                                        className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-neutral-300 rounded-lg text-neutral-400 hover:border-primary-500 hover:text-primary-500 transition-all"
-                                    >
-                                        <Plus className="w-6 h-6" />
-                                        <span className="text-xs mt-1">Añadir</span>
-                                    </button>
+
+                                    {/* Upload Buttons */}
+                                    <div className="aspect-square flex flex-col gap-2">
+                                        <label className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-neutral-300 rounded-lg text-neutral-400 hover:border-primary-500 hover:text-primary-500 transition-all cursor-pointer">
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={handleFileUpload}
+                                                disabled={loading}
+                                            />
+                                            {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Plus className="w-6 h-6" />}
+                                            <span className="text-xs mt-1">Subir</span>
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={handleImageAdd}
+                                            className="h-8 flex items-center justify-center border border-neutral-300 rounded-lg text-neutral-600 hover:bg-neutral-50 text-xs"
+                                        >
+                                            URL
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </Card>

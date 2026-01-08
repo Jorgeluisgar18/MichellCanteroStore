@@ -36,7 +36,7 @@ const Footer: React.FC = () => {
                         </p>
                         <div className="flex space-x-4">
                             <a
-                                href="https://instagram.com"
+                                href="https://www.instagram.com/michellcantero.store/"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="p-2 bg-neutral-800 rounded-lg hover:bg-primary-600 transition-colors"
@@ -45,44 +45,30 @@ const Footer: React.FC = () => {
                                 <Instagram className="w-5 h-5" />
                             </a>
                             <a
-                                href="https://facebook.com"
+                                href="https://www.facebook.com/share/16tdadH8Rd/"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="p-2 bg-neutral-800 rounded-lg hover:bg-primary-600 transition-colors"
-                                aria-label="Facebook"
+                                aria-label="Facebook CEO"
                             >
                                 <Facebook className="w-5 h-5" />
+                            </a>
+                        </div>
+                        <div className="mt-4">
+                            <p className="text-sm font-semibold text-white mb-2">CEO:</p>
+                            <a
+                                href="https://www.instagram.com/michellcantero/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm hover:text-primary-400 transition-colors flex items-center gap-2"
+                            >
+                                <Instagram className="w-4 h-4" /> @michellcantero
                             </a>
                         </div>
                     </div>
 
                     {/* Quick Links */}
-                    <div>
-                        <h4 className="text-white font-semibold mb-4">Enlaces Rápidos</h4>
-                        <ul className="space-y-2 text-sm">
-                            <li>
-                                <Link href="/tienda" className="hover:text-primary-400 transition-colors">
-                                    Tienda
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="/nosotros" className="hover:text-primary-400 transition-colors">
-                                    Sobre Nosotros
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="/contacto" className="hover:text-primary-400 transition-colors">
-                                    Contacto
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="/cuenta" className="hover:text-primary-400 transition-colors">
-                                    Mi Cuenta
-                                </Link>
-                            </li>
-                        </ul>
-                    </div>
-
+                    {/* Newsletter removed as per request */}
                     {/* Customer Service */}
                     <div>
                         <h4 className="text-white font-semibold mb-4">Servicio al Cliente</h4>
@@ -110,67 +96,43 @@ const Footer: React.FC = () => {
                         </ul>
                     </div>
 
-                    {/* Newsletter */}
+                    {/* Contact Info */}
                     <div>
-                        <h4 className="text-white font-semibold mb-4">Newsletter</h4>
-                        <p className="text-sm mb-4">
-                            Suscríbete para recibir ofertas exclusivas y novedades.
-                        </p>
-                        <form onSubmit={handleNewsletterSubmit} className="space-y-2">
-                            <Input
-                                type="email"
-                                placeholder="Tu correo electrónico"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                                className="bg-neutral-800 border-neutral-700 text-white placeholder:text-neutral-500"
-                            />
-                            <Button
-                                type="submit"
-                                variant="primary"
-                                className="w-full"
-                                isLoading={isSubmitting}
-                            >
-                                Suscribirse
-                            </Button>
-                        </form>
-                    </div>
-                </div>
-
-                {/* Contact Info */}
-                <div className="mt-12 pt-8 border-t border-neutral-800">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-                        <div className="flex items-start space-x-3">
-                            <MapPin className="w-5 h-5 text-primary-400 flex-shrink-0 mt-0.5" />
-                            <div>
-                                <p className="font-semibold text-white mb-1">Dirección</p>
-                                <p>Bogotá, Colombia</p>
-                            </div>
-                        </div>
-                        <div className="flex items-start space-x-3">
-                            <Phone className="w-5 h-5 text-primary-400 flex-shrink-0 mt-0.5" />
-                            <div>
-                                <p className="font-semibold text-white mb-1">Teléfono</p>
-                                <p>+57 300 123 4567</p>
-                            </div>
-                        </div>
-                        <div className="flex items-start space-x-3">
-                            <Mail className="w-5 h-5 text-primary-400 flex-shrink-0 mt-0.5" />
-                            <div>
-                                <p className="font-semibold text-white mb-1">Email</p>
-                                <p>info@michellcantero.com</p>
-                            </div>
-                        </div>
+                        <h4 className="text-white font-semibold mb-4">Contáctanos</h4>
+                        <ul className="space-y-4 text-sm">
+                            <li className="flex items-start space-x-3">
+                                <MapPin className="w-5 h-5 text-primary-400 flex-shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="font-semibold text-white mb-1">Tienda Física</p>
+                                    <p>Ciénaga, Magdalena</p>
+                                    <p>Calle 9 #22-51</p>
+                                </div>
+                            </li>
+                            <li className="flex items-start space-x-3">
+                                <Phone className="w-5 h-5 text-primary-400 flex-shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="font-semibold text-white mb-1">WhatsApp</p>
+                                    <p>311 363 3618</p>
+                                </div>
+                            </li>
+                            <li className="flex items-start space-x-3">
+                                <Mail className="w-5 h-5 text-primary-400 flex-shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="font-semibold text-white mb-1">Email</p>
+                                    <p>info@michellcanterostore.com</p>
+                                </div>
+                            </li>
+                        </ul>
                     </div>
                 </div>
 
                 {/* Payment Methods */}
-                <div className="mt-8 pt-8 border-t border-neutral-800">
+                <div className="mt-12 pt-8 border-t border-neutral-800">
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                         <div className="flex items-center space-x-2">
                             <CreditCard className="w-5 h-5 text-primary-400" />
                             <span className="text-sm font-semibold text-white">Métodos de Pago:</span>
-                            <span className="text-sm">Tarjetas, PayPal, Mercado Pago</span>
+                            <span className="text-sm">PSE (Nequi, Daviplata, Bancolombia), Addi</span>
                         </div>
                         <div className="flex items-center space-x-4 text-xs">
                             <span>🔒 Pago Seguro</span>

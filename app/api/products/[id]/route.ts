@@ -1,3 +1,5 @@
+import { cookies } from 'next/headers';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
@@ -49,6 +51,9 @@ export async function PUT(
         const body = await request.json();
 
         // Validar autenticación y rol de admin
+        const cookieStore = cookies();
+        const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
         const { data: { session } } = await supabase.auth.getSession();
 
         if (!session) {
@@ -104,6 +109,9 @@ export async function DELETE(
 ) {
     try {
         // Validar autenticación y rol de admin
+        const cookieStore = cookies();
+        const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
         const { data: { session } } = await supabase.auth.getSession();
 
         if (!session) {

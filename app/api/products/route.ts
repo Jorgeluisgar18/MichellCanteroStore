@@ -1,3 +1,5 @@
+import { cookies } from 'next/headers';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
@@ -70,7 +72,10 @@ export async function POST(request: Request) {
     try {
         const body = await request.json();
 
-        // Validar que el usuario sea admin (esto se mejorará con middleware)
+        // Validar que el usuario sea admin
+        const cookieStore = cookies();
+        const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
         const { data: { session } } = await supabase.auth.getSession();
 
         if (!session) {

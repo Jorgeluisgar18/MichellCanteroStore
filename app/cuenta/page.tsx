@@ -104,7 +104,7 @@ export default function CuentaPage() {
 
                             {/* Admin Dashboard (solo si es admin) */}
                             {user.role === 'admin' && (
-                                <Card hover className="cursor-pointer bg-gradient-primary text-white" onClick={() => router.push('/admin')}>
+                                <Card hover className="cursor-pointer bg-primary-600 text-white" onClick={() => router.push('/admin')}>
                                     <div className="p-6">
                                         <div className="flex items-center gap-4 mb-4">
                                             <div className="p-3 bg-white/20 rounded-lg">
