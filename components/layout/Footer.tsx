@@ -1,24 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { Instagram, Facebook, Mail, Phone, MapPin, CreditCard } from 'lucide-react';
-import Input from '@/components/ui/Input';
-import Button from '@/components/ui/Button';
 
 const Footer: React.FC = () => {
-    const [email, setEmail] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
-    const handleNewsletterSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsSubmitting(true);
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        alert('¡Gracias por suscribirte!');
-        setEmail('');
-        setIsSubmitting(false);
-    };
 
     return (
         <footer className="bg-neutral-900 text-neutral-300">
