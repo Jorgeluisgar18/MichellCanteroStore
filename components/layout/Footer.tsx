@@ -3,7 +3,6 @@
 import React from 'react';
 import Link from 'next/link';
 import { Instagram, Facebook, Mail, Phone, MapPin, CreditCard } from 'lucide-react';
-import Logo from '@/components/common/Logo';
 
 const Footer: React.FC = () => {
     return (

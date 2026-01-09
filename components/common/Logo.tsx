@@ -3,11 +3,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 interface LogoProps {
-    showStore?: boolean;
     className?: string;
 }
 
-const Logo: React.FC<LogoProps> = ({ showStore = true, className = "" }) => {
+const Logo: React.FC<LogoProps> = ({ className = "" }) => {
     return (
         <Link
             href="/"

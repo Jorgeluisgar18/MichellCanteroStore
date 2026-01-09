@@ -18,7 +18,7 @@ export default function NosotrosPage() {
                                 Nuestra Historia
                             </h1>
                             <p className="text-lg text-neutral-600 leading-relaxed italic">
-                                "Donde la pasión por la belleza se encuentra con la calidez de nuestro servicio."
+                                &quot;Donde la pasión por la belleza se encuentra con la calidez de nuestro servicio.&quot;
                             </p>
                         </div>
                     </div>
@@ -71,7 +71,7 @@ export default function NosotrosPage() {
                                     <span className="text-secondary-400">Michell Cantero</span>
                                 </h2>
                                 <p className="text-lg text-neutral-600 leading-relaxed italic">
-                                    "Cada mujer merece brillar con luz propia. Mi propósito es brindarles las herramientas para que se sientan seguras y empoderadas en su propia piel."
+                                    &quot;Cada mujer merece brillar con luz propia. Mi propósito es brindarles las herramientas para que se sientan seguras y empoderadas en su propia piel.&quot;
                                 </p>
                                 <div className="pt-4">
                                     <a
