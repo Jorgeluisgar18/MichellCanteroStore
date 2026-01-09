@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-// @ts-expect-error
+// @ts-expect-error: Missing type definition in current version
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
