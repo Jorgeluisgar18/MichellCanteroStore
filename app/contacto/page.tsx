@@ -150,7 +150,8 @@ export default function ContactoPage() {
                                                 Dirección
                                             </h3>
                                             <p className="text-neutral-600">
-                                                Bogotá, Colombia
+                                                Ciénaga, Magdalena<br />
+                                                Calle 9 #22-51
                                             </p>
                                         </div>
                                     </div>
@@ -168,10 +169,10 @@ export default function ContactoPage() {
                                                 Teléfono
                                             </h3>
                                             <p className="text-neutral-600">
-                                                +57 300 123 4567
+                                                311 363 3618
                                             </p>
                                             <p className="text-sm text-neutral-500 mt-1">
-                                                Lunes a Sábado: 9:00 AM - 6:00 PM
+                                                Lunes a Sábado: 8:00 AM - 6:00 PM
                                             </p>
                                         </div>
                                     </div>
@@ -189,7 +190,7 @@ export default function ContactoPage() {
                                                 Email
                                             </h3>
                                             <p className="text-neutral-600">
-                                                info@michellcantero.com
+                                                mcanterostroe@gmail.com
                                             </p>
                                             <p className="text-sm text-neutral-500 mt-1">
                                                 Respuesta en 24-48 horas
@@ -212,7 +213,7 @@ export default function ContactoPage() {
                                         className="bg-white text-primary-600 hover:bg-neutral-100"
                                     >
                                         <a
-                                            href="https://wa.me/573001234567"
+                                            href="https://wa.me/573113633618"
                                             target="_blank"
                                             rel="noopener noreferrer"
                                         >

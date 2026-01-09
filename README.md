@@ -149,7 +149,7 @@ Este proyecto es privado y confidencial.
 
 ## 👥 Contacto
 
-- **Email**: info@michellcantero.com
+- **Email**: mcanterostroe@gmail.com
 - **Instagram**: [@michellcantero](https://instagram.com/michellcantero)
 - **WhatsApp**: +57 300 123 4567
 

@@ -10,12 +10,12 @@ const config: Config = {
         extend: {
             colors: {
                 primary: {
-                    50: '#fdf4f8',
-                    100: '#fbe8f1',
-                    200: '#f9d1e5',
-                    300: '#f5aad0',
-                    400: '#ef75b2',
-                    500: '#e54d96',
+                    50: '#fdf2f4',
+                    100: '#fce6ea',
+                    200: '#f9d1d8',
+                    300: '#f4b5b5',
+                    400: '#ec8c9a',
+                    500: '#f4b5b5', // Main Pink
                     600: '#d12d74',
                     700: '#b31f5c',
                     800: '#941d4d',
@@ -23,17 +23,22 @@ const config: Config = {
                     950: '#4b0b25',
                 },
                 secondary: {
-                    50: '#faf5ff',
-                    100: '#f3e8ff',
-                    200: '#e9d5ff',
-                    300: '#d8b4fe',
-                    400: '#c084fc',
-                    500: '#a855f7',
-                    600: '#9333ea',
-                    700: '#7e22ce',
-                    800: '#6b21a8',
-                    900: '#581c87',
-                    950: '#3b0764',
+                    50: '#f8f7fb',
+                    100: '#f1f0f7',
+                    200: '#e3e1f0',
+                    300: '#cfcae6',
+                    400: '#bface0', // Main Lavender
+                    500: '#9b8bcb',
+                    600: '#7d6ba9',
+                    700: '#625189',
+                    800: '#4a3d69',
+                    900: '#352c4a',
+                    950: '#1d1929',
+                },
+                accent: {
+                    gold: '#D4AF37',
+                    light: '#E5D5B0',
+                    blue: '#ADD8E6', // Heart blue
                 },
                 neutral: {
                     50: '#fafafa',
@@ -52,6 +57,7 @@ const config: Config = {
             fontFamily: {
                 sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
                 display: ['var(--font-playfair)', 'serif'],
+                script: ['var(--font-script)', 'cursive'],
             },
             animation: {
                 'fade-in': 'fadeIn 0.5s ease-in-out',
