@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+// @ts-ignore
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
