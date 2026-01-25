@@ -18,6 +18,13 @@ export default function CheckoutClient() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [wompiLoaded, setWompiLoaded] = useState(false);
 
+    // Efecto para verificar si Wompi ya está cargado (por si el script termina antes del onLoad)
+    useEffect(() => {
+        if (typeof window !== 'undefined' && (window as any).WidgetCheckout) {
+            setWompiLoaded(true);
+        }
+    }, []);
+
     const [formData, setFormData] = useState({
         email: '',
         name: '',
@@ -144,9 +151,9 @@ export default function CheckoutClient() {
             {/* Cargar script de Wompi con Next.js Script */}
             <Script
                 src="https://checkout.wompi.co/widget.js"
-                strategy="lazyOnload"
+                strategy="afterInteractive"
                 onLoad={() => {
-                    console.log('Wompi widget script loaded successfully');
+                    console.log('Wompi widget script loaded successfully via onLoad');
                     setWompiLoaded(true);
                 }}
                 onError={() => {
