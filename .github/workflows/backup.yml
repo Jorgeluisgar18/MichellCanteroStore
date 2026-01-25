@@ -53,27 +53,25 @@ jobs:
           retention-days: 90 # Keep for 3 months
 
       # Optional: Upload to Google Drive
-      # Requires GDRIVE_CREDENTIALS secret with service account JSON
-      - name: Upload to Google Drive (Optional)
-        if: ${{ secrets.GDRIVE_CREDENTIALS != '' }}
-        uses: satackey/action-google-drive@v1
-        with:
-          skicka-tokencache-json: ${{ secrets.GDRIVE_CREDENTIALS }}
-          upload-from: ${{ steps.backup-name.outputs.filename }}.gz
-          upload-to: /backups/michell-cantero-store/
+      # Uncomment and add GDRIVE_CREDENTIALS secret to enable
+      # - name: Upload to Google Drive (Optional)
+      #   uses: satackey/action-google-drive@v1
+      #   with:
+      #     skicka-tokencache-json: ${{ secrets.GDRIVE_CREDENTIALS }}
+      #     upload-from: ${{ steps.backup-name.outputs.filename }}.gz
+      #     upload-to: /backups/michell-cantero-store/
 
       # Optional: Upload to AWS S3
-      # Requires AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION secrets
-      - name: Upload to AWS S3 (Optional)
-        if: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-        run: |
-          aws s3 cp \
-            ${{ steps.backup-name.outputs.filename }}.gz \
-            s3://${{ secrets.AWS_S3_BUCKET }}/backups/michell-cantero-store/
+      # Uncomment and add AWS secrets to enable
+      # - name: Upload to AWS S3 (Optional)
+      #   env:
+      #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     AWS_REGION: ${{ secrets.AWS_REGION }}
+      #   run: |
+      #     aws s3 cp \
+      #       ${{ steps.backup-name.outputs.filename }}.gz \
+      #       s3://${{ secrets.AWS_S3_BUCKET }}/backups/michell-cantero-store/
 
       - name: Cleanup old artifacts
         uses: actions/github-script@v7
