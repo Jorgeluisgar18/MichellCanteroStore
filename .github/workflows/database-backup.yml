@@ -18,8 +18,8 @@ jobs:
         run: |
           # Download latest Supabase CLI binary
           wget -qO supabase.tar.gz https://github.com/supabase/cli/releases/latest/download/supabase_linux_amd64.tar.gz
-          tar -xzf supabase.tar.gz
-          sudo mv supabase /usr/local/bin/
+          tar -xzf supabase.tar.gz --overwrite
+          sudo mv supabase /usr/local/bin/supabase
           supabase --version
 
       - name: Generate backup filename
