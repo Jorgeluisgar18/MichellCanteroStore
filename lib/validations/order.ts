@@ -16,7 +16,7 @@ export const CreateOrderSchema = z.object({
     shipping_address: z.string().min(5, 'Dirección muy corta').max(200, 'Dirección muy larga'),
     shipping_city: z.string().min(2, 'Ciudad requerida').max(100),
     shipping_state: z.string().min(2, 'Departamento requerido').max(100),
-    shipping_zip_code: z.string().min(4, 'Código postal inválido').max(10),
+    shipping_zip_code: z.string().min(4, 'Código postal inválido').max(10).optional().nullable(),
     payment_method: z.enum(['wompi', 'cash_on_delivery']).default('wompi'),
     items: z.array(OrderItemSchema).min(1, 'Debe incluir al menos un producto').max(50, 'Máximo 50 productos por orden'),
     userId: z.string().uuid().optional().nullable(),
