@@ -5,11 +5,16 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:prod": "npm run type-check && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
+    "clean:logs": "powershell -Command \"Remove-Item *.txt, *.log, *.js, *.py -Exclude next-env.d.ts, next.config.js, postcss.config.js, tailwind.config.ts -ErrorAction SilentlyContinue\""
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.36.0",
     "@supabase/auth-helpers-nextjs": "^0.15.0",
+    "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.89.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.454.0",
@@ -18,7 +23,7 @@
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.53.2",
     "tailwind-merge": "^2.5.5",
-    "zod": "^3.23.8",
+    "zod": "^3.25.76",
     "zustand": "^4.5.5"
   },
   "devDependencies": {

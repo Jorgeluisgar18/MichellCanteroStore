@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { ShoppingCart, Heart } from 'lucide-react';
 import type { Product } from '@/types';
 import { formatPrice, calculateDiscount } from '@/lib/utils';
@@ -11,6 +10,7 @@ import { useWishlistStore } from '@/store/wishlistStore';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import ProductImage from '@/components/product/ProductImage';
 
 interface ProductCardProps {
     product: Product;
@@ -39,7 +39,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <Link href={`/producto/${product.slug}`}>
             <Card hover className="group h-full">
                 <div className="relative aspect-square overflow-hidden">
-                    <Image
+                    <ProductImage
                         src={product.images[0]}
                         alt={product.name}
                         fill

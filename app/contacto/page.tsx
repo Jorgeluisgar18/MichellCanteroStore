@@ -190,7 +190,7 @@ export default function ContactoPage() {
                                                 Email
                                             </h3>
                                             <p className="text-neutral-600">
-                                                mcanterostroe@gmail.com
+                                                mcanterostore@gmail.com
                                             </p>
                                             <p className="text-sm text-neutral-500 mt-1">
                                                 Respuesta en 24-48 horas

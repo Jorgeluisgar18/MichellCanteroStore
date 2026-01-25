@@ -6,8 +6,16 @@ export const dynamic = 'force-dynamic';
 // GET /api/admin/users - Listar perfiles (Solo admin)
 export async function GET() {
     try {
-        // En una app real, verificaríamos el JWT y el rol aquí
-        // Por ahora, asumimos que el middleware ya filtró el acceso a /admin y /api/admin
+        // ✅ SECURITY: Verify admin role
+        const { verifyAdmin } = await import('@/lib/middleware/auth');
+        const { logger } = await import('@/lib/utils/logger');
+
+        const authResult = await verifyAdmin();
+        if (authResult instanceof NextResponse) {
+            return authResult; // Return 401/403 error
+        }
+
+        const { user } = authResult;
 
         const { data, error } = await supabaseAdmin
             .from('profiles')
@@ -15,16 +23,19 @@ export async function GET() {
             .order('created_at', { ascending: false });
 
         if (error) {
-            console.error('Error fetching profiles:', error);
+            logger.error('Error fetching profiles', error);
             return NextResponse.json(
                 { error: 'Error al obtener usuarios' },
                 { status: 500 }
             );
         }
 
+        logger.info('Admin fetched user list', { adminId: user.id, count: data?.length || 0 });
+
         return NextResponse.json({ data });
     } catch (error) {
-        console.error('API Error:', error);
+        const { logger } = await import('@/lib/utils/logger');
+        logger.error('API Error in admin/users', error as Error);
         return NextResponse.json(
             { error: 'Error del servidor' },
             { status: 500 }

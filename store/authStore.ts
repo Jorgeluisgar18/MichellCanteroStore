@@ -22,11 +22,13 @@ interface AuthStore {
     logout: () => Promise<void>;
     updateUser: (user: Partial<User>) => void;
     checkSession: () => Promise<void>;
+    sendPasswordResetEmail: (email: string) => Promise<{ success: boolean; error?: string }>;
+    signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
 }
 
 export const useAuthStore = create<AuthStore>()(
     persist(
-        (set, get) => ({
+        (set) => ({
             user: null,
             isAuthenticated: false,
             isLoading: false,
@@ -76,10 +78,11 @@ export const useAuthStore = create<AuthStore>()(
 
                     set({ user, isAuthenticated: true, isLoading: false });
                     return { success: true };
-                } catch (error: any) {
+                } catch (error: unknown) {
                     console.error('Login error:', error);
                     set({ isLoading: false });
-                    return { success: false, error: getAuthErrorMessage(error) };
+                    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+                    return { success: false, error: getAuthErrorMessage(new Error(errorMessage)) };
                 }
             },
 
@@ -144,10 +147,11 @@ export const useAuthStore = create<AuthStore>()(
 
                     set({ user, isAuthenticated: true, isLoading: false });
                     return { success: true };
-                } catch (error: any) {
+                } catch (error: unknown) {
                     console.error('Registration error:', error);
                     set({ isLoading: false });
-                    return { success: false, error: getAuthErrorMessage(error) };
+                    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+                    return { success: false, error: getAuthErrorMessage(new Error(errorMessage)) };
                 }
             },
 
@@ -217,6 +221,61 @@ export const useAuthStore = create<AuthStore>()(
                     set({ user: null, isAuthenticated: false });
                 }
             },
+
+            sendPasswordResetEmail: async (email) => {
+                set({ isLoading: true });
+                try {
+                    const supabase = getSupabaseClient();
+                    const siteUrl = getSiteUrl();
+                    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                        redirectTo: `${siteUrl}/cuenta/actualizar-password`,
+                    });
+
+                    if (error) {
+                        set({ isLoading: false });
+                        return { success: false, error: getAuthErrorMessage(error) };
+                    }
+
+                    set({ isLoading: false });
+                    return { success: true };
+                } catch (error: unknown) {
+                    console.error('Password reset error:', error);
+                    set({ isLoading: false });
+                    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+                    return { success: false, error: getAuthErrorMessage(new Error(errorMessage)) };
+                }
+            },
+
+            signInWithGoogle: async () => {
+                set({ isLoading: true });
+                try {
+                    const supabase = getSupabaseClient();
+                    const siteUrl = getSiteUrl();
+
+                    const { error } = await supabase.auth.signInWithOAuth({
+                        provider: 'google',
+                        options: {
+                            redirectTo: `${siteUrl}/auth/callback`,
+                            queryParams: {
+                                access_type: 'offline',
+                                prompt: 'consent',
+                            },
+                        },
+                    });
+
+                    if (error) {
+                        set({ isLoading: false });
+                        return { success: false, error: error.message };
+                    }
+
+                    return { success: true };
+                } catch (error: unknown) {
+                    console.error('Google sign in error:', error);
+                    set({ isLoading: false });
+                    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+                    return { success: false, error: getAuthErrorMessage(new Error(errorMessage)) };
+                }
+            },
         }),
         {
             name: 'auth-storage',
@@ -232,7 +291,7 @@ export const useAuthStore = create<AuthStore>()(
 if (typeof window !== 'undefined') {
     try {
         const supabase = getSupabaseClient();
-        supabase.auth.onAuthStateChange(async (event: string, session: any) => {
+        supabase.auth.onAuthStateChange(async (event: string, session: unknown) => {
             if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
                 if (session) {
                     useAuthStore.getState().checkSession();

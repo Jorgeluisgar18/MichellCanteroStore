@@ -1,0 +1,76 @@
+import { NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase';
+
+export const dynamic = 'force-dynamic';
+
+// GET /api/reviews?product_id=... - Obtener reseñas de un producto
+export async function GET(request: Request) {
+    const { searchParams } = new URL(request.url);
+    const productId = searchParams.get('product_id');
+
+    if (!productId) {
+        return NextResponse.json({ error: 'Falta product_id' }, { status: 400 });
+    }
+
+    try {
+        const { data, error } = await supabaseAdmin
+            .from('reviews')
+            .select('*')
+            .eq('product_id', productId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        return NextResponse.json({ data });
+    } catch (error) {
+        console.error('Error fetching reviews:', error);
+        return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
+    }
+}
+
+// POST /api/reviews - Crear reseña
+export async function POST(request: Request) {
+    try {
+        const { createClient } = await import('@/lib/supabase-server');
+        const supabase = createClient();
+
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+        if (authError || !user) {
+            return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+        }
+
+        const body = await request.json();
+        const { product_id, full_name, rating, comment } = body;
+
+        // Opcional: Verificar que el usuario compró el producto anteriormente
+        // const { data: purchased } = await supabaseAdmin
+        //     .from('order_items')
+        //     .select('id')
+        //     .eq('product_id', product_id)
+        //     .eq('orders.user_id', user.id)
+        //     .limit(1);
+
+        const { data, error } = await supabaseAdmin
+            .from('reviews')
+            .insert([{
+                product_id,
+                user_id: user.id,
+                full_name: full_name || user.user_metadata.full_name || 'Cliente',
+                rating,
+                comment
+            }])
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Error creating review:', error);
+            return NextResponse.json({ error: 'Error al crear reseña' }, { status: 500 });
+        }
+
+        return NextResponse.json({ data }, { status: 201 });
+    } catch (error) {
+        console.error('API Error:', error);
+        return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
+    }
+}

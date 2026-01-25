@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import {
     Search,
-    Filter,
     Plus,
     Edit,
     Trash2,
@@ -17,13 +16,14 @@ import { formatPrice } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Link from 'next/link';
-import Image from 'next/image';
+import ProductImage from '@/components/product/ProductImage';
 import { Product } from '@/types';
 
 export default function AdminProductsPage() {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
     useEffect(() => {
         fetchProducts();
@@ -62,10 +62,15 @@ export default function AdminProductsPage() {
         );
     }
 
-    const filteredProducts = products.filter(product =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.category.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Get unique categories
+    const categories = ['all', ...Array.from(new Set(products.map(p => p.category)))];
+
+    const filteredProducts = products.filter(product => {
+        const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            product.category.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+        return matchesSearch && matchesCategory;
+    });
 
     return (
         <div className="space-y-6">
@@ -134,9 +139,18 @@ export default function AdminProductsPage() {
                         />
                     </div>
                     <div className="flex gap-2">
-                        <Button variant="outline" leftIcon={<Filter className="w-4 h-4" />}>
-                            Categorías
-                        </Button>
+                        <select
+                            value={selectedCategory}
+                            onChange={(e) => setSelectedCategory(e.target.value)}
+                            className="px-4 py-2 border border-neutral-200 rounded-lg text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        >
+                            <option value="all">Todas las categorías</option>
+                            {categories.filter(c => c !== 'all').map((category) => (
+                                <option key={category} value={category} className="capitalize">
+                                    {category}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                 </div>
             </Card>
@@ -162,7 +176,7 @@ export default function AdminProductsPage() {
                                             <div className="w-12 h-12 bg-neutral-100 rounded-lg overflow-hidden flex-shrink-0">
                                                 {product.images?.[0] ? (
                                                     <div className="relative w-full h-full">
-                                                        <Image
+                                                        <ProductImage
                                                             src={product.images[0]}
                                                             alt={product.name}
                                                             fill

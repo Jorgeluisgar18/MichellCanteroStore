@@ -15,9 +15,14 @@ let _supabaseClient: SupabaseClient | null = null;
  */
 export function getSupabase(): SupabaseClient {
     if (!supabaseUrl || !supabaseAnonKey) {
+        console.error('Supabase configuration missing:', { url: !!supabaseUrl, anonKey: !!supabaseAnonKey });
         throw new Error(
             'Missing Supabase configuration. Please check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.'
         );
+    }
+
+    if (!supabaseServiceKey) {
+        console.warn('SUPABASE_SERVICE_ROLE_KEY is missing. Admin operations will fail.');
     }
 
     if (!_supabaseClient) {

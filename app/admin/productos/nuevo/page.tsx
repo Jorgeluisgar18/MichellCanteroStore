@@ -15,6 +15,15 @@ import Input from '@/components/ui/Input';
 import { createBrowserClient } from '@supabase/auth-helpers-nextjs';
 import Image from 'next/image';
 
+interface Variant {
+    id: string;
+    name: string;
+    type: string;
+    value: string;
+    stock_quantity: number;
+    inStock: boolean;
+}
+
 // Utilidad para subir imagen
 const uploadImage = async (file: File) => {
     const supabase = createBrowserClient(
@@ -55,7 +64,7 @@ interface ProductFormData {
     featured: boolean;
     is_new: boolean;
     images: string[];
-    variants: Record<string, unknown>[];
+    variants: Variant[];
 }
 
 export default function ProductFormPage() {
@@ -168,6 +177,37 @@ export default function ProductFormPage() {
         }));
     };
 
+    const handleVariantAdd = () => {
+        const newVariant = {
+            id: Math.random().toString(36).substring(2, 9),
+            name: '',
+            type: 'color',
+            value: '#000000',
+            stock_quantity: 0,
+            inStock: true
+        };
+        setFormData(prev => ({
+            ...prev,
+            variants: [...prev.variants, newVariant]
+        }));
+    };
+
+    const handleVariantRemove = (id: string) => {
+        setFormData(prev => ({
+            ...prev,
+            variants: prev.variants.filter((v: Variant) => v.id !== id)
+        }));
+    };
+
+    const handleVariantChange = (id: string, field: string, value: string | number | boolean) => {
+        setFormData(prev => ({
+            ...prev,
+            variants: prev.variants.map((v: Variant) =>
+                v.id === id ? { ...v, [field]: value } as Variant : v
+            )
+        }));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
@@ -176,21 +216,49 @@ export default function ProductFormPage() {
             const url = isEditing ? `/api/products/${productId}` : '/api/products';
             const method = isEditing ? 'PUT' : 'POST';
 
+            // Limpiar payload: solo enviar campos permitidos que están en la tabla
+            const payload = { ...formData } as unknown as Record<string, unknown>;
+            delete payload.id;
+            delete payload.created_at;
+            delete payload.updated_at;
+            delete payload.rating;
+            delete payload.review_count;
+
+            // Asegurar tipos correctos para la base de datos
+            payload.price = parseFloat(String(payload.price)) || 0;
+            payload.compare_at_price = payload.compare_at_price ? parseFloat(String(payload.compare_at_price)) : null;
+            payload.stock_quantity = parseInt(String(payload.stock_quantity)) || 0;
+
+            // Limpiar variantes para asegurar que tengan el formato correcto
+            if (payload.variants && Array.isArray(payload.variants)) {
+                payload.variants = payload.variants.map((v: unknown) => {
+                    const variant = v as Variant;
+                    return {
+                        id: variant.id || Math.random().toString(36).substring(2, 9),
+                        name: variant.name || 'Sin nombre',
+                        type: variant.type || 'color',
+                        value: variant.value || '',
+                        stock_quantity: parseInt(String(variant.stock_quantity)) || 0,
+                        inStock: (parseInt(String(variant.stock_quantity)) || 0) > 0
+                    };
+                });
+            }
+
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(payload)
             });
 
             if (res.ok) {
                 router.push('/admin/productos');
             } else {
                 const error = await res.json();
-                alert(error.error || 'Error al guardar el producto');
+                alert(error.error || 'Error al guardar el producto. Revisa los datos.');
             }
         } catch (error) {
             console.error('Error saving product:', error);
-            alert('Error de conexión');
+            alert('Error de conexión o datos inválidos');
         } finally {
             setIsSaving(false);
         }
@@ -318,6 +386,112 @@ export default function ProductFormPage() {
                                             <span className="text-sm font-medium text-neutral-700">Producto disponible</span>
                                         </label>
                                     </div>
+                                </div>
+                            </div>
+                        </Card>
+
+                        {/* Variants Management */}
+                        <Card>
+                            <div className="p-6 space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <h2 className="text-lg font-bold text-neutral-900">Variantes (Colores, Tonos, Tallas)</h2>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleVariantAdd}
+                                        leftIcon={<Plus className="w-4 h-4" />}
+                                    >
+                                        Agregar Variante
+                                    </Button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {formData.variants.length === 0 ? (
+                                        <div className="text-center py-8 border-2 border-dashed border-neutral-100 rounded-2xl text-neutral-400">
+                                            No hay variantes configuradas para este producto.
+                                        </div>
+                                    ) : (
+                                        formData.variants.map((variant: Variant) => {
+                                            return (
+                                                <div key={variant.id} className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 animate-in fade-in zoom-in-95 duration-200">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                                                        <div className="lg:col-span-1">
+                                                            <label className="text-xs font-semibold text-neutral-500 uppercase mb-1 block">Tipo</label>
+                                                            <select
+                                                                value={variant.type}
+                                                                onChange={(e) => handleVariantChange(variant.id, 'type', e.target.value)}
+                                                                className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                                                            >
+                                                                <option value="color">Color</option>
+                                                                <option value="shade">Tono (Maquillaje)</option>
+                                                                <option value="size">Talla</option>
+                                                            </select>
+                                                        </div>
+                                                        <div className="lg:col-span-1">
+                                                            <label className="text-xs font-semibold text-neutral-500 uppercase mb-1 block">Nombre</label>
+                                                            <input
+                                                                type="text"
+                                                                value={variant.name}
+                                                                onChange={(e) => handleVariantChange(variant.id, 'name', e.target.value)}
+                                                                placeholder="Ej. Rojo Pasión"
+                                                                className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                                                            />
+                                                        </div>
+                                                        <div className="lg:col-span-1">
+                                                            <label className="text-xs font-semibold text-neutral-500 uppercase mb-1 block">
+                                                                {(variant.type === 'color' || variant.type === 'shade') ? 'Color' : 'Valor'}
+                                                            </label>
+                                                            <div className="flex gap-2">
+                                                                {(variant.type === 'color' || variant.type === 'shade') ? (
+                                                                    <input
+                                                                        type="color"
+                                                                        value={variant.value}
+                                                                        onChange={(e) => handleVariantChange(variant.id, 'value', e.target.value)}
+                                                                        className="w-10 h-10 p-1 bg-white border border-neutral-200 rounded-lg cursor-pointer"
+                                                                    />
+                                                                ) : (
+                                                                    <input
+                                                                        type="text"
+                                                                        value={variant.value}
+                                                                        onChange={(e) => handleVariantChange(variant.id, 'value', e.target.value)}
+                                                                        placeholder="Ej. L"
+                                                                        className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                                                                    />
+                                                                )}
+                                                                {(variant.type === 'color' || variant.type === 'shade') && (
+                                                                    <input
+                                                                        type="text"
+                                                                        value={variant.value}
+                                                                        onChange={(e) => handleVariantChange(variant.id, 'value', e.target.value)}
+                                                                        className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-xs font-mono focus:ring-2 focus:ring-primary-500 outline-none"
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <div className="lg:col-span-1">
+                                                            <label className="text-xs font-semibold text-neutral-500 uppercase mb-1 block">Stock</label>
+                                                            <input
+                                                                type="number"
+                                                                value={variant.stock_quantity}
+                                                                onChange={(e) => handleVariantChange(variant.id, 'stock_quantity', parseInt(e.target.value))}
+                                                                className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                                                            />
+                                                        </div>
+                                                        <div className="flex justify-end pb-1">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleVariantRemove(variant.id)}
+                                                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                            >
+                                                                <Trash2 className="w-5 h-5" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
                                 </div>
                             </div>
                         </Card>

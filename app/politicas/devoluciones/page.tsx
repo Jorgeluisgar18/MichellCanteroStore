@@ -35,7 +35,7 @@ export default function DevolucionesPage() {
                         <section>
                             <h2 className="text-2xl font-display font-semibold text-neutral-900 mb-4">3. Proceso de Devolución</h2>
                             <p>
-                                Para iniciar el proceso, contáctanos a través de nuestro WhatsApp <strong>311 363 3618</strong> o al correo <strong>mcanterostroe@gmail.com</strong> indicando tu número de pedido y el motivo de la devolución.
+                                Para iniciar el proceso, contáctanos a través de nuestro WhatsApp <strong>311 363 3618</strong> o al correo <strong>mcanterostore@gmail.com</strong> indicando tu número de pedido y el motivo de la devolución.
                                 Una vez aprobada tu solicitud, te indicaremos los pasos para el envío del paquete.
                             </p>
                         </section>

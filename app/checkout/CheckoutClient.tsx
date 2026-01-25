@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Script from 'next/script';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Button from '@/components/ui/Button';
@@ -15,6 +16,7 @@ export default function CheckoutClient() {
     const router = useRouter();
     const { items, getSubtotal, getShipping, getTotal, clearCart } = useCartStore();
     const [isProcessing, setIsProcessing] = useState(false);
+    const [wompiLoaded, setWompiLoaded] = useState(false);
 
     const [formData, setFormData] = useState({
         email: '',
@@ -23,7 +25,6 @@ export default function CheckoutClient() {
         street: '',
         city: '',
         state: '',
-        zipCode: '',
         paymentMethod: 'card',
     });
 
@@ -32,6 +33,12 @@ export default function CheckoutClient() {
         setIsProcessing(true);
 
         try {
+            // Verificar que Wompi esté cargado
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            if (!wompiLoaded || typeof window === 'undefined' || !(window as any).WidgetCheckout) {
+                throw new Error('El sistema de pagos aún no está listo. Por favor, intenta de nuevo en un momento.');
+            }
+
             // 1. Crear la orden en la base de datos a través de la API
             const orderResponse = await fetch('/api/orders', {
                 method: 'POST',
@@ -43,7 +50,7 @@ export default function CheckoutClient() {
                     shipping_address: formData.street,
                     shipping_city: formData.city,
                     shipping_state: formData.state,
-                    shipping_zip_code: formData.zipCode,
+                    shipping_zip_code: null,
                     payment_method: 'wompi',
                     items: items.map(item => ({
                         product_id: item.product.id,
@@ -89,8 +96,13 @@ export default function CheckoutClient() {
                 amountInCents: params.amountInCents,
                 reference: params.reference,
                 publicKey: params.publicKey,
+                signature: {
+                    integrity: params.signature
+                },
                 redirectUrl: params.redirectUrl,
-                customerEmail: params.customerEmail
+                customerData: {
+                    email: params.customerEmail
+                }
             });
 
             checkout.open((result: { transaction: { status: string } }) => {
@@ -129,11 +141,19 @@ export default function CheckoutClient() {
     return (
         <>
             <Header />
-            {/* Cargar script de Wompi */}
-            <script
+            {/* Cargar script de Wompi con Next.js Script */}
+            <Script
                 src="https://checkout.wompi.co/widget.js"
-                async
-            ></script>
+                strategy="lazyOnload"
+                onLoad={() => {
+                    console.log('Wompi widget script loaded successfully');
+                    setWompiLoaded(true);
+                }}
+                onError={() => {
+                    console.error('Failed to load Wompi widget script');
+                    alert('Error al cargar el sistema de pagos. Por favor, recarga la página.');
+                }}
+            />
 
             <main className="min-h-screen bg-neutral-50 text-neutral-900">
                 <div className="container-custom py-8">
@@ -214,14 +234,6 @@ export default function CheckoutClient() {
                                                 onChange={handleChange}
                                                 required
                                                 placeholder="Cundinamarca"
-                                            />
-                                            <Input
-                                                label="Código Postal"
-                                                name="zipCode"
-                                                value={formData.zipCode}
-                                                onChange={handleChange}
-                                                required
-                                                placeholder="110111"
                                             />
                                         </div>
                                     </div>

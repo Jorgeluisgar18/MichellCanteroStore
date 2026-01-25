@@ -1,24 +1,27 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
 // GET /api/profiles - Obtener el perfil del usuario actual
 export async function GET() {
     try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { createClient } = await import('@/lib/supabase-server');
+        const supabase = createClient();
 
-        if (!session) {
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+        if (authError || !user) {
             return NextResponse.json(
                 { error: 'No autenticado' },
                 { status: 401 }
             );
         }
 
-        const { data: profile, error } = await supabase
+        const { data: profile, error } = await supabaseAdmin
             .from('profiles')
             .select('*')
-            .eq('id', session.user.id)
+            .eq('id', user.id)
             .single();
 
         if (error) {
@@ -42,9 +45,12 @@ export async function GET() {
 // PUT /api/profiles - Actualizar el perfil del usuario actual
 export async function PUT(request: Request) {
     try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { createClient } = await import('@/lib/supabase-server');
+        const supabase = createClient();
 
-        if (!session) {
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+        if (authError || !user) {
             return NextResponse.json(
                 { error: 'No autenticado' },
                 { status: 401 }
@@ -54,14 +60,14 @@ export async function PUT(request: Request) {
         const body = await request.json();
         const { full_name, phone } = body;
 
-        const { data: profile, error } = await supabase
+        const { data: profile, error } = await supabaseAdmin
             .from('profiles')
             .update({
                 full_name,
                 phone,
                 updated_at: new Date().toISOString()
             })
-            .eq('id', session.user.id)
+            .eq('id', user.id)
             .select()
             .single();
 

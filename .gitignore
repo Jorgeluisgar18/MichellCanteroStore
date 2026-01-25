@@ -35,3 +35,12 @@ next-env.d.ts
 
 # MCP config (puede contener credenciales)
 mcp-config.json
+
+# Backups
+/backups
+*.sql
+*.sql.gz
+
+# Sentry
+.sentryclirc
+sentry.properties

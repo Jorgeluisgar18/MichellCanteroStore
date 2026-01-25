@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Button from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import ProductImage from '@/components/product/ProductImage';
 import { useCartStore } from '@/store/cartStore';
 import { formatPrice } from '@/lib/utils';
 
@@ -88,7 +88,7 @@ export default function CarritoClient() {
                                         <div className="flex gap-4">
                                             {/* Product Image */}
                                             <div className="relative w-24 h-24 md:w-32 md:h-32 flex-shrink-0 bg-neutral-100 rounded-lg overflow-hidden">
-                                                <Image
+                                                <ProductImage
                                                     src={item.product.images[0]}
                                                     alt={item.product.name}
                                                     fill

@@ -1,158 +1,67 @@
-# Michell Cantero Store
+# Michell Cantero Store - Ecommerce Enterprise Solution
 
-Tienda de ecommerce profesional para maquillaje, accesorios y ropa femenina. Construida con Next.js 14, TypeScript y Tailwind CSS.
+Este repositorio contiene la implementación técnica de la plataforma de comercio electrónico profesional de Michell Cantero Store, especializada en maquillaje, accesorios y moda femenina. El proyecto ha sido desarrollado bajo estándares de ingeniería de software modernos, priorizando la escalabilidad, la seguridad y la experiencia de usuario.
 
-## 🚀 Características
+## Arquitectura Técnica
 
-- ✅ **Next.js 14** con App Router y React Server Components
-- ✅ **TypeScript** para type safety
-- ✅ **Tailwind CSS** con sistema de diseño personalizado
-- ✅ **Zustand** para manejo de estado global
-- ✅ **Responsive Design** mobile-first
-- ✅ **SEO Optimizado** con metadata y Open Graph
-- ✅ **Carrito de Compras** con persistencia local
-- ✅ **Autenticación** (simulada, lista para integración)
-- ✅ **Checkout Flow** completo
-- ✅ **Optimización de Imágenes** con Next.js Image
+La plataforma está construida sobre un stack tecnológico de última generación:
 
-## 📦 Instalación
+- **Frontend Core**: Next.js 14 utilizando el **App Router** para un enrutamiento jerárquico eficiente y optimización de carga mediante Server Components.
+- **Lenguaje**: TypeScript como estándar de tipado estático, garantizando la robustez del sistema y facilitando el mantenimiento a largo plazo.
+- **Motor de Estilos**: Tailwind CSS implementado a través de un sistema de diseño (Design System) modular y altamente personalizable.
+- **Gestión de Estado**: Zustand para la gestión de estados globales livianos (Carrito, Autenticación, Wishlist).
+- **Backend-as-a-Service**: Supabase integrado para la persistencia de datos (PostgreSQL), autenticación de usuarios y almacenamiento de activos (Storage).
+- **Monitoreo de Errores**: Integración nativa con Sentry para la observabilidad y seguimiento de excepciones en tiempo real en entornos de producción.
+- **Pasarela de Pagos**: Integración con Wompi (Bancolombia) para el procesamiento seguro de transacciones financieras en Colombia.
 
-```bash
-# Clonar el repositorio
-git clone https://github.com/tuusuario/michell-cantero-store.git
+## Características de Implementación
 
-# Navegar al directorio
-cd michell-cantero-store
+### Optimización y Resiliencia
+- **Sistema de Fallback de Imágenes**: Implementación de un componente de imagen inteligente (`ProductImage`) que gestiona errores de carga de activos externos mediante una lógica de respaldo automática.
+- **SEO & Performance**: Optimización completa de metadatos dinámicos y generación selectiva de rutas estáticas (SSG) combinada con renderizado dinámico según la prioridad del contenido.
+- **Seguridad**: Configuración avanzada de Content Security Policy (CSP) y Headers HTTP para mitigar vulnerabilidades comunes XSS y Clickjacking.
 
-# Instalar dependencias
-npm install
+### Infraestructura de Datos
+- **Tipado Unificado**: Centralización de interfaces en `types/index.ts` con sincronización directa hacia el esquema de base de datos de Supabase.
+- **Middleware de Autenticación**: Control de acceso granular para secciones de cliente y panel administrativo mediante Next.js Middleware.
 
-# Ejecutar en desarrollo
-npm run dev
+## Estructura del Proyecto
+
+```text
+├── app/                    # Arquitectura de rutas y lógica de servidor (Next.js App Router)
+│   ├── admin/             # Módulo de administración y gestión de inventario
+│   ├── api/               # Capa de API interna para operaciones CRUD y pagos
+│   ├── tienda/            # Catálogo dinámico con filtrado y búsqueda
+│   └── (otros)/           # Módulos de checkout, carrito y autenticación
+├── components/            # Librería de componentes reutilizables
+│   ├── layout/            # Componentes de estructura global (Header, Footer)
+│   ├── product/           # Lógica visual de productos y grids
+│   └── ui/                # Átomos y moléculas del sistema de diseño
+├── lib/                   # Utilidades de lógica de negocio y clientes de servicios (Supabase, Wompi)
+├── scripts/               # Herramientas de automatización para migración y backups
+├── store/                 # Gestión de estados globales con persistencia
+└── types/                 # Definiciones de tipos e interfaces de dominio
 ```
 
-Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
+## Configuración del Entorno de Desarrollo
 
-## 🛠️ Scripts Disponibles
+1. Clonar el repositorio.
+2. Ejecutar `npm install` para la gestión de dependencias.
+3. Configurar el archivo `.env.local` basándose en `.env.example`.
+4. Ejecutar `npm run dev` para iniciar el entorno local de desarrollo.
+5. Para entornos de producción, ejecutar `npm run build` seguido de `npm start`.
 
-```bash
-npm run dev      # Ejecutar servidor de desarrollo
-npm run build    # Crear build de producción
-npm start        # Ejecutar servidor de producción
-npm run lint     # Ejecutar ESLint
-```
+## Scripts de Mantenimiento
 
-## 📁 Estructura del Proyecto
+- `npm run build`: Compilación optimizada del proyecto.
+- `npm run lint`: Análisis estático de código para asegurar cumplimiento de estándares.
+- `scripts/backup-db.sh`: Script automatizado para el respaldo de la base de datos PostgreSQL.
 
-```
-michell-cantero-store/
-├── app/                    # App Router (Next.js 14)
-│   ├── carrito/           # Página de carrito
-│   ├── checkout/          # Página de checkout
-│   ├── contacto/          # Página de contacto
-│   ├── cuenta/            # Autenticación (login/registro)
-│   ├── nosotros/          # Página sobre nosotros
-│   ├── producto/[slug]/   # Página de detalle de producto
-│   ├── tienda/            # Páginas de tienda
-│   ├── globals.css        # Estilos globales
-│   ├── layout.tsx         # Layout raíz
-│   └── page.tsx           # Página de inicio
-├── components/            # Componentes React
-│   ├── layout/           # Header, Footer
-│   ├── product/          # ProductCard, ProductGrid
-│   └── ui/               # Componentes UI reutilizables
-├── data/                 # Datos estáticos (JSON)
-│   ├── products.json     # Catálogo de productos
-│   └── categories.json   # Categorías
-├── lib/                  # Utilidades y helpers
-│   ├── utils.ts          # Funciones utilitarias
-│   └── validations.ts    # Esquemas de validación Zod
-├── store/                # Estado global (Zustand)
-│   ├── cartStore.ts      # Estado del carrito
-│   ├── authStore.ts      # Estado de autenticación
-│   └── wishlistStore.ts  # Estado de favoritos
-├── types/                # Definiciones TypeScript
-│   └── index.ts          # Tipos e interfaces
-└── public/               # Archivos estáticos
-```
+## Responsable Técnico
 
-## 🎨 Sistema de Diseño
-
-El proyecto utiliza un sistema de diseño personalizado con:
-
-- **Colores**: Paleta de primary (rosa), secondary (púrpura) y neutral
-- **Tipografía**: Inter (sans-serif) y Playfair Display (display)
-- **Componentes**: Button, Input, Card, Badge, Modal, Skeleton
-- **Animaciones**: fade-in, slide-up, scale-in
-
-## 🔧 Configuración
-
-### Variables de Entorno
-
-Crea un archivo `.env.local` en la raíz del proyecto:
-
-```env
-# API URLs (para integración futura)
-NEXT_PUBLIC_API_URL=https://api.tudominio.com
-
-# Analytics (opcional)
-NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
-
-# Payment Gateway (para integración futura)
-NEXT_PUBLIC_STRIPE_KEY=pk_test_xxxxx
-```
-
-## 📱 Responsive Breakpoints
-
-- **Mobile**: < 768px
-- **Tablet**: 768px - 1024px
-- **Desktop**: > 1024px
-
-## 🚀 Despliegue
-
-### Vercel (Recomendado)
-
-1. Sube tu código a GitHub
-2. Conecta tu repositorio en [Vercel](https://vercel.com)
-3. Vercel detectará automáticamente Next.js
-4. Configura las variables de entorno
-5. Despliega
-
-```bash
-# O usa Vercel CLI
-npm i -g vercel
-vercel
-```
-
-### Netlify
-
-1. Conecta tu repositorio en [Netlify](https://netlify.com)
-2. Build command: `npm run build`
-3. Publish directory: `.next`
-4. Despliega
-
-## 🔄 Próximas Mejoras
-
-- [ ] Integración con backend/CMS (Strapi, Sanity)
-- [ ] Pasarela de pago real (Stripe, Mercado Pago)
-- [ ] Autenticación completa (NextAuth.js)
-- [ ] Panel de administración
-- [ ] Sistema de reseñas
-- [ ] Búsqueda avanzada con filtros
-- [ ] Notificaciones por email
-- [ ] Multi-idioma (i18n)
-- [ ] PWA (Progressive Web App)
-
-## 📄 Licencia
-
-Este proyecto es privado y confidencial.
-
-## 👥 Contacto
-
-- **Email**: mcanterostroe@gmail.com
-- **Instagram**: [@michellcantero](https://instagram.com/michellcantero)
-- **WhatsApp**: +57 300 123 4567
+**Jorge Luis García Valderrama**
+Estudiante de Ingeniería de Sistemas - Universidad del Magdalena
+Colombia
 
 ---
-
-Desarrollado con Amor para Michell Cantero Store
+*Este proyecto representa una solución de ingeniería orientada a resultados, optimizada para el mercado de retail en Colombia.*

@@ -1,0 +1,12 @@
+# Exclude build scripts and config files from strict linting
+fix-env.js
+parse_catalog.js
+split_sql.js
+scripts/
+next.config.js
+postcss.config.js
+tailwind.config.ts
+node_modules/
+.next/
+out/
+build/

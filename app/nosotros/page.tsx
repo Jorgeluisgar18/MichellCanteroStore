@@ -135,7 +135,7 @@ export default function NosotrosPage() {
                                         Calidad
                                     </h3>
                                     <p className="text-sm text-neutral-600">
-                                        Solo trabajamos con marcas y productos de la más alta calidad
+                                        Trabajamos con las mejores marcas y productos de la más alta calidad
                                     </p>
                                 </div>
                             </Card>

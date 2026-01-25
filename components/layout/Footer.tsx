@@ -6,31 +6,31 @@ import { Instagram, Facebook, Mail, Phone, MapPin, CreditCard } from 'lucide-rea
 
 const Footer: React.FC = () => {
     return (
-        <footer className="bg-neutral-900 text-neutral-400">
+        <footer className="bg-primary-50 text-primary-600 border-t border-primary-100">
             {/* Main Footer */}
             <div className="container-custom py-16 md:py-20">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-16">
                     {/* Customer Service */}
                     <div>
-                        <h4 className="text-white font-display font-semibold text-lg mb-6">Servicio al Cliente</h4>
+                        <h4 className="text-primary-700 font-display font-semibold text-lg mb-6">Servicio al Cliente</h4>
                         <ul className="space-y-4 text-sm">
                             <li>
-                                <Link href="/politicas/envios" className="hover:text-primary-400 transition-colors">
+                                <Link href="/politicas/envios" className="hover:text-primary-700 transition-colors">
                                     Envíos y Entregas
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/politicas/devoluciones" className="hover:text-primary-400 transition-colors">
+                                <Link href="/politicas/devoluciones" className="hover:text-primary-700 transition-colors">
                                     Devoluciones
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/politicas/privacidad" className="hover:text-primary-400 transition-colors">
+                                <Link href="/politicas/privacidad" className="hover:text-primary-700 transition-colors">
                                     Política de Privacidad
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/politicas/terminos" className="hover:text-primary-400 transition-colors">
+                                <Link href="/politicas/terminos" className="hover:text-primary-700 transition-colors">
                                     Términos y Condiciones
                                 </Link>
                             </li>
@@ -39,52 +39,53 @@ const Footer: React.FC = () => {
 
                     {/* Contact Info */}
                     <div>
-                        <h4 className="text-white font-display font-semibold text-lg mb-6">Contáctanos</h4>
+                        <h4 className="text-primary-700 font-display font-semibold text-lg mb-6">Contáctanos</h4>
                         <ul className="space-y-6 text-sm">
                             <li className="flex items-start space-x-3">
-                                <MapPin className="w-5 h-5 text-primary-400 flex-shrink-0 mt-0.5" />
+                                <MapPin className="w-5 h-5 text-primary-600 flex-shrink-0 mt-0.5" />
                                 <div>
-                                    <p className="font-semibold text-white mb-1">Tienda Física</p>
+                                    <p className="font-semibold text-primary-700 mb-1">Tienda Física</p>
                                     <p>Ciénaga, Magdalena</p>
                                     <p>Calle 9 #22-51</p>
                                 </div>
                             </li>
                             <li className="flex items-start space-x-3">
-                                <Phone className="w-5 h-5 text-primary-400 flex-shrink-0 mt-0.5" />
+                                <Phone className="w-5 h-5 text-primary-600 flex-shrink-0 mt-0.5" />
                                 <div>
-                                    <p className="font-semibold text-white mb-1">WhatsApp</p>
+                                    <p className="font-semibold text-primary-700 mb-1">WhatsApp</p>
                                     <p>311 363 3618</p>
                                 </div>
                             </li>
                             <li className="flex items-start space-x-3">
-                                <Mail className="w-5 h-5 text-primary-400 flex-shrink-0 mt-0.5" />
+                                <Mail className="w-5 h-5 text-primary-600 flex-shrink-0 mt-0.5" />
                                 <div>
-                                    <p className="font-semibold text-white mb-1">Email</p>
-                                    <p>mcanterostroe@gmail.com</p>
+                                    <p className="font-semibold text-primary-700 mb-1">Email</p>
+                                    <p>mcanterostore@gmail.com</p>
                                 </div>
                             </li>
                         </ul>
                     </div>
 
-                    {/* Social & CEO */}
+                    {/* Social, Newsletter & CEO */}
                     <div className="space-y-8">
+                        {/* Social */}
                         <div>
-                            <h4 className="text-white font-display font-semibold text-lg mb-6">Síguenos</h4>
+                            <h4 className="text-primary-700 font-display font-semibold text-lg mb-6">Síguenos</h4>
                             <div className="flex space-x-4">
                                 <a
                                     href="https://www.instagram.com/michellcantero.store/"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="p-3 bg-neutral-800 rounded-xl hover:bg-primary-600 transition-all hover:-translate-y-1"
+                                    className="p-3 bg-gradient-to-tr from-purple-600 via-pink-600 to-orange-500 rounded-xl hover:scale-110 transition-all hover:-translate-y-1"
                                     aria-label="Instagram Store"
                                 >
-                                    <Instagram className="w-6 h-6" />
+                                    <Instagram className="w-6 h-6 text-white" />
                                 </a>
                                 <a
                                     href="https://www.tiktok.com/@michellcantero.st?is_from_webapp=1&sender_device=pc"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="p-3 bg-neutral-800 rounded-xl hover:bg-black transition-all hover:-translate-y-1"
+                                    className="p-3 bg-black rounded-xl hover:scale-110 transition-all hover:-translate-y-1"
                                     aria-label="TikTok"
                                 >
                                     <svg className="w-6 h-6 fill-current text-white" viewBox="0 0 24 24">
@@ -95,21 +96,66 @@ const Footer: React.FC = () => {
                                     href="https://www.facebook.com/share/16tdadH8Rd/"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="p-3 bg-neutral-800 rounded-xl hover:bg-blue-600 transition-all hover:-translate-y-1"
+                                    className="p-3 bg-blue-600 rounded-xl hover:bg-blue-700 hover:scale-110 transition-all hover:-translate-y-1"
                                     aria-label="Facebook CEO"
                                 >
-                                    <Facebook className="w-6 h-6" />
+                                    <Facebook className="w-6 h-6 text-white" />
                                 </a>
                             </div>
                         </div>
 
+                        {/* Newsletter */}
                         <div>
-                            <p className="text-sm font-semibold text-white mb-2 font-display">Nuestra Fundadora:</p>
+                            <h4 className="text-primary-700 font-display font-semibold text-lg mb-6">Únete al Club</h4>
+                            <p className="text-sm text-primary-600 mb-4">Recibe ofertas exclusivas y consejos de belleza.</p>
+                            <form
+                                onSubmit={async (e) => {
+                                    e.preventDefault();
+                                    const form = e.target as HTMLFormElement;
+                                    const email = (form.elements.namedItem('email') as HTMLInputElement).value;
+                                    try {
+                                        const res = await fetch('/api/newsletter', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ email })
+                                        });
+                                        const data = await res.json();
+                                        if (res.ok) {
+                                            alert('¡Te has suscrito correctamente!');
+                                            form.reset();
+                                        } else {
+                                            alert(data.error);
+                                        }
+                                    } catch {
+                                        alert('Error al suscribirse');
+                                    }
+                                }}
+                                className="flex flex-col sm:flex-row gap-2"
+                            >
+                                <input
+                                    type="email"
+                                    name="email"
+                                    placeholder="Tu email..."
+                                    required
+                                    className="flex-1 px-4 py-2 rounded-xl border border-primary-200 focus:outline-none focus:ring-2 focus:ring-primary-400 text-sm"
+                                />
+                                <button
+                                    type="submit"
+                                    className="px-6 py-2 bg-primary-600 text-white rounded-xl text-sm font-semibold hover:bg-primary-700 transition-colors shadow-sm"
+                                >
+                                    Suscribirme
+                                </button>
+                            </form>
+                        </div>
+
+                        {/* CEO */}
+                        <div className="pt-2 border-t border-primary-100/50">
+                            <p className="text-sm font-semibold text-primary-700 mb-2 font-display">CEO:</p>
                             <a
                                 href="https://www.instagram.com/michellcantero/"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-sm hover:text-primary-400 transition-colors flex items-center gap-2"
+                                className="text-sm hover:text-primary-700 transition-colors flex items-center gap-2"
                             >
                                 <Instagram className="w-4 h-4" /> @michellcantero
                             </a>
@@ -118,18 +164,18 @@ const Footer: React.FC = () => {
                 </div>
 
                 {/* Relocated Payment & Trust Badges */}
-                <div className="mt-16 pt-8 border-t border-neutral-800">
+                <div className="mt-16 pt-8 border-t border-primary-200">
                     <div className="grid md:grid-cols-2 gap-8 items-center">
                         <div className="flex items-center space-x-3">
-                            <div className="p-2 bg-neutral-800 rounded-lg">
-                                <CreditCard className="w-5 h-5 text-primary-400" />
+                            <div className="p-2 bg-primary-100 rounded-lg">
+                                <CreditCard className="w-5 h-5 text-primary-600" />
                             </div>
                             <div>
-                                <p className="text-sm font-semibold text-white">Métodos de Pago</p>
-                                <p className="text-xs">PSE (Nequi, Daviplata, Bancolombia), Addi</p>
+                                <p className="text-sm font-semibold text-primary-700">Métodos de Pago</p>
+                                <p className="text-xs text-primary-500">PSE (Nequi, Daviplata, Bancolombia), Addi</p>
                             </div>
                         </div>
-                        <div className="flex flex-wrap items-center justify-start md:justify-end gap-6 text-xs text-neutral-500">
+                        <div className="flex flex-wrap items-center justify-start md:justify-end gap-6 text-xs text-primary-500">
                             <span className="flex items-center gap-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
                                 🔒 Pago Seguro
@@ -138,19 +184,15 @@ const Footer: React.FC = () => {
                                 <span className="w-1.5 h-1.5 rounded-full bg-primary-500"></span>
                                 📦 Envíos a todo Colombia
                             </span>
-                            <span className="flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 rounded-full bg-accent-blue"></span>
-                                ↩️ Devoluciones fáciles
-                            </span>
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* Bottom Bar */}
-            <div className="bg-neutral-950 py-8">
+            <div className="bg-primary-700 py-8">
                 <div className="container-custom">
-                    <p className="text-center text-xs tracking-widest font-display">
+                    <p className="text-center text-xs tracking-widest font-display text-white">
                         © {new Date().getFullYear()} MICHELL CANTERO STORE. TODOS LOS DERECHOS RESERVADOS.
                     </p>
                 </div>

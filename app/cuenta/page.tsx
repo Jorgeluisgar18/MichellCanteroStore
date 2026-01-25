@@ -86,7 +86,7 @@ export default function CuentaPage() {
                             </Card>
 
                             {/* Favoritos */}
-                            <Card hover className="cursor-pointer" onClick={() => router.push('/cuenta/favoritos')}>
+                            <Card hover className="cursor-pointer" onClick={() => router.push('/favoritos')}>
                                 <div className="p-6">
                                     <div className="flex items-center gap-4 mb-4">
                                         <div className="p-3 bg-primary-50 rounded-lg">
