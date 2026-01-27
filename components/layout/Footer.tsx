@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Instagram, Facebook, Mail, Phone, MapPin, CreditCard } from 'lucide-react';
+import { Instagram, Facebook, Mail, Phone, MapPin, CreditCard, ShieldCheck, Truck } from 'lucide-react';
 
 const Footer: React.FC = () => {
     return (
@@ -175,14 +175,14 @@ const Footer: React.FC = () => {
                                 <p className="text-xs text-primary-600 font-medium">Wompi, PSE, Nequi, Crédito y más</p>
                             </div>
                         </div>
-                        <div className="flex flex-wrap items-center justify-start md:justify-end gap-6 text-xs text-primary-500">
-                            <span className="flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                                🔒 Pago Seguro
+                        <div className="flex flex-wrap items-center justify-start md:justify-end gap-6 text-sm">
+                            <span className="flex items-center gap-2 text-primary-600 font-medium tracking-tight">
+                                <ShieldCheck className="w-5 h-5" />
+                                Pago Seguro
                             </span>
-                            <span className="flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 rounded-full bg-primary-500"></span>
-                                📦 Envíos a todo Colombia
+                            <span className="flex items-center gap-2 text-primary-600 font-medium tracking-tight">
+                                <Truck className="w-5 h-5" />
+                                Envíos a todo Colombia
                             </span>
                         </div>
                     </div>

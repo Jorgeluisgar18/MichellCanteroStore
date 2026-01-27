@@ -251,30 +251,30 @@ export default function HomePage() {
                     </div>
                 </section>
 
-                <section className="py-6 bg-primary-50 overflow-hidden border-y border-primary-100 flex">
+                <section className="py-6 bg-primary-50 overflow-hidden border-y border-primary-100 flex mb-20">
                     <div className="flex w-max animate-scroll items-center gap-0">
-                        {[1, 2].map((i) => (
+                        {[1, 2, 3].map((i) => (
                             <div key={i} className="flex shrink-0 items-center">
-                                <div className="flex items-center gap-4 px-8 text-primary-600">
-                                    <CheckCircle className="w-6 h-6" />
-                                    <span className="text-lg font-display font-bold uppercase tracking-widest leading-none">Excelente Calidad</span>
+                                <div className="flex items-center gap-4 px-12 text-primary-600">
+                                    <CheckCircle className="w-5 h-5 opacity-80" />
+                                    <span className="text-lg font-display font-medium tracking-wide leading-none">Excelente calidad</span>
                                 </div>
-                                <div className="h-6 w-[1px] bg-primary-200"></div>
-                                <div className="flex items-center gap-4 px-8 text-primary-600">
-                                    <Instagram className="w-6 h-6" />
-                                    <span className="text-lg font-display font-bold uppercase tracking-widest leading-none">Asesoría Personalizada</span>
+                                <div className="h-6 w-[1px] bg-primary-200 opacity-50"></div>
+                                <div className="flex items-center gap-4 px-12 text-primary-600">
+                                    <Instagram className="w-5 h-5 opacity-80" />
+                                    <span className="text-lg font-display font-medium tracking-wide leading-none">Asesoría personalizada</span>
                                 </div>
-                                <div className="h-6 w-[1px] bg-primary-200"></div>
-                                <div className="flex items-center gap-4 px-8 text-primary-600">
-                                    <ShoppingBag className="w-6 h-6" />
-                                    <span className="text-lg font-display font-bold uppercase tracking-widest leading-none">Compra Fácil y Segura</span>
+                                <div className="h-6 w-[1px] bg-primary-200 opacity-50"></div>
+                                <div className="flex items-center gap-4 px-12 text-primary-600">
+                                    <ShoppingBag className="w-5 h-5 opacity-80" />
+                                    <span className="text-lg font-display font-medium tracking-wide leading-none">Compra fácil y segura</span>
                                 </div>
-                                <div className="h-6 w-[1px] bg-primary-200"></div>
-                                <div className="flex items-center gap-4 px-8 text-primary-600">
-                                    <Truck className="w-6 h-6" />
-                                    <span className="text-lg font-display font-bold uppercase tracking-widest leading-none">Envíos a Nivel Nacional</span>
+                                <div className="h-6 w-[1px] bg-primary-200 opacity-50"></div>
+                                <div className="flex items-center gap-4 px-12 text-primary-600">
+                                    <Truck className="w-5 h-5 opacity-80" />
+                                    <span className="text-lg font-display font-medium tracking-wide leading-none">Envíos a nivel nacional</span>
                                 </div>
-                                <div className="h-6 w-[1px] bg-primary-200 flex-shrink-0"></div>
+                                <div className="h-6 w-[1px] bg-primary-200 opacity-50 flex-shrink-0"></div>
                             </div>
                         ))}
                     </div>
