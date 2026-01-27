@@ -13,6 +13,11 @@ export async function middleware(req: NextRequest) {
         return res;
     }
 
+    // ✅ CRITICAL: Skip middleware for webhook endpoints (Wompi needs to POST without auth)
+    if (req.nextUrl.pathname.startsWith('/api/payments/webhook')) {
+        return res;
+    }
+
     try {
         // Create authenticated Supabase Client
         const supabase = createServerClient(
