@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, Truck, Shield, RefreshCw, Instagram, Loader2 } from 'lucide-react';
+import { ArrowRight, Truck, Shield, ShoppingBag, Instagram, Loader2, CheckCircle } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import ProductGrid from '@/components/product/ProductGrid';
 import { Card } from '@/components/ui/Card';
@@ -114,34 +114,25 @@ export default function HomePage() {
                                 </div>
                                 <div className="space-y-1">
                                     <p className="font-display font-bold text-neutral-900">Envío Gratis</p>
-                                    <p className="text-xs text-neutral-500">En compras mayores a $200k</p>
+                                    <p className="text-xs text-neutral-600 font-medium tracking-tight">En compras mayores a $200k</p>
                                 </div>
                             </div>
                             <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-4">
                                 <div className="p-4 bg-secondary-50 rounded-2xl shadow-sm">
-                                    <Shield className="w-6 h-6 text-secondary-500" />
+                                    <ShoppingBag className="w-6 h-6 text-secondary-500" />
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="font-display font-bold text-neutral-900">Pago Seguro</p>
-                                    <p className="text-xs text-neutral-500">Pasarela 100% confiable</p>
+                                    <p className="font-display font-bold text-neutral-900">Nuevas Marcas</p>
+                                    <p className="text-xs text-neutral-600 font-medium">Originales y Garantizadas</p>
                                 </div>
                             </div>
                             <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-4">
                                 <div className="p-4 bg-primary-50 rounded-2xl shadow-sm">
-                                    <RefreshCw className="w-6 h-6 text-primary-500" />
+                                    <Shield className="w-6 h-6 text-primary-500" />
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="font-display font-bold text-neutral-900">Cambios</p>
-                                    <p className="text-xs text-neutral-500">Hasta 30 días de garantía</p>
-                                </div>
-                            </div>
-                            <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-4">
-                                <div className="p-4 bg-secondary-50 rounded-2xl shadow-sm">
-                                    <Instagram className="w-6 h-6 text-secondary-500" />
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="font-display font-bold text-neutral-900">Soporte 1:1</p>
-                                    <p className="text-xs text-neutral-500">Asesoría personalizada</p>
+                                    <p className="font-display font-bold text-neutral-900">Pagos Seguros</p>
+                                    <p className="text-xs text-neutral-600 font-medium">Wompi, PSE, Nequi y más</p>
                                 </div>
                             </div>
                         </div>
@@ -251,32 +242,33 @@ export default function HomePage() {
                     </div>
                 </section>
 
-                {/* Instagram Feed CTA */}
-                <section className="py-16 md:py-20 bg-gradient-primary text-white">
-                    <div className="container-custom text-center">
-                        <Instagram className="w-16 h-16 mx-auto mb-6" />
-                        <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">
-                            Síguenos en Instagram
-                        </h2>
-                        <p className="text-lg mb-8 max-w-2xl mx-auto opacity-90">
-                            Inspírate con nuestras clientas y descubre tips de belleza,
-                            tutoriales y ofertas exclusivas
-                        </p>
-                        <a
-                            href="https://www.instagram.com/michellcantero.store/"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-block"
-                        >
-                            <Button
-                                variant="secondary"
-                                size="lg"
-                                className="bg-white text-primary-600 hover:bg-neutral-100"
-                                rightIcon={<ArrowRight className="w-5 h-5" />}
-                            >
-                                @michellcantero.store
-                            </Button>
-                        </a>
+                {/* Infinite Scrolling Banner */}
+                <section className="py-6 bg-primary-50 overflow-hidden border-y border-primary-100 flex">
+                    <div className="flex whitespace-nowrap animate-scroll items-center min-w-full">
+                        {[1, 2, 3, 4].map((i) => (
+                            <div key={i} className="flex shrink-0 items-center">
+                                <div className="flex items-center gap-4 px-8 text-primary-600">
+                                    <CheckCircle className="w-6 h-6" />
+                                    <span className="text-lg font-display font-bold uppercase tracking-widest">Excelente Calidad</span>
+                                </div>
+                                <div className="h-6 w-[1px] bg-primary-200"></div>
+                                <div className="flex items-center gap-4 px-8 text-primary-600">
+                                    <Instagram className="w-6 h-6" />
+                                    <span className="text-lg font-display font-bold uppercase tracking-widest">Asesoría Personalizada</span>
+                                </div>
+                                <div className="h-6 w-[1px] bg-primary-200"></div>
+                                <div className="flex items-center gap-4 px-8 text-primary-600">
+                                    <ShoppingBag className="w-6 h-6" />
+                                    <span className="text-lg font-display font-bold uppercase tracking-widest">Compra Fácil y Segura</span>
+                                </div>
+                                <div className="h-6 w-[1px] bg-primary-200"></div>
+                                <div className="flex items-center gap-4 px-8 text-primary-600">
+                                    <Truck className="w-6 h-6" />
+                                    <span className="text-lg font-display font-bold uppercase tracking-widest">Envíos a Nivel Nacional</span>
+                                </div>
+                                <div className="h-6 w-[1px] bg-primary-200"></div>
+                            </div>
+                        ))}
                     </div>
                 </section>
             </main>
