@@ -172,7 +172,7 @@ const Footer: React.FC = () => {
                             </div>
                             <div>
                                 <p className="text-sm font-semibold text-primary-700">Métodos de Pago</p>
-                                <p className="text-xs text-primary-500">PSE (Nequi, Daviplata, Bancolombia), Addi</p>
+                                <p className="text-xs text-primary-600 font-medium">Wompi, PSE, Nequi, Crédito y más</p>
                             </div>
                         </div>
                         <div className="flex flex-wrap items-center justify-start md:justify-end gap-6 text-xs text-primary-500">

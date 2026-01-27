@@ -135,6 +135,15 @@ export default function HomePage() {
                                     <p className="text-xs text-neutral-600 font-medium">Wompi, PSE, Nequi y más</p>
                                 </div>
                             </div>
+                            <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-4">
+                                <div className="p-4 bg-secondary-50 rounded-2xl shadow-sm">
+                                    <CheckCircle className="w-6 h-6 text-secondary-500" />
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="font-display font-bold text-neutral-900">Garantía</p>
+                                    <p className="text-xs text-neutral-600 font-medium">100% Calidad Asegurada</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -242,31 +251,30 @@ export default function HomePage() {
                     </div>
                 </section>
 
-                {/* Infinite Scrolling Banner */}
                 <section className="py-6 bg-primary-50 overflow-hidden border-y border-primary-100 flex">
-                    <div className="flex whitespace-nowrap animate-scroll items-center min-w-full">
-                        {[1, 2, 3, 4].map((i) => (
+                    <div className="flex w-max animate-scroll items-center gap-0">
+                        {[1, 2].map((i) => (
                             <div key={i} className="flex shrink-0 items-center">
                                 <div className="flex items-center gap-4 px-8 text-primary-600">
                                     <CheckCircle className="w-6 h-6" />
-                                    <span className="text-lg font-display font-bold uppercase tracking-widest">Excelente Calidad</span>
+                                    <span className="text-lg font-display font-bold uppercase tracking-widest leading-none">Excelente Calidad</span>
                                 </div>
                                 <div className="h-6 w-[1px] bg-primary-200"></div>
                                 <div className="flex items-center gap-4 px-8 text-primary-600">
                                     <Instagram className="w-6 h-6" />
-                                    <span className="text-lg font-display font-bold uppercase tracking-widest">Asesoría Personalizada</span>
+                                    <span className="text-lg font-display font-bold uppercase tracking-widest leading-none">Asesoría Personalizada</span>
                                 </div>
                                 <div className="h-6 w-[1px] bg-primary-200"></div>
                                 <div className="flex items-center gap-4 px-8 text-primary-600">
                                     <ShoppingBag className="w-6 h-6" />
-                                    <span className="text-lg font-display font-bold uppercase tracking-widest">Compra Fácil y Segura</span>
+                                    <span className="text-lg font-display font-bold uppercase tracking-widest leading-none">Compra Fácil y Segura</span>
                                 </div>
                                 <div className="h-6 w-[1px] bg-primary-200"></div>
                                 <div className="flex items-center gap-4 px-8 text-primary-600">
                                     <Truck className="w-6 h-6" />
-                                    <span className="text-lg font-display font-bold uppercase tracking-widest">Envíos a Nivel Nacional</span>
+                                    <span className="text-lg font-display font-bold uppercase tracking-widest leading-none">Envíos a Nivel Nacional</span>
                                 </div>
-                                <div className="h-6 w-[1px] bg-primary-200"></div>
+                                <div className="h-6 w-[1px] bg-primary-200 flex-shrink-0"></div>
                             </div>
                         ))}
                     </div>
