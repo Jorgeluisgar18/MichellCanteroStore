@@ -116,7 +116,7 @@ export async function POST(request: Request) {
         const productIds = items.map((item) => item.product_id);
         const { data: productsInDb, error: productsError } = await supabaseAdmin
             .from('products')
-            .select('id, name, price, stock_quantity, in_stock')
+            .select('id, name, price, stock_quantity, in_stock, images')
             .in('id', productIds);
 
         if (productsError) {
@@ -146,6 +146,7 @@ export async function POST(request: Request) {
                 product_id: item.product_id,
                 product_name: product.name,
                 product_price: product.price, // ← Real price from DB
+                product_image: product.images?.[0] || '', // First image from product
                 quantity: item.quantity,
                 variant_name: item.variant_name || null,
                 variant_id: item.variant_id || null,
@@ -204,7 +205,7 @@ export async function POST(request: Request) {
             product_id: item.product_id,
             product_name: item.product_name,
             product_price: item.product_price,
-            product_image: '', // Will be populated from product if needed
+            product_image: item.product_image,
             quantity: item.quantity,
             variant_name: item.variant_name,
             variant_id: item.variant_id,
