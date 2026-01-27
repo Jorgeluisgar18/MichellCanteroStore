@@ -31,7 +31,7 @@ export default function NosotrosPage() {
                             <div className="absolute -inset-4 bg-primary-100 rounded-2xl blur-xl opacity-40 group-hover:opacity-60 transition-opacity"></div>
                             <div className="relative h-[500px] rounded-3xl overflow-hidden shadow-strong border-8 border-white">
                                 <Image
-                                    src="https://scontent.cdninstagram.com/v/t51.82787-15/609228343_18157673476414234_8191082946744627498_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=111&ig_cache_key=MzgwMDc4MDIxNDc1ODM3Mzk4NA%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjEzNTB4MTY4OC5zZHIuQzMifQ%3D%3D&_nc_ohc=5tLQ3d2nvKoQ7kNvwFmgwi2&_nc_oc=AdnxhSih4qFNHhol0GVb3YoWvc3fDkQjLn3MLCaeZyjyf0WLIK_NAZqi4v_zKM4JS88&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent.cdninstagram.com&_nc_gid=PSaeKPinN_eRf0BbE8F43w&oh=00_AfqwRNa2nJBymDAMswwPG8U5SDHUI73zjyHWdtuLhEiNsg&oe=696762D0"
+                                    src="/nosotros-inauguracion.jpg"
                                     alt="Inauguración Michell Cantero Store"
                                     fill
                                     className="object-cover"
@@ -88,7 +88,7 @@ export default function NosotrosPage() {
                                 <div className="absolute -inset-4 bg-secondary-100 rounded-3xl blur-xl opacity-40 group-hover:opacity-60 transition-opacity"></div>
                                 <div className="relative h-[600px] rounded-3xl overflow-hidden shadow-2xl border-4 border-white">
                                     <Image
-                                        src="https://scontent.cdninstagram.com/v/t51.75761-15/503155416_18135352501414234_4018159033080138352_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=103&ig_cache_key=MzY0NTY1MTgzMDIyMzg2NDAxMw%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjE0NDB4MTc5NS5zZHIuQzMifQ%3D%3D&_nc_ohc=VF1K6O1WmjkQ7kNvwGuh6py&_nc_oc=AdnclfmDrH7RpqOx-nMy2JJ-bsJEH51EQO9_vZf7IlEz7OJQkHXw8ghx_ccv62dcRJM&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent.cdninstagram.com&_nc_gid=rvefNH-FfYrb-vQlDOj2Ng&oh=00_AfoHFWm-s_x7qnk3zLGnWSIQa1VkdxAz45HnDwAzie0zzw&oe=6967593E"
+                                        src="/nosotros-collage.jpg"
                                         alt="Michell Cantero"
                                         fill
                                         className="object-cover"

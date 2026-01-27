@@ -35,6 +35,11 @@ export default function CheckoutClient() {
         paymentMethod: 'card',
     });
 
+    const [termsAccepted, setTermsAccepted] = useState({
+        terms: false,
+        privacy: false,
+    });
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsProcessing(true);
@@ -327,16 +332,64 @@ export default function CheckoutClient() {
                                             </div>
                                         </div>
 
+                                        {/* Terms and Conditions */}
+                                        <div className="space-y-3 mb-6 border-t border-neutral-200 pt-4">
+                                            <label className="flex items-start cursor-pointer group">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={termsAccepted.terms}
+                                                    onChange={(e) => setTermsAccepted({ ...termsAccepted, terms: e.target.checked })}
+                                                    className="mt-1 mr-3 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                                                />
+                                                <span className="text-sm text-neutral-600 group-hover:text-neutral-900 transition-colors">
+                                                    Acepto los{' '}
+                                                    <a
+                                                        href="/politicas/terminos"
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-primary-600 hover:text-primary-700 underline font-medium"
+                                                    >
+                                                        Términos y Condiciones
+                                                    </a>
+                                                </span>
+                                            </label>
+                                            <label className="flex items-start cursor-pointer group">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={termsAccepted.privacy}
+                                                    onChange={(e) => setTermsAccepted({ ...termsAccepted, privacy: e.target.checked })}
+                                                    className="mt-1 mr-3 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                                                />
+                                                <span className="text-sm text-neutral-600 group-hover:text-neutral-900 transition-colors">
+                                                    Acepto la{' '}
+                                                    <a
+                                                        href="/politicas/privacidad"
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-primary-600 hover:text-primary-700 underline font-medium"
+                                                    >
+                                                        Política de Privacidad
+                                                    </a>
+                                                </span>
+                                            </label>
+                                        </div>
+
                                         <Button
                                             type="submit"
                                             variant="primary"
                                             size="lg"
                                             className="w-full h-14 text-lg"
                                             isLoading={isProcessing}
+                                            disabled={!termsAccepted.terms || !termsAccepted.privacy || isProcessing}
                                             leftIcon={<CheckCircle className="w-6 h-6" />}
                                         >
-                                            Pagar Ahora con Wompi
+                                            Finalizar Compra
                                         </Button>
+                                        {(!termsAccepted.terms || !termsAccepted.privacy) && (
+                                            <p className="text-xs text-center text-neutral-500 mt-2">
+                                                Debes aceptar los términos y condiciones para continuar
+                                            </p>
+                                        )}
                                     </div>
                                 </Card>
                             </div>

@@ -82,7 +82,7 @@ export default function HomePage() {
                                 <div className="absolute -inset-4 bg-gradient-to-tr from-primary-200/50 to-secondary-200/50 rounded-3xl blur-2xl opacity-50 group-hover:opacity-100 transition-opacity duration-700"></div>
                                 <div className="relative h-full w-full overflow-hidden rounded-3xl border-8 border-white shadow-strong">
                                     <Image
-                                        src="https://scontent.cdninstagram.com/v/t39.30808-6/470116934_18118764886414234_8392932795780468143_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=107&ig_cache_key=MzE5MDI5NTU3NjM3MzExNTY0OQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjE0NDB4MTQ0MC5zZHIuQzMifQ%3D%3D&_nc_ohc=EEm8C2eXm3IQ7kNvwEI9kzU&_nc_oc=AdnMC6fh5qFBLRK_qB_dHiTxhC-e4hdhbdNsuENWKM-jJKSHDNIRU1CPDkSQ88W4TbA&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent.cdninstagram.com&_nc_gid=4c_pffenDcMUTR1_h0Q-BQ&oh=00_AfpBITSVKLHDNQN1ybYkAJ5uy9hz6KtGeVaH-uIfsFGbzA&oe=69675E67"
+                                        src="/hero-michell.jpg"
                                         alt="Michell Cantero - Fundadora"
                                         fill
                                         className="object-cover object-center group-hover:scale-105 transition-transform duration-1000"
