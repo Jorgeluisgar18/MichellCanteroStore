@@ -113,11 +113,15 @@ export const config = {
         '/admin/:path*',
         '/cuenta/:path*',
         /*
-         * Specifically match API routes that need CSRF protection
+         * Specifically match API routes that need CSRF protection (base and sub-paths)
          */
+        '/api/orders',
         '/api/orders/:path*',
+        '/api/products',
         '/api/products/:path*',
+        '/api/profiles',
         '/api/profiles/:path*',
+        '/api/admin',
         '/api/admin/:path*',
     ],
 };
