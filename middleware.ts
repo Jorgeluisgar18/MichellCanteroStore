@@ -4,124 +4,66 @@ import { applyCsrfProtection, setCsrfCookie } from '@/lib/security/csrf';
 
 export async function middleware(req: NextRequest) {
     const res = NextResponse.next();
+    const { pathname } = req.nextUrl;
 
-    // Validate environment variables
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-        console.error('Missing Supabase environment variables in middleware');
-        return res;
-    }
-
-    // ✅ CRITICAL: Skip middleware for webhook endpoints (Wompi needs to POST without auth)
-    if (req.nextUrl.pathname.startsWith('/api/payments/webhook')) {
-        return res;
-    }
-
-    // ✅ SECURITY: Apply CSRF protection to state-changing requests
+    // 1. ✅ CSRF Protection (Standardized)
     const csrfError = applyCsrfProtection(req);
-    if (csrfError) {
-        return csrfError;
-    }
+    if (csrfError) return csrfError;
 
-    try {
-        // Create authenticated Supabase Client
-        const supabase = createServerClient(
-            supabaseUrl,
-            supabaseAnonKey,
-            {
-                cookies: {
-                    get(name: string) {
-                        return req.cookies.get(name)?.value;
-                    },
-                    set(name: string, value: string, options: Record<string, unknown>) {
-                        req.cookies.set({ name, value, ...options });
-                        res.cookies.set({ name, value, ...options });
-                    },
-                    remove(name: string, options: Record<string, unknown>) {
-                        req.cookies.set({ name, value: '', ...options });
-                        res.cookies.set({ name, value: '', ...options });
-                    },
+    // 2. ✅ Auth Helpers Connection
+    const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+            cookies: {
+                get: (name) => req.cookies.get(name)?.value,
+                set: (name, value, options) => {
+                    req.cookies.set({ name, value, ...options });
+                    res.cookies.set({ name, value, ...options });
                 },
-            }
-        );
+                remove: (name, options) => {
+                    req.cookies.set({ name, value: '', ...options });
+                    res.cookies.set({ name, value: '', ...options });
+                },
+            },
+        }
+    );
 
-        // Refresh session if expired
-        const {
-            data: { session },
-            error: sessionError,
-        } = await supabase.auth.getSession();
+    // 3. ✅ Session Management
+    const { data: { session } } = await supabase.auth.getSession();
 
-        if (sessionError) {
-            console.error('Session error in middleware:', sessionError);
+    // 4. ✅ Route Protection Logic
+    if (pathname.startsWith('/admin')) {
+        if (!session) {
+            return NextResponse.redirect(new URL(`/cuenta/login?redirect=${pathname}`, req.url));
         }
 
-        // Proteger rutas de admin
-        if (req.nextUrl.pathname.startsWith('/admin')) {
-            if (!session) {
-                const redirectUrl = new URL('/cuenta/login', req.url);
-                redirectUrl.searchParams.set('redirect', req.nextUrl.pathname);
-                return NextResponse.redirect(redirectUrl);
-            }
-
-            // Verificar que el usuario sea admin
-            const { data: profile, error: profileError } = await supabase
-                .from('profiles')
-                .select('role')
-                .eq('id', session.user.id)
-                .single();
-
-            if (profileError || profile?.role !== 'admin') {
-                return NextResponse.redirect(new URL('/', req.url));
-            }
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+        if (profile?.role !== 'admin') {
+            return NextResponse.redirect(new URL('/', req.url));
         }
-
-        // Proteger rutas de cuenta (requieren autenticación)
-        if (req.nextUrl.pathname.startsWith('/cuenta') &&
-            !req.nextUrl.pathname.includes('/login') &&
-            !req.nextUrl.pathname.includes('/registro') &&
-            !req.nextUrl.pathname.includes('/recuperar')) {
-            if (!session) {
-                const redirectUrl = new URL('/cuenta/login', req.url);
-                redirectUrl.searchParams.set('redirect', req.nextUrl.pathname);
-                return NextResponse.redirect(redirectUrl);
-            }
-        }
-
-        // ✅ SECURITY: Set CSRF cookie for client
-        setCsrfCookie(res);
-
-        return res;
-    } catch (error) {
-        console.error('Middleware error:', error);
-        // En caso de error, permitir continuar pero loguear el error
-        return res;
     }
+
+    if (pathname.startsWith('/cuenta') && !['/cuenta/login', '/cuenta/registro', '/cuenta/recuperar'].some(p => pathname.startsWith(p))) {
+        if (!session) {
+            return NextResponse.redirect(new URL(`/cuenta/login?redirect=${pathname}`, req.url));
+        }
+    }
+
+    // 5. ✅ Finalize Response
+    setCsrfCookie(res);
+    return res;
 }
 
 export const config = {
     matcher: [
         /*
          * Match all request paths except:
-         * - api (General API routes)
          * - _next/static (static files)
          * - _next/image (image optimization files)
          * - favicon.ico (favicon file)
+         * - Webhooks (Must be public)
          */
-        '/((?!api|_next/static|_next/image|favicon.ico).*)',
-        '/admin/:path*',
-        '/cuenta/:path*',
-        /*
-         * Specifically match API routes that need CSRF protection (base and sub-paths)
-         */
-        '/api/orders',
-        '/api/orders/:path*',
-        '/api/products',
-        '/api/products/:path*',
-        '/api/profiles',
-        '/api/profiles/:path*',
-        '/api/admin',
-        '/api/admin/:path*',
+        '/((?!_next/static|_next/image|favicon.ico|api/payments/webhook).*)',
     ],
 };

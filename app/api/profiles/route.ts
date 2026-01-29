@@ -1,24 +1,22 @@
-import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { ApiResponse } from '@/lib/api-responses';
+import { createClient } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
 
-// GET /api/profiles - Obtener el perfil del usuario actual
+/**
+ * GET /api/profiles
+ * Fetch current user profile
+ */
 export async function GET() {
     try {
-        const { createClient } = await import('@/lib/supabase-server');
         const supabase = createClient();
-
         const { data: { user }, error: authError } = await supabase.auth.getUser();
 
         if (authError || !user) {
-            return NextResponse.json(
-                { error: 'No autenticado' },
-                { status: 401 }
-            );
+            return ApiResponse.unauthorized();
         }
 
-        const { data: profile, error } = await supabaseAdmin
+        const { data, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', user.id)
@@ -26,46 +24,38 @@ export async function GET() {
 
         if (error) {
             console.error('Error fetching profile:', error);
-            return NextResponse.json(
-                { error: 'Error al obtener el perfil' },
-                { status: 500 }
-            );
+            return ApiResponse.error('Error al obtener perfil');
         }
 
-        return NextResponse.json({ data: profile });
+        return ApiResponse.success(data);
     } catch (error) {
-        console.error('API Error:', error);
-        return NextResponse.json(
-            { error: 'Error del servidor' },
-            { status: 500 }
-        );
+        return ApiResponse.error(error);
     }
 }
 
-// PUT /api/profiles - Actualizar el perfil del usuario actual
+/**
+ * PUT /api/profiles
+ * Update user profile details
+ */
 export async function PUT(request: Request) {
     try {
-        const { createClient } = await import('@/lib/supabase-server');
         const supabase = createClient();
-
         const { data: { user }, error: authError } = await supabase.auth.getUser();
 
         if (authError || !user) {
-            return NextResponse.json(
-                { error: 'No autenticado' },
-                { status: 401 }
-            );
+            return ApiResponse.unauthorized();
         }
 
         const body = await request.json();
-        const { full_name, phone } = body;
+        const { first_name, last_name, phone } = body;
 
-        const { data: profile, error } = await supabaseAdmin
+        const { data, error } = await supabase
             .from('profiles')
             .update({
-                full_name,
+                first_name,
+                last_name,
                 phone,
-                updated_at: new Date().toISOString()
+                updated_at: new Date().toISOString(),
             })
             .eq('id', user.id)
             .select()
@@ -73,18 +63,11 @@ export async function PUT(request: Request) {
 
         if (error) {
             console.error('Error updating profile:', error);
-            return NextResponse.json(
-                { error: 'Error al actualizar el perfil' },
-                { status: 500 }
-            );
+            return ApiResponse.error(`Error al actualizar perfil: ${error.message}`);
         }
 
-        return NextResponse.json({ data: profile });
+        return ApiResponse.success(data);
     } catch (error) {
-        console.error('API Error:', error);
-        return NextResponse.json(
-            { error: 'Error del servidor' },
-            { status: 500 }
-        );
+        return ApiResponse.error(error);
     }
 }
