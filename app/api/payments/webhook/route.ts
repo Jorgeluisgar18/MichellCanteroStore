@@ -99,29 +99,25 @@ export async function POST(request: Request) {
             orderStatus = 'paid';
             paymentStatus = 'paid';
 
-            // DECREMENTAR STOCK
+            // ✅ SECURITY: Confirm stock reservation and decrement stock
             try {
-                const { data: orderItems, error: itemsError } = await supabaseAdmin
-                    .from('order_items')
-                    .select('product_id, quantity, variant_id')
-                    .eq('order_id', order.id);
+                const { data: confirmResult, error: confirmError } = await supabaseAdmin
+                    .rpc('confirm_stock_reservation', {
+                        order_id_param: order.id
+                    });
 
-                if (!itemsError && orderItems) {
-                    for (const item of orderItems) {
-                        const { error: stockError } = await supabaseAdmin.rpc('decrement_product_stock', {
-                            product_id_param: item.product_id,
-                            quantity_param: item.quantity
-                        });
-
-                        if (stockError) {
-                            logger.error('Error decrementing stock', stockError, {
-                                productId: item.product_id
-                            });
-                        }
-                    }
+                if (confirmError) {
+                    logger.error('Error confirming stock reservation', confirmError, {
+                        orderId: order.id
+                    });
+                } else {
+                    logger.info('Stock reservation confirmed', {
+                        orderId: order.id,
+                        reservationsConfirmed: confirmResult?.reservations_confirmed
+                    });
                 }
             } catch (stockCatchError) {
-                logger.error('Error in stock decrement', stockCatchError as Error);
+                logger.error('Error in stock reservation confirmation', stockCatchError as Error);
             }
 
             // ENVIAR NOTIFICACIONES POR EMAIL
@@ -141,6 +137,27 @@ export async function POST(request: Request) {
             }
         } else if (status === 'DECLINED' || status === 'ERROR') {
             paymentStatus = 'failed';
+
+            // ✅ SECURITY: Release stock reservation on payment failure
+            try {
+                const { data: releaseResult, error: releaseError } = await supabaseAdmin
+                    .rpc('release_stock_reservation', {
+                        order_id_param: order.id
+                    });
+
+                if (releaseError) {
+                    logger.error('Error releasing stock reservation', releaseError, {
+                        orderId: order.id
+                    });
+                } else {
+                    logger.info('Stock reservation released', {
+                        orderId: order.id,
+                        reservationsReleased: releaseResult?.reservations_released
+                    });
+                }
+            } catch (releaseError) {
+                logger.error('Error in stock reservation release', releaseError as Error);
+            }
         }
 
         // Actualizar la orden

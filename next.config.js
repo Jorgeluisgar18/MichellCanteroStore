@@ -12,6 +12,10 @@ const nextConfig = {
         formats: ['image/webp', 'image/avif'],
     },
     reactStrictMode: true,
+    // Enable instrumentation for Sentry
+    experimental: {
+        instrumentationHook: true,
+    },
     // ✅ SECURITY FIX: Enable TypeScript and ESLint checking
     // Removed ignoreBuildErrors and ignoreDuringBuilds
     // Ensure environment variables are available at build time

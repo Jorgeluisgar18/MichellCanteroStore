@@ -250,6 +250,39 @@ export async function POST(request: Request) {
             );
         }
 
+        // ✅ SECURITY: Reserve stock to prevent overselling
+        const reservationErrors = [];
+        for (const item of validatedItems) {
+            const { data: reservationResult, error: reservationError } = await supabaseAdmin
+                .rpc('reserve_product_stock', {
+                    product_id_param: item.product_id,
+                    order_id_param: order.id,
+                    quantity_param: item.quantity,
+                    expiration_minutes: 15 // 15 minutes to complete payment
+                });
+
+            if (reservationError || !reservationResult?.success) {
+                reservationErrors.push({
+                    product: item.product_name,
+                    error: reservationResult?.error || reservationError?.message
+                });
+            }
+        }
+
+        // If any reservation failed, rollback
+        if (reservationErrors.length > 0) {
+            logger.error('Stock reservation failed', { reservationErrors });
+            // Rollback: delete order and items
+            await supabaseAdmin.from('orders').delete().eq('id', order.id);
+            return NextResponse.json(
+                {
+                    error: 'Stock insuficiente para completar la orden',
+                    details: reservationErrors
+                },
+                { status: 400 }
+            );
+        }
+
         logger.info('Order created successfully', {
             orderId: order.id,
             orderNumber: order.order_number,
