@@ -1,232 +1,86 @@
-# 🛍️ Michell Cantero Store
+# Michell Cantero Store - Infrastructure and Technical Overview
 
-E-commerce moderno y seguro construido con Next.js 14, Supabase y Wompi.
+Michell Cantero Store is a high-performance e-commerce platform built with Next.js 14, Supabase, and Wompi. The architecture focuses on security, scalability, and transactional integrity.
 
-[![Next.js](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org/)
-[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-green)](https://supabase.com/)
-[![Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black)](https://vercel.com/)
+## Technical Specifications
 
----
+### Core Technologies
+- **Framework:** Next.js 14 (App Router)
+- **Language:** TypeScript 5 (Strict Mode)
+- **Database:** Supabase (PostgreSQL with RLS)
+- **Authentication:** Supabase Auth (JWT-based)
+- **Security Middleware:** CSRF protection (double-submit cookie), Rate Limiting (Upstash Redis)
+- **Payments:** Wompi API (Production Environment)
+- **Monitoring:** Sentry (Performance and Error Tracking)
 
-## 🚀 Características
+### Key Engineering Features
+- **Stock Reservation System:** Prevents overselling by reserving inventory during the payment window (15-minute expiration).
+- **Idempotency Protection:** Prevents duplicate orders and payments using UUID-based idempotent keys.
+- **CSRF Defense:** Robust cross-site request forgery protection implemented at the middleware level for all state-changing API endpoints.
+- **Transactional Integrity:** Uses PostgreSQL functions to ensure atomic operations for inventory management and order processing.
+- **Automated Maintenance:** Vercel Cron jobs for cleanup of expired stock reservations and temporary data.
 
-- ✅ **Autenticación segura** con Supabase Auth
-- ✅ **Pagos integrados** con Wompi (Colombia)
-- ✅ **Rate limiting distribuido** con Upstash Redis
-- ✅ **RLS policies** para seguridad de datos
-- ✅ **Idempotency keys** para prevenir duplicados
-- ✅ **TypeScript strict mode** para type safety
-- ✅ **Monitoring** con Sentry
-- ✅ **Responsive design** mobile-first
-
----
-
-## 📁 Estructura del Proyecto
+## Project Structure
 
 ```
 MichellCanteroStore/
-├── app/                      # Next.js App Router
-│   ├── (auth)/              # Rutas de autenticación
-│   ├── admin/               # Panel de administración
-│   ├── api/                 # API routes
+├── app/                      # Next.js App Router and API Handlers
+│   ├── (auth)/              # Authentication flow implementations
+│   ├── admin/               # Administrative dashboard
+│   ├── api/                 # Secure RESTful API endpoints
 │   └── ...
-├── components/              # Componentes React
-│   ├── layout/             # Layout components
-│   ├── products/           # Product components
-│   └── ui/                 # UI components
-├── lib/                     # Utilidades y configuración
-│   ├── middleware/         # Rate limiting, etc.
-│   ├── validations/        # Zod schemas
-│   └── supabase/           # Supabase clients
-├── supabase/               # Database migrations & schemas
-│   ├── migrations/         # SQL migrations
-│   └── security.sql        # RLS policies
-├── docs/                    # 📚 Documentación
-│   ├── deployment/         # Guías de despliegue
-│   ├── security/           # Auditorías y fixes
-│   └── setup/              # Configuración inicial
-└── public/                  # Assets estáticos
+├── components/              # Atomic React components
+│   ├── layout/             # Global layout architecture
+│   ├── products/           # Inventory-specific components
+│   └── ui/                 # Design system and UI primitives
+├── lib/                     # Core logic and configurations
+│   ├── security/           # CSRF and Auth security implementations
+│   ├── middleware/         # Rate limiting and request interception
+│   ├── validations/        # Zod schema definitions
+│   └── supabase/           # Database client configurations
+├── supabase/               # Database migrations and RLS definitions
+│   ├── migrations/         # Versioned SQL migrations
+│   └── functions/          # Stored procedures for critical transactions
+├── docs/                    # Technical documentation repository
+└── public/                  # Static assets and media
 ```
 
----
+## Security Posture
 
-## 🛠️ Tech Stack
+The application adheres to modern security standards:
+- **Rate Limiting:** Protects against brute-force and DDoS attempts at the API level.
+- **Content Security Policy (CSP):** Restricts resource loading to trusted domains only.
+- **Row Level Security (RLS):** Ensures data isolation at the database layer (Supabase).
+- **Webhook Validation:** Cryptographic verification of all incoming payment notifications.
 
-### Frontend
-- **Framework:** Next.js 14 (App Router)
-- **Language:** TypeScript 5
-- **Styling:** CSS Modules
-- **State:** React Hooks + Context
+## Deployment and CI/CD
 
-### Backend
-- **Database:** Supabase (PostgreSQL)
-- **Auth:** Supabase Auth
-- **Storage:** Supabase Storage
-- **Rate Limiting:** Upstash Redis
+Hosted on **Vercel** with the following pipeline:
+- **Build Step:** TypeScript type checking and linting enforcement.
+- **Continuous Deployment:** Automated builds on pushes to the main branch.
+- **Health Monitoring:** Dedicated `/api/health` endpoint for infrastructure verification.
 
-### Payments
-- **Gateway:** Wompi (Colombia)
-- **Webhooks:** Signature validation
-- **Idempotency:** UUID-based
+## Getting Started
 
-### DevOps
-- **Hosting:** Vercel
-- **Monitoring:** Sentry
-- **CI/CD:** GitHub Actions
+### Prerequisites
+- Node.js 18.17.0 or higher
+- PostgreSQL instance (Supabase)
+- Upstash Redis instance
+- Wompi Merchant Account
 
----
+### Installation
+1. Clone the repository and install dependencies:
+   ```bash
+   npm install
+   ```
+2. Configure environment variables in `.env.local` based on `.env.example`.
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
-## 📚 Documentación
-
-### 🚀 Inicio Rápido
-- [**DEPLOYMENT.md**](docs/DEPLOYMENT.md) - Guía de despliegue paso a paso
-- [**Setup Inicial**](docs/setup/) - Configuración de desarrollo local
-
-### 🔒 Seguridad
-- [**Security Audit**](docs/security/production_audit_report.md) - Auditoría completa
-- [**Security Fixes**](docs/security/implementation_plan.md) - Fixes implementados
-- [**Migration Verification**](docs/security/migration_verification.md) - Verificación de migraciones
-
-### 📦 Despliegue
-- [**Deployment Guide**](docs/deployment/deployment_guide.md) - Guía detallada
-- [**Upstash Migration**](docs/deployment/upstash_migration.md) - Migración de Vercel KV
-- [**Sentry Migration**](docs/deployment/sentry_migration.md) - Migración a instrumentation
-
-### 🔧 Configuración
-- [**Sentry Setup**](docs/setup/sentry-setup.md) - Configuración de Sentry
-- [**GitHub Backups**](docs/setup/github-actions-backup.md) - Backups automáticos
+## Support and Maintenance
+For technical inquiries or infrastructure support, please contact the lead systems engineer via GitHub.
 
 ---
-
-## 🚀 Inicio Rápido
-
-### Prerrequisitos
-- Node.js 18+
-- npm o yarn
-- Cuenta de Supabase
-- Cuenta de Wompi (para pagos)
-
-### Instalación
-
-```bash
-# Clonar repositorio
-git clone https://github.com/Jorgeluisgar18/MichellCanteroStore.git
-cd MichellCanteroStore
-
-# Instalar dependencias
-npm install
-
-# Configurar variables de entorno
-cp .env.example .env.local
-# Editar .env.local con tus credenciales
-
-# Ejecutar migraciones
-# Ver docs/DEPLOYMENT.md para instrucciones
-
-# Iniciar servidor de desarrollo
-npm run dev
-```
-
-Visita [http://localhost:3000](http://localhost:3000)
-
----
-
-## 🔐 Variables de Entorno
-
-```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-
-# Wompi
-NEXT_PUBLIC_WOMPI_PUBLIC_KEY=
-WOMPI_PRIVATE_KEY=
-WOMPI_EVENTS_SECRET=
-
-# Upstash Redis (Rate Limiting)
-KV_REST_API_URL=
-KV_REST_API_TOKEN=
-
-# Sentry (Monitoring)
-NEXT_PUBLIC_SENTRY_DSN=
-SENTRY_AUTH_TOKEN=
-
-# NextAuth
-NEXTAUTH_SECRET=
-NEXTAUTH_URL=
-```
-
-Ver [`.env.example`](.env.example) para más detalles.
-
----
-
-## 📊 Estado del Proyecto
-
-### Puntuación de Seguridad: **9.5/10** ✅
-
-| Aspecto | Estado |
-|---------|--------|
-| **RLS Policies** | ✅ 26 políticas activas |
-| **Rate Limiting** | ✅ Distribuido (Upstash) |
-| **Type Safety** | ✅ Strict mode |
-| **Webhooks** | ✅ Firma obligatoria |
-| **Idempotency** | ✅ Implementado |
-| **Build** | ✅ 0 errores |
-
----
-
-## 🤝 Contribuir
-
-1. Fork el proyecto
-2. Crea tu feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push al branch (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
----
-
-## 📝 Scripts Disponibles
-
-```bash
-# Desarrollo
-npm run dev          # Iniciar servidor de desarrollo
-npm run build        # Build de producción
-npm run start        # Iniciar servidor de producción
-
-# Calidad de código
-npm run lint         # Ejecutar ESLint
-npm run type-check   # Verificar tipos TypeScript
-
-# Testing (futuro)
-npm run test         # Ejecutar tests
-npm run test:e2e     # Tests end-to-end
-```
-
----
-
-## 📄 Licencia
-
-Este proyecto es privado y confidencial.
-
----
-
-## 👤 Autor
-
-**Jorge Luis García**
-- GitHub: [@Jorgeluisgar18](https://github.com/Jorgeluisgar18)
-
----
-
-## 🙏 Agradecimientos
-
-- [Next.js](https://nextjs.org/)
-- [Supabase](https://supabase.com/)
-- [Vercel](https://vercel.com/)
-- [Wompi](https://wompi.com/)
-- [Upstash](https://upstash.com/)
-
----
-
-**🎉 ¡Proyecto listo para producción!**
+Copyright 2026 Michell Cantero Store. All rights reserved.
