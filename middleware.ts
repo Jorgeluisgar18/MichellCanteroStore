@@ -25,17 +25,6 @@ export async function middleware(req: NextRequest) {
         return csrfError;
     }
 
-    // ✅ PERFORMANCE: Skip Supabase session refresh for public API routes
-    // (They handle their own auth/security if needed)
-    if (req.nextUrl.pathname.startsWith('/api/') &&
-        !req.nextUrl.pathname.startsWith('/api/admin') &&
-        !req.nextUrl.pathname.startsWith('/api/profile')) {
-
-        // Final response needs CSRF cookie
-        setCsrfCookie(res);
-        return res;
-    }
-
     try {
         // Create authenticated Supabase Client
         const supabase = createServerClient(
@@ -115,13 +104,20 @@ export const config = {
     matcher: [
         /*
          * Match all request paths except:
+         * - api (General API routes)
          * - _next/static (static files)
          * - _next/image (image optimization files)
          * - favicon.ico (favicon file)
          */
-        '/((?!_next/static|_next/image|favicon.ico).*)',
+        '/((?!api|_next/static|_next/image|favicon.ico).*)',
         '/admin/:path*',
         '/cuenta/:path*',
-        '/api/:path*',
+        /*
+         * Specifically match API routes that need CSRF protection
+         */
+        '/api/orders/:path*',
+        '/api/products/:path*',
+        '/api/profiles/:path*',
+        '/api/admin/:path*',
     ],
 };
