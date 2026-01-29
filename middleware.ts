@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/auth-helpers-nextjs';
 import { NextResponse, type NextRequest } from 'next/server';
+import { applyCsrfProtection, setCsrfCookie } from '@/lib/security/csrf';
 
 export async function middleware(req: NextRequest) {
     const res = NextResponse.next();
@@ -16,6 +17,12 @@ export async function middleware(req: NextRequest) {
     // ✅ CRITICAL: Skip middleware for webhook endpoints (Wompi needs to POST without auth)
     if (req.nextUrl.pathname.startsWith('/api/payments/webhook')) {
         return res;
+    }
+
+    // ✅ SECURITY: Apply CSRF protection to state-changing requests
+    const csrfError = applyCsrfProtection(req);
+    if (csrfError) {
+        return csrfError;
     }
 
     try {
@@ -81,6 +88,9 @@ export async function middleware(req: NextRequest) {
                 return NextResponse.redirect(redirectUrl);
             }
         }
+
+        // ✅ SECURITY: Set CSRF cookie for client
+        setCsrfCookie(res);
 
         return res;
     } catch (error) {
