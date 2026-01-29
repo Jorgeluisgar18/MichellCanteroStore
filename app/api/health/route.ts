@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-export const dynamic = 'force-dynamic';
 import { createClient } from '@supabase/supabase-js';
+
+export const dynamic = 'force-dynamic';
 
 /**
  * Health Check Endpoint

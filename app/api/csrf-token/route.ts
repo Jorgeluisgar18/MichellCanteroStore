@@ -1,10 +1,8 @@
-import { NextResponse, NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getCsrfToken } from '@/lib/security/csrf';
 
-/**
- * GET /api/csrf-token
- * Returns CSRF token for client-side forms
- */
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
     try {
         const token = getCsrfToken(request);
