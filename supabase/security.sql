@@ -25,22 +25,51 @@ CREATE POLICY "Admin Delete Products" ON "products" FOR DELETE USING (
   auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin')
 );
 
--- 3. Create policies for 'orders' (Public Insert for guest checkout, Owner Read)
--- Pending orders are created via API with Service Role usually, but if client creates:
+-- 3. Create policies for 'orders' (Authenticated users only)
+-- ✅ SECURITY FIX: Require authentication for order creation
 DROP POLICY IF EXISTS "Public Insert Orders" ON "orders";
-CREATE POLICY "Public Insert Orders" ON "orders" FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Authenticated Insert Orders" ON "orders";
+CREATE POLICY "Authenticated Insert Orders" ON "orders" 
+  FOR INSERT 
+  WITH CHECK (
+    auth.uid() = user_id OR auth.uid() IS NOT NULL
+  );
 
 -- Only owner or admin can view orders
 DROP POLICY IF EXISTS "Owner Read Orders" ON "orders";
 CREATE POLICY "Owner Read Orders" ON "orders" FOR SELECT USING (
   auth.uid() = user_id 
   OR auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin')
-  OR user_id IS NULL -- Optional: allow guests to see anonymous orders? Usually unsafe.
 );
 
+-- Only admins can update orders (webhooks use service role)
+DROP POLICY IF EXISTS "Admin Update Orders" ON "orders";
+CREATE POLICY "Admin Update Orders" ON "orders" 
+  FOR UPDATE 
+  USING (auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin'));
+
+-- ✅ SECURITY FIX: Allow admins to delete orders
+DROP POLICY IF EXISTS "Admin Delete Orders" ON "orders";
+CREATE POLICY "Admin Delete Orders" ON "orders" 
+  FOR DELETE 
+  USING (auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin'));
+
 -- 4. Create policies for 'order_items'
+-- ✅ SECURITY FIX: Require order ownership for item creation
 DROP POLICY IF EXISTS "Public Insert Order Items" ON "order_items";
-CREATE POLICY "Public Insert Order Items" ON "order_items" FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Authenticated Insert Order Items" ON "order_items";
+CREATE POLICY "Authenticated Insert Order Items" ON "order_items" 
+  FOR INSERT 
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM orders 
+      WHERE id = order_id 
+      AND (
+        user_id = auth.uid() 
+        OR auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin')
+      )
+    )
+  );
 
 DROP POLICY IF EXISTS "Owner Read Order Items" ON "order_items";
 CREATE POLICY "Owner Read Order Items" ON "order_items" FOR SELECT USING (
@@ -80,3 +109,4 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+

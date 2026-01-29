@@ -12,12 +12,8 @@ const nextConfig = {
         formats: ['image/webp', 'image/avif'],
     },
     reactStrictMode: true,
-    eslint: {
-        ignoreDuringBuilds: true,
-    },
-    typescript: {
-        ignoreBuildErrors: true,
-    },
+    // ✅ SECURITY FIX: Enable TypeScript and ESLint checking
+    // Removed ignoreBuildErrors and ignoreDuringBuilds
     // Ensure environment variables are available at build time
     env: {
         NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,

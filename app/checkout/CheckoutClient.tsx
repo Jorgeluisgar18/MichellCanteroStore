@@ -12,6 +12,13 @@ import { useCartStore } from '@/store/cartStore';
 import { formatPrice } from '@/lib/utils';
 import { CreditCard, CheckCircle } from 'lucide-react';
 
+// Declare Wompi WidgetCheckout global type
+declare global {
+    interface Window {
+        WidgetCheckout: unknown;
+    }
+}
+
 export default function CheckoutClient() {
     const router = useRouter();
     const { items, getSubtotal, getShipping, getTotal, clearCart } = useCartStore();
@@ -20,7 +27,7 @@ export default function CheckoutClient() {
 
     // Efecto para verificar si Wompi ya está cargado (por si el script termina antes del onLoad)
     useEffect(() => {
-        if (typeof window !== 'undefined' && (window as any).WidgetCheckout) {
+        if (typeof window !== 'undefined' && window.WidgetCheckout) {
             setWompiLoaded(true);
         }
     }, []);
@@ -51,6 +58,9 @@ export default function CheckoutClient() {
                 throw new Error('El sistema de pagos aún no está listo. Por favor, intenta de nuevo en un momento.');
             }
 
+            // ✅ SECURITY: Generate idempotency key to prevent duplicate orders
+            const idempotencyKey = crypto.randomUUID();
+
             // 1. Crear la orden en la base de datos a través de la API
             const orderResponse = await fetch('/api/orders', {
                 method: 'POST',
@@ -64,6 +74,7 @@ export default function CheckoutClient() {
                     shipping_state: formData.state,
                     shipping_zip_code: null,
                     payment_method: 'wompi',
+                    idempotency_key: idempotencyKey,
                     items: items.map(item => ({
                         product_id: item.product.id,
                         product_name: item.product.name,

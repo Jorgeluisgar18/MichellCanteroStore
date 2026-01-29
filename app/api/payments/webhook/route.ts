@@ -46,8 +46,15 @@ export async function POST(request: Request) {
             }
             logger.info('Webhook signature verified successfully');
         } else {
-            logger.warn('Webhook received without signature metadata');
-            // En sandbox a veces puede variar, pero en producción es obligatorio
+            // ✅ SECURITY FIX: Signature is REQUIRED in production
+            if (process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production') {
+                logger.error('WEBHOOK REJECTED: Missing signature in production environment');
+                return NextResponse.json({
+                    error: 'Firma requerida en producción'
+                }, { status: 401 });
+            }
+            // Allow in development/sandbox for testing
+            logger.warn('Webhook received without signature (development/sandbox only)');
         }
 
         // ✅ SECURITY: Sanitized logging (no sensitive data)

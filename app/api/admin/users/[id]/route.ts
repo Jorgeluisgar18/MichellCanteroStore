@@ -12,7 +12,7 @@ export async function GET(
         // ✅ SECURITY: Verify admin role
         const { verifyAdmin } = await import('@/lib/middleware/auth');
 
-        const authResult = await verifyAdmin(request);
+        const authResult = await verifyAdmin();
         if (authResult instanceof NextResponse) {
             return authResult;
         }
@@ -52,7 +52,7 @@ export async function PUT(
         const { AdminUpdateUserSchema } = await import('@/lib/validations/order');
         const { logger } = await import('@/lib/utils/logger');
 
-        const authResult = await verifyAdmin(request);
+        const authResult = await verifyAdmin();
         if (authResult instanceof NextResponse) {
             return authResult;
         }
@@ -117,7 +117,7 @@ export async function DELETE(
         const { verifyAdmin } = await import('@/lib/middleware/auth');
         const { logger } = await import('@/lib/utils/logger');
 
-        const authResult = await verifyAdmin(request);
+        const authResult = await verifyAdmin();
         if (authResult instanceof NextResponse) {
             return authResult;
         }

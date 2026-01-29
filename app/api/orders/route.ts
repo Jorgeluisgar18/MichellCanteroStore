@@ -64,7 +64,7 @@ export async function POST(request: Request) {
         // ✅ SECURITY: Rate limiting
         const { checkRateLimit, getClientIdentifier, getRateLimitHeaders } = await import('@/lib/middleware/ratelimit');
         const clientId = getClientIdentifier(request);
-        const rateLimitResult = checkRateLimit(clientId, { maxRequests: 10, windowMs: 60000 });
+        const rateLimitResult = await checkRateLimit(clientId, { maxRequests: 10, windowMs: 60000 });
 
         if (!rateLimitResult.success) {
             return NextResponse.json(
@@ -107,10 +107,33 @@ export async function POST(request: Request) {
             payment_method,
             items,
             userId,
-            customer_notes
+            customer_notes,
+            idempotency_key
         } = validatedData;
 
         logApiRequest('POST', '/api/orders', userId || 'guest');
+
+        // ✅ SECURITY: Check idempotency key to prevent duplicate orders
+        if (idempotency_key) {
+            const { data: existingOrder, error: idempotencyError } = await supabaseAdmin
+                .from('orders')
+                .select(`
+                    *,
+                    order_items (*)
+                `)
+                .eq('idempotency_key', idempotency_key)
+                .single();
+
+            if (existingOrder && !idempotencyError) {
+                logger.info('Returning existing order (idempotency)', {
+                    orderId: existingOrder.id,
+                    idempotencyKey: idempotency_key
+                });
+                return NextResponse.json({
+                    data: existingOrder
+                }, { status: 200 });
+            }
+        }
 
         // ✅ SECURITY: Get real product data from database (prevent price manipulation)
         const productIds = items.map((item) => item.product_id);
@@ -187,6 +210,7 @@ export async function POST(request: Request) {
                 shipping_zip_code,
                 payment_method: payment_method || 'wompi',
                 customer_notes: customer_notes || null,
+                idempotency_key: idempotency_key || null,
             }])
             .select()
             .single();

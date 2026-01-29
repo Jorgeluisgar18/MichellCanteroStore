@@ -21,6 +21,7 @@ export const CreateOrderSchema = z.object({
     items: z.array(OrderItemSchema).min(1, 'Debe incluir al menos un producto').max(50, 'Máximo 50 productos por orden'),
     userId: z.string().uuid().optional().nullable(),
     customer_notes: z.string().max(500, 'Notas muy largas').optional(),
+    idempotency_key: z.string().uuid('Idempotency key debe ser UUID válido').optional(),
 });
 
 // Update Order Schema (Admin)
