@@ -55,6 +55,7 @@ export const metadata: Metadata = {
 };
 
 import ErrorBoundary from '@/components/common/ErrorBoundary';
+import { Analytics } from '@vercel/analytics/next';
 
 export default function RootLayout({
     children,
@@ -67,6 +68,7 @@ export default function RootLayout({
                 <ErrorBoundary>
                     {children}
                 </ErrorBoundary>
+                <Analytics />
             </body>
         </html>
     );
