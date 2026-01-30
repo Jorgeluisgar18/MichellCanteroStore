@@ -12,7 +12,6 @@
     "clean:logs": "powershell -Command \"Remove-Item *.txt, *.log, *.js, *.py -Exclude next-env.d.ts, next.config.js, postcss.config.js, tailwind.config.ts -ErrorAction SilentlyContinue\""
   },
   "dependencies": {
-    "@edge-csrf/nextjs": "^2.5.2",
     "@sentry/nextjs": "^10.36.0",
     "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/ssr": "^0.8.0",
