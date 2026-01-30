@@ -13,7 +13,7 @@ export async function GET(request: Request) {
         let cronSecret = '';
         try {
             cronSecret = getEnvVar('CRON_SECRET');
-        } catch (e) {
+        } catch {
             console.warn('CRON_SECRET not configured');
         }
 

@@ -1,20 +1,28 @@
-/**
- * Simple CSRF Protection Middleware
- * Uses double-submit cookie pattern
- */
-
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import crypto from 'crypto';
 
 const CSRF_COOKIE_NAME = 'csrf_token';
 const CSRF_HEADER_NAME = 'x-csrf-token';
 
 /**
- * Generate a random CSRF token
+ * Generate a random CSRF token (Edge Runtime compatible)
  */
 function generateToken(): string {
-    return crypto.randomBytes(32).toString('hex');
+    const array = new Uint8Array(32);
+    globalThis.crypto.getRandomValues(array);
+    return Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Constant-time string comparison (Edge Runtime compatible)
+ */
+function safeCompare(a: string, b: string): boolean {
+    if (a.length !== b.length) return false;
+    let result = 0;
+    for (let i = 0; i < a.length; i++) {
+        result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+    }
+    return result === 0;
 }
 
 /**
@@ -69,10 +77,7 @@ function validateCsrfToken(request: NextRequest): boolean {
     }
 
     // Constant-time comparison to prevent timing attacks
-    return crypto.timingSafeEqual(
-        Buffer.from(cookieToken),
-        Buffer.from(headerToken)
-    );
+    return safeCompare(cookieToken, headerToken);
 }
 
 /**
