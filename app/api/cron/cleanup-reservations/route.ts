@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getEnvVar } from '@/lib/env';
 
 /**
  * Cron job to cleanup expired stock reservations
@@ -9,7 +10,12 @@ export async function GET(request: Request) {
     try {
         // Verify cron secret to prevent unauthorized access
         const authHeader = request.headers.get('authorization');
-        const cronSecret = process.env.CRON_SECRET;
+        let cronSecret = '';
+        try {
+            cronSecret = getEnvVar('CRON_SECRET');
+        } catch (e) {
+            console.warn('CRON_SECRET not configured');
+        }
 
         if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
             return NextResponse.json(
@@ -20,8 +26,8 @@ export async function GET(request: Request) {
 
         // Create admin client
         const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!
+            getEnvVar('NEXT_PUBLIC_SUPABASE_URL'),
+            getEnvVar('SUPABASE_SERVICE_ROLE_KEY')
         );
 
         // Call cleanup function

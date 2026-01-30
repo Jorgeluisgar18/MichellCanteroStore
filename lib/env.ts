@@ -17,7 +17,7 @@ export function getEnvVar(key: string, defaultValue?: string): string {
         }
     }
 
-    return value;
+    return value.trim();
 }
 
 export function validateSupabaseConfig() {
