@@ -15,6 +15,7 @@ import { formatPrice } from '@/lib/utils';
 import Link from 'next/link';
 import Button from '@/components/ui/Button';
 import ProductImage from '@/components/product/ProductImage';
+import { useAuthStore } from '@/store/authStore';
 
 interface DashboardStats {
     totalRevenue: number;
@@ -48,6 +49,7 @@ export default function AdminDashboardPage() {
     const [recentOrders, setRecentOrders] = useState<SimpleOrder[]>([]);
     const [featuredProducts, setFeaturedProducts] = useState<DashboardProduct[]>([]);
     const [loading, setLoading] = useState(true);
+    const user = useAuthStore((state) => state.user);
 
     useEffect(() => {
         // En una implementación real, esto vendría de un endpoint de estadísticas
@@ -161,7 +163,7 @@ export default function AdminDashboardPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                 <div>
                     <h1 className="text-3xl font-display font-bold text-neutral-900 tracking-tight">Vista General</h1>
-                    <p className="text-neutral-500 text-sm mt-1">Bienvenida de nuevo, <span className="font-bold text-primary-600">Michell</span>. Esto es lo que está pasando en tu tienda.</p>
+                    <p className="text-neutral-500 text-sm mt-1">Bienvenido/a de nuevo{user?.name ? `, ${user.name.split(' ')[0]}` : ''}. Esto es lo que está pasando en tu tienda.</p>
                 </div>
                 <div className="flex gap-3">
                     <Button

@@ -182,7 +182,7 @@ export default function NosotrosPage() {
                         </div>
                         <div>
                             <p className="text-4xl md:text-5xl font-bold text-gradient mb-2">
-                                500+
+                                +200
                             </p>
                             <p className="text-neutral-600">Productos en Catálogo</p>
                         </div>

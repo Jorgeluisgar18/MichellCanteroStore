@@ -75,7 +75,7 @@ Una vez desplegado, verifica:
 ```bash
 # 1. Rate limiting
 for ($i=1; $i -le 15; $i++) {
-    curl -X POST https://tu-app.vercel.app/api/orders
+    curl -X POST https://michellcanterostore.com/api/orders
 }
 # Esperado: 429 después de 10 peticiones
 

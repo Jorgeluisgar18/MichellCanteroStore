@@ -1,86 +1,89 @@
-# Michell Cantero Store - Infrastructure and Technical Overview
+# Michell Cantero Store - Infraestructura y Descripción Técnica
 
-Michell Cantero Store is a high-performance e-commerce platform built with Next.js 14, Supabase, and Wompi. The architecture focuses on security, scalability, and transactional integrity.
+Michell Cantero Store es una plataforma de comercio electrónico de alto rendimiento construida con Next.js 14, Supabase y Wompi. La arquitectura se centra en la seguridad, la escalabilidad y la integridad transaccional.
 
-## Technical Specifications
+## Especificaciones Técnicas
 
-### Core Technologies
+### Tecnologías Core
 - **Framework:** Next.js 14 (App Router)
-- **Language:** TypeScript 5 (Strict Mode)
-- **Database:** Supabase (PostgreSQL with RLS)
-- **Authentication:** Supabase Auth (JWT-based)
-- **Security Middleware:** CSRF protection (double-submit cookie), Rate Limiting (Upstash Redis)
-- **Payments:** Wompi API (Production Environment)
-- **Monitoring:** Sentry (Performance and Error Tracking)
+- **Lenguaje:** TypeScript 5 (Modo Estricto)
+- **Base de Datos:** Supabase (PostgreSQL con RLS)
+- **Autenticación:** Supabase Auth (Basado en JWT)
+- **Middleware de Seguridad:** Protección CSRF (cookie de doble envío), Limitación de Tasa (Upstash Redis)
+- **Pagos:** Wompi API (Entorno de Producción)
+- **Monitoreo:** Sentry (Rendimiento y Seguimiento de Errores)
 
-### Key Engineering Features
-- **Stock Reservation System:** Prevents overselling by reserving inventory during the payment window (15-minute expiration).
-- **Idempotency Protection:** Prevents duplicate orders and payments using UUID-based idempotent keys.
-- **CSRF Defense:** Robust cross-site request forgery protection implemented at the middleware level for all state-changing API endpoints.
-- **Transactional Integrity:** Uses PostgreSQL functions to ensure atomic operations for inventory management and order processing.
-- **Automated Maintenance:** Vercel Cron jobs for cleanup of expired stock reservations and temporary data.
+### Características Sugeridas de Ingeniería
+- **Sistema de Reserva de Stock:** Evita la sobreventa al reservar inventario durante la ventana de pago (expiración de 15 minutos).
+- **Protección de Idempotencia:** Evita pedidos y pagos duplicados mediante claves de idempotencia basadas en UUID.
+- **Defensa CSRF:** Protección robusta contra falsificación de solicitudes entre sitios implementada a nivel de middleware para todos los endpoints de la API que cambian el estado.
+- **Integridad Transaccional:** Utiliza funciones de PostgreSQL para asegurar operaciones atómicas en la gestión de inventario y el procesamiento de pedidos.
+- **Mantenimiento Automatizado:** Tareas programadas de Vercel (Cron) para la limpieza de reservas de stock expiradas y datos temporales.
 
-## Project Structure
+## Estructura del Proyecto
 
 ```
 MichellCanteroStore/
-├── app/                      # Next.js App Router and API Handlers
-│   ├── (auth)/              # Authentication flow implementations
-│   ├── admin/               # Administrative dashboard
-│   ├── api/                 # Secure RESTful API endpoints
+├── app/                      # Next.js App Router y API Handlers
+│   ├── (auth)/              # Implementaciones del flujo de autenticación
+│   ├── admin/               # Panel administrativo
+│   ├── api/                 # Endpoints RESTful seguros
 │   └── ...
-├── components/              # Atomic React components
-│   ├── layout/             # Global layout architecture
-│   ├── products/           # Inventory-specific components
-│   └── ui/                 # Design system and UI primitives
-├── lib/                     # Core logic and configurations
-│   ├── security/           # CSRF and Auth security implementations
-│   ├── middleware/         # Rate limiting and request interception
-│   ├── validations/        # Zod schema definitions
-│   └── supabase/           # Database client configurations
-├── supabase/               # Database migrations and RLS definitions
-│   ├── migrations/         # Versioned SQL migrations
-│   └── functions/          # Stored procedures for critical transactions
-├── docs/                    # Technical documentation repository
-└── public/                  # Static assets and media
+├── components/              # Componentes de React atómicos
+│   ├── layout/             # Arquitectura de diseño global
+│   ├── products/           # Componentes específicos de inventario
+│   └── ui/                 # Sistema de diseño y primitivas de UI
+├── lib/                     # Lógica core y configuraciones
+│   ├── security/           # Implementaciones de seguridad CSRF y Auth
+│   ├── middleware/         # Limitación de tasa e interceptación de solicitudes
+│   ├── validations/        # Definiciones de esquemas Zod
+│   └── supabase/           # Configuraciones del cliente de la base de datos
+├── supabase/               # Migraciones de base de datos y definiciones de RLS
+│   ├── migrations/         # Migraciones SQL versionadas
+│   └── functions/          # Procedimientos almacenados para transacciones críticas
+├── docs/                    # Repositorio de documentación técnica
+└── public/                  # Activos estáticos y multimedia
 ```
 
-## Security Posture
+## Postura de Seguridad
 
-The application adheres to modern security standards:
-- **Rate Limiting:** Protects against brute-force and DDoS attempts at the API level.
-- **Content Security Policy (CSP):** Restricts resource loading to trusted domains only.
-- **Row Level Security (RLS):** Ensures data isolation at the database layer (Supabase).
-- **Webhook Validation:** Cryptographic verification of all incoming payment notifications.
+La aplicación cumple con los estándares de seguridad modernos:
+- **Limitación de Tasa (Rate Limiting):** Protege contra ataques de fuerza bruta y DDoS a nivel de API.
+- **Política de Seguridad de Contenido (CSP):** Restringe la carga de recursos solo a dominios de confianza.
+- **Seguridad a Nivel de Fila (RLS):** Asegura el aislamiento de datos en la capa de la base de datos (Supabase).
+- **Validación de Webhooks:** Verificación criptográfica de todas las notificaciones de pago entrantes.
 
-## Deployment and CI/CD
+## Despliegue y CI/CD
 
-Hosted on **Vercel** with the following pipeline:
-- **Build Step:** TypeScript type checking and linting enforcement.
-- **Continuous Deployment:** Automated builds on pushes to the main branch.
-- **Health Monitoring:** Dedicated `/api/health` endpoint for infrastructure verification.
+Alojado en **Vercel** con el siguiente flujo de trabajo:
+- **Paso de Build:** Aplicación de verificación de tipos de TypeScript y cumplimiento de linting.
+- **Despliegue Continuo:** Builds automatizados al realizar push a la rama principal.
+- **Monitoreo de Salud:** Endpoint dedicado `/api/health` para la verificación de la infraestructura.
 
-## Getting Started
+## Primeros Pasos
 
-### Prerequisites
-- Node.js 18.17.0 or higher
-- PostgreSQL instance (Supabase)
-- Upstash Redis instance
-- Wompi Merchant Account
+### Requisitos Previos
+- Node.js 18.17.0 o superior
+- Instancia de PostgreSQL (Supabase)
+- Instancia de Upstash Redis
+- Cuenta de Comercio de Wompi
 
-### Installation
-1. Clone the repository and install dependencies:
+### Instalación
+1. Clona el repositorio e instala las dependencias:
    ```bash
    npm install
    ```
-2. Configure environment variables in `.env.local` based on `.env.example`.
-3. Run the development server:
+2. Configura las variables de entorno en `.env.local` basándote en `.env.example`.
+3. Inicia el servidor de desarrollo:
    ```bash
    npm run dev
    ```
 
-## Support and Maintenance
-For technical inquiries or infrastructure support, please contact the lead systems engineer via GitHub.
+## Soporte y Mantenimiento
+Para consultas técnicas o soporte de infraestructura, por favor contacta al ingeniero de sistemas líder a través de GitHub.
 
 ---
-Copyright 2026 Michell Cantero Store. All rights reserved.
+Copyright 2026 Michell Cantero Store. Todos los derechos reservados.
+
+Desarrollado por: Jorge Garcia Valderrama  
+Universidad: Universidad Del Magdalena

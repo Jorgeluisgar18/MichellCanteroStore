@@ -15,6 +15,7 @@ import {
     ExternalLink
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import Logo from '@/components/common/Logo';
 
 const adminNavigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -50,11 +51,9 @@ export default function AdminLayout({
             `}>
                 <div className="h-full flex flex-col">
                     {/* Header */}
-                    <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
-                        <Link href="/" className="flex items-center gap-2">
-                            <span className="text-xl font-display font-bold text-primary-600 italic">Michell Cantero</span>
-                        </Link>
-                        <button className="lg:hidden" onClick={() => setIsSidebarOpen(false)}>
+                    <div className="p-6 border-b border-neutral-100">
+                        <Logo size="small" className="hover:opacity-80 transition-opacity" />
+                        <button className="lg:hidden absolute top-4 right-4" onClick={() => setIsSidebarOpen(false)}>
                             <X className="w-6 h-6" />
                         </button>
                     </div>
@@ -117,7 +116,6 @@ export default function AdminLayout({
                     <div className="flex items-center gap-4">
                         <div className="text-right hidden sm:block">
                             <p className="text-sm font-medium text-neutral-900">Administrador</p>
-                            <p className="text-xs text-neutral-500">Tienda Michell Cantero</p>
                         </div>
                         <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold">
                             AD

@@ -66,7 +66,7 @@ const Footer: React.FC = () => {
                         </ul>
                     </div>
 
-                    {/* Social, Newsletter & CEO */}
+                    {/* Social & CEO */}
                     <div className="space-y-8">
                         {/* Social */}
                         <div>
@@ -104,50 +104,6 @@ const Footer: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Newsletter */}
-                        <div>
-                            <h4 className="text-primary-700 font-display font-semibold text-lg mb-6">Únete al Club</h4>
-                            <p className="text-sm text-primary-600 mb-4">Recibe ofertas exclusivas y consejos de belleza.</p>
-                            <form
-                                onSubmit={async (e) => {
-                                    e.preventDefault();
-                                    const form = e.target as HTMLFormElement;
-                                    const email = (form.elements.namedItem('email') as HTMLInputElement).value;
-                                    try {
-                                        const res = await fetch('/api/newsletter', {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ email })
-                                        });
-                                        const data = await res.json();
-                                        if (res.ok) {
-                                            alert('¡Te has suscrito correctamente!');
-                                            form.reset();
-                                        } else {
-                                            alert(data.error);
-                                        }
-                                    } catch {
-                                        alert('Error al suscribirse');
-                                    }
-                                }}
-                                className="flex flex-col sm:flex-row gap-2"
-                            >
-                                <input
-                                    type="email"
-                                    name="email"
-                                    placeholder="Tu email..."
-                                    required
-                                    className="flex-1 px-4 py-2 rounded-xl border border-primary-200 focus:outline-none focus:ring-2 focus:ring-primary-400 text-sm"
-                                />
-                                <button
-                                    type="submit"
-                                    className="px-6 py-2 bg-primary-600 text-white rounded-xl text-sm font-semibold hover:bg-primary-700 transition-colors shadow-sm"
-                                >
-                                    Suscribirme
-                                </button>
-                            </form>
-                        </div>
-
                         {/* CEO */}
                         <div className="pt-2 border-t border-primary-100/50">
                             <p className="text-sm font-semibold text-primary-700 mb-2 font-display">CEO:</p>
@@ -162,29 +118,29 @@ const Footer: React.FC = () => {
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {/* Relocated Payment & Trust Badges */}
-                <div className="mt-16 pt-8 border-t border-primary-200">
-                    <div className="grid md:grid-cols-2 gap-8 items-center">
-                        <div className="flex items-center space-x-3">
-                            <div className="p-2 bg-primary-100 rounded-lg">
-                                <CreditCard className="w-5 h-5 text-primary-600" />
-                            </div>
-                            <div>
-                                <p className="text-sm font-semibold text-primary-700">Métodos de Pago</p>
-                                <p className="text-xs text-primary-600 font-medium">Wompi, PSE, Nequi, Crédito y más</p>
-                            </div>
+            {/* Payment & Trust Badges */}
+            <div className="bg-primary-100/30 py-12">
+                <div className="container-custom grid md:grid-cols-2 gap-8 items-center">
+                    <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-primary-100 rounded-lg">
+                            <CreditCard className="w-5 h-5 text-primary-600" />
                         </div>
-                        <div className="flex flex-wrap items-center justify-start md:justify-end gap-6 text-sm">
-                            <span className="flex items-center gap-2 text-primary-600 font-medium tracking-tight">
-                                <ShieldCheck className="w-5 h-5" />
-                                Pago Seguro
-                            </span>
-                            <span className="flex items-center gap-2 text-primary-600 font-medium tracking-tight">
-                                <Truck className="w-5 h-5" />
-                                Envíos a todo Colombia
-                            </span>
+                        <div>
+                            <p className="text-sm font-semibold text-primary-700">Métodos de Pago</p>
+                            <p className="text-xs text-primary-600 font-medium">Wompi, PSE, Nequi, Crédito y más</p>
                         </div>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-start md:justify-end gap-6 text-sm">
+                        <span className="flex items-center gap-2 text-primary-600 font-medium tracking-tight">
+                            <ShieldCheck className="w-5 h-5" />
+                            Pago Seguro
+                        </span>
+                        <span className="flex items-center gap-2 text-primary-600 font-medium tracking-tight">
+                            <Truck className="w-5 h-5" />
+                            Envíos a todo Colombia
+                        </span>
                     </div>
                 </div>
             </div>
@@ -192,7 +148,7 @@ const Footer: React.FC = () => {
             {/* Bottom Bar */}
             <div className="bg-primary-700 py-8">
                 <div className="container-custom">
-                    <p className="text-center text-xs tracking-widest font-display text-white">
+                    <p className="text-center text-xs tracking-widest font-display text-white" suppressHydrationWarning>
                         © {new Date().getFullYear()} MICHELL CANTERO STORE. TODOS LOS DERECHOS RESERVADOS.
                     </p>
                 </div>

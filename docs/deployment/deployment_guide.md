@@ -132,7 +132,7 @@ curl -X POST https://tu-proyecto.supabase.co/rest/v1/orders \
 ```bash
 # Hacer 15 peticiones rápidas
 for i in {1..15}; do
-  curl -X POST https://tu-app.vercel.app/api/orders
+  curl -X POST https://michellcanterostore.com/api/orders
 done
 # Esperado: 429 después de 10 peticiones
 ```

@@ -126,7 +126,7 @@ const rateLimitStore = new Map<string, RateLimitEntry>();
 ```bash
 # Attacker can bypass rate limit easily:
 for i in {1..1000}; do
-  curl -X POST https://your-site.vercel.app/api/orders &
+  curl -X POST https://michellcanterostore.com/api/orders &
 done
 # Each request hits a different serverless instance = no rate limiting
 ```

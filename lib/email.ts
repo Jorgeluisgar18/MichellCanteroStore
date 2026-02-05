@@ -3,7 +3,7 @@
  */
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const ADMIN_EMAIL = 'mcanterostore@gmail.com';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'mcanterostore@gmail.com';
 const SITE_NAME = 'Michell Cantero Store';
 
 interface EmailOrder {
@@ -46,7 +46,7 @@ export async function sendEmail({
                 'Authorization': `Bearer ${RESEND_API_KEY}`
             },
             body: JSON.stringify({
-                from: `${SITE_NAME} <onboarding@resend.dev>`, // Resend requires a verified domain or uses onboarding@resend.dev for testing
+                from: `${SITE_NAME} <hola@michellcanterostore.com>`, // Requiere dominio verificado en Resend
                 to,
                 subject,
                 html
