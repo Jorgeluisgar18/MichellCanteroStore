@@ -11,6 +11,13 @@ export async function middleware(req: NextRequest) {
     if ((searchParams.has('code') || searchParams.has('error')) && pathname !== '/auth/callback') {
         const callbackUrl = req.nextUrl.clone();
         callbackUrl.pathname = '/auth/callback';
+
+        // If we have a code but no destination, assume it's a recovery flow 
+        // that fell back to the homepage and send them to the password update page.
+        if (searchParams.has('code') && !searchParams.has('next')) {
+            callbackUrl.searchParams.set('next', '/cuenta/actualizar-password');
+        }
+
         return NextResponse.redirect(callbackUrl);
     }
 
