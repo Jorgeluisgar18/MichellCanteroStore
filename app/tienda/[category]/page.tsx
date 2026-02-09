@@ -60,7 +60,7 @@ export default function CategoryPage() {
             if (!selectedSubcategory) return false;
 
             // Check if subcategory has keywords for intelligent matching
-            const subcatWithKeywords = selectedSubcategory as any;
+            const subcatWithKeywords = selectedSubcategory as { slug: string; name: string; keywords?: string[] };
             if (subcatWithKeywords.keywords && Array.isArray(subcatWithKeywords.keywords)) {
                 const keywords = subcatWithKeywords.keywords as string[];
                 const productName = p.name.toLowerCase();
