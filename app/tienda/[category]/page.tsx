@@ -1,19 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ProductGrid from '@/components/product/ProductGrid';
+import CategorySidebar from '@/components/product/CategorySidebar';
 import categoriesData from '@/data/categories.json';
 import type { Product, Category } from '@/types';
 
 const categories = categoriesData as Category[];
+console.log('Categories loaded:', categories.find(c => c.slug === 'maquillaje')?.subcategories?.length);
 
 export default function CategoryPage() {
     const params = useParams();
+    const searchParams = useSearchParams();
     const categorySlug = params.category as string;
+    const subcategorySlug = searchParams.get('subcategory');
 
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
@@ -39,6 +43,38 @@ export default function CategoryPage() {
 
         fetchProducts();
     }, [categorySlug, category]);
+
+    // Smart filter: match products to subcategories using keywords
+    const filteredProducts = subcategorySlug
+        ? products.filter((p) => {
+            // Direct match - if product already has this exact subcategory
+            if (p.subcategory === subcategorySlug) {
+                return true;
+            }
+
+            // Find the selected subcategory definition
+            const selectedSubcategory = category?.subcategories?.find(
+                (sub) => sub.slug === subcategorySlug
+            );
+
+            if (!selectedSubcategory) return false;
+
+            // Check if subcategory has keywords for intelligent matching
+            const subcatWithKeywords = selectedSubcategory as any;
+            if (subcatWithKeywords.keywords && Array.isArray(subcatWithKeywords.keywords)) {
+                const keywords = subcatWithKeywords.keywords as string[];
+                const productName = p.name.toLowerCase();
+
+                // Match if product name contains any of the keywords
+                return keywords.some(keyword => productName.includes(keyword.toLowerCase()));
+            }
+
+            return false;
+        })
+        : products;
+
+    const isMakeupCategory = categorySlug === 'maquillaje';
+    const hasSubcategories = category?.subcategories && category.subcategories.length > 0;
 
     if (loading) {
         return (
@@ -89,13 +125,41 @@ export default function CategoryPage() {
                 </div>
 
                 <div className="container-custom py-8">
-                    <div className="mb-6">
-                        <p className="text-sm text-neutral-600">
-                            {products.length} productos encontrados
-                        </p>
-                    </div>
+                    {isMakeupCategory && hasSubcategories ? (
+                        <div className="grid lg:grid-cols-4 gap-8">
+                            {/* Sidebar */}
+                            <div className="lg:col-span-1">
+                                <CategorySidebar
+                                    subcategories={category.subcategories!}
+                                    categorySlug={categorySlug}
+                                />
+                            </div>
 
-                    <ProductGrid products={products} />
+                            {/* Products */}
+                            <div className="lg:col-span-3">
+                                <div className="mb-6">
+                                    <p className="text-sm text-neutral-600">
+                                        {filteredProducts.length} productos encontrados
+                                        {subcategorySlug && (
+                                            <span className="ml-2 text-primary-600 font-medium">
+                                                en {category.subcategories?.find(s => s.slug === subcategorySlug)?.name}
+                                            </span>
+                                        )}
+                                    </p>
+                                </div>
+                                <ProductGrid products={filteredProducts} />
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="mb-6">
+                                <p className="text-sm text-neutral-600">
+                                    {filteredProducts.length} productos encontrados
+                                </p>
+                            </div>
+                            <ProductGrid products={filteredProducts} />
+                        </>
+                    )}
                 </div>
             </main>
             <Footer />

@@ -45,6 +45,8 @@ export interface Order {
         zipCode: string;
         country: string;
     };
+    shippingMethod: 'delivery' | 'pickup';
+    shippingLocation?: string;
     paymentMethod?: string;
     customerNotes?: string;
     adminNotes?: string;

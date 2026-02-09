@@ -228,7 +228,7 @@ export const useAuthStore = create<AuthStore>()(
                     const supabase = getSupabaseClient();
                     const siteUrl = getSiteUrl();
                     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                        redirectTo: `${siteUrl}/cuenta/actualizar-password`,
+                        redirectTo: `${siteUrl}/auth/callback?next=/cuenta/actualizar-password`,
                     });
 
                     if (error) {

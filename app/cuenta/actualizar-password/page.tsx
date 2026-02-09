@@ -20,18 +20,15 @@ export default function ActualizarPasswordPage() {
     const [error, setError] = useState('');
 
     useEffect(() => {
-        // Supabase handles the recovery session automatically when clicking the link.
-        // If there's no active recovery session, we should stay or redirect if needed.
-        // However, onAuthStateChange or getSession would confirm if we can interact.
         const checkSession = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) {
-                // If no session, it might be an invalid or expired link
-                // But we let the user try to update if they reached here from a link
+                // If no session, the user didn't come from a valid recovery link
+                router.push('/cuenta/login?error=invalid_session');
             }
         };
         checkSession();
-    }, []);
+    }, [router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

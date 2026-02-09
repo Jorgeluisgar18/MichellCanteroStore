@@ -156,13 +156,13 @@ En Supabase, ve a **Authentication** → **Settings**:
 
 **Site URL:**
 ```
-http://localhost:3000
+https://michellcanterostore.com
 ```
 
 **Redirect URLs:**
 ```
-http://localhost:3000/**
-https://tudominio.com/**
+https://michellcanterostore.com/**
+http://localhost:3001/**
 ```
 
 ---

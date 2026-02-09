@@ -16,14 +16,22 @@ const categories = categoriesData as Category[];
 
 export default function HomePage() {
     const [products, setProducts] = useState<Product[]>([]);
+    const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                const res = await fetch('/api/products');
-                const data = await res.json();
-                setProducts(data.data || []);
+                const [productsRes, countsRes] = await Promise.all([
+                    fetch('/api/products'),
+                    fetch('/api/products?counts=true')
+                ]);
+
+                const productsData = await productsRes.json();
+                const countsData = await countsRes.json();
+
+                setProducts(productsData.data || []);
+                setCategoryCounts(countsData.data || {});
             } catch (error) {
                 console.error('Error fetching products:', error);
             } finally {
@@ -177,7 +185,7 @@ export default function HomePage() {
                                                     {category.name}
                                                 </h3>
                                                 <p className="text-sm text-white/90 mb-3">
-                                                    {category.productCount} productos
+                                                    {categoryCounts[category.slug] || 0} productos
                                                 </p>
                                                 <span className="inline-flex items-center text-sm font-medium group-hover:gap-2 transition-all">
                                                     Ver más <ArrowRight className="w-4 h-4 ml-1" />

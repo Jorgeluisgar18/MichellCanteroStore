@@ -8,19 +8,176 @@
         "productCount": 8,
         "subcategories": [
             {
+                "id": "rubores",
+                "name": "Rubores",
+                "slug": "rubores",
+                "keywords": [
+                    "rubor",
+                    "blush"
+                ]
+            },
+            {
+                "id": "brochas",
+                "name": "Brochas",
+                "slug": "brochas",
+                "keywords": [
+                    "brocha",
+                    "brush",
+                    "pincel"
+                ]
+            },
+            {
+                "id": "piel",
+                "name": "Piel",
+                "slug": "piel",
+                "keywords": [
+                    "piel",
+                    "skin",
+                    "primer",
+                    "prebase"
+                ]
+            },
+            {
+                "id": "polvos",
+                "name": "Polvos",
+                "slug": "polvos",
+                "keywords": [
+                    "polvo",
+                    "powder",
+                    "translucido",
+                    "compacto"
+                ]
+            },
+            {
+                "id": "contornos",
+                "name": "Contornos",
+                "slug": "contornos",
+                "keywords": [
+                    "contorno",
+                    "contour",
+                    "bronzer",
+                    "esculpir"
+                ]
+            },
+            {
+                "id": "lapiz-de-ojos",
+                "name": "Lápiz de Ojos",
+                "slug": "lapiz-de-ojos",
+                "keywords": [
+                    "lapiz de ojo",
+                    "lápiz de ojo",
+                    "eye pencil",
+                    "kajal"
+                ]
+            },
+            {
                 "id": "labios",
                 "name": "Labios",
-                "slug": "labios"
+                "slug": "labios",
+                "keywords": [
+                    "labial",
+                    "lip",
+                    "gloss",
+                    "tinta",
+                    "balsamo",
+                    "bálsamo",
+                    "elixir"
+                ]
             },
             {
-                "id": "ojos",
-                "name": "Ojos",
-                "slug": "ojos"
+                "id": "bases",
+                "name": "Bases",
+                "slug": "bases",
+                "keywords": [
+                    "base",
+                    "foundation",
+                    "bb cream",
+                    "cc cream"
+                ]
             },
             {
-                "id": "rostro",
-                "name": "Rostro",
-                "slug": "rostro"
+                "id": "correctores",
+                "name": "Correctores",
+                "slug": "correctores",
+                "keywords": [
+                    "corrector",
+                    "concealer"
+                ]
+            },
+            {
+                "id": "cejas",
+                "name": "Cejas",
+                "slug": "cejas",
+                "keywords": [
+                    "ceja",
+                    "brow",
+                    "gel de ceja",
+                    "pomada",
+                    "kit ceja"
+                ]
+            },
+            {
+                "id": "delineadores",
+                "name": "Delineadores",
+                "slug": "delineadores",
+                "keywords": [
+                    "delineador",
+                    "eyeliner",
+                    "plumón"
+                ]
+            },
+            {
+                "id": "fijadores",
+                "name": "Fijadores",
+                "slug": "fijadores",
+                "keywords": [
+                    "fijador",
+                    "setting spray",
+                    "spray fijador"
+                ]
+            },
+            {
+                "id": "iluminadores",
+                "name": "Iluminadores",
+                "slug": "iluminadores",
+                "keywords": [
+                    "iluminador",
+                    "highlighter",
+                    "glow"
+                ]
+            },
+            {
+                "id": "paletas-de-sombras",
+                "name": "Paletas de Sombras",
+                "slug": "paletas-de-sombras",
+                "keywords": [
+                    "paleta",
+                    "sombra",
+                    "eyeshadow",
+                    "palette"
+                ]
+            },
+            {
+                "id": "pestanas-y-pestaninas",
+                "name": "Pestañas y Pestañinas",
+                "slug": "pestanas-y-pestaninas",
+                "keywords": [
+                    "pestaña",
+                    "pestañina",
+                    "mascara",
+                    "rimel",
+                    "máscara"
+                ]
+            },
+            {
+                "id": "pigmentos",
+                "name": "Pigmentos",
+                "slug": "pigmentos",
+                "keywords": [
+                    "pigmento",
+                    "pigment",
+                    "glitter"
+                ]
             }
         ]
     },

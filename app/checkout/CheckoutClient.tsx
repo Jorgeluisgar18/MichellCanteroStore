@@ -10,7 +10,7 @@ import Input from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { useCartStore } from '@/store/cartStore';
 import { formatPrice } from '@/lib/utils';
-import { CreditCard, CheckCircle } from 'lucide-react';
+import { CreditCard, CheckCircle, Truck, MapPin } from 'lucide-react';
 
 // Declare Wompi WidgetCheckout global type
 declare global {
@@ -21,7 +21,7 @@ declare global {
 
 export default function CheckoutClient() {
     const router = useRouter();
-    const { items, getSubtotal, getShipping, getTotal, clearCart } = useCartStore();
+    const { items, getSubtotal, clearCart } = useCartStore();
     const [isProcessing, setIsProcessing] = useState(false);
     const [wompiLoaded, setWompiLoaded] = useState(false);
 
@@ -40,12 +40,33 @@ export default function CheckoutClient() {
         city: '',
         state: '',
         paymentMethod: 'card',
+        shippingMethod: 'delivery' as 'delivery' | 'pickup',
+        shippingLocation: 'cienaga' as string,
     });
 
     const [termsAccepted, setTermsAccepted] = useState({
         terms: false,
         privacy: false,
     });
+
+    // Calculate shipping cost based on method and location
+    const getShippingCost = (): number => {
+        if (formData.shippingMethod === 'pickup') {
+            return 0;
+        }
+
+        const shippingCosts: Record<string, number> = {
+            'cienaga': 5000,
+            'santa-marta': 10000,
+            'resto-colombia': 16000,
+        };
+
+        return shippingCosts[formData.shippingLocation] || 0;
+    };
+
+    const subtotal = getSubtotal();
+    const shipping = getShippingCost();
+    const total = subtotal + shipping;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -73,6 +94,8 @@ export default function CheckoutClient() {
                     shipping_city: formData.city,
                     shipping_state: formData.state,
                     shipping_zip_code: null,
+                    shipping_method: formData.shippingMethod,
+                    shipping_location: formData.shippingMethod === 'delivery' ? formData.shippingLocation : null,
                     payment_method: 'wompi',
                     idempotency_key: idempotencyKey,
                     items: items.map(item => ({
@@ -100,9 +123,9 @@ export default function CheckoutClient() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     orderId: order.id,
-                    orderNumber: order.order_number,
-                    amount: getTotal(),
-                    email: formData.email
+                    amount: total, // Use local total calculation
+                    email: formData.email,
+                    reference: order.order_number,
                 }),
             });
 
@@ -208,11 +231,109 @@ export default function CheckoutClient() {
                                     </div>
                                 </Card>
 
+                                {/* Shipping Method */}
+                                <Card>
+                                    <div className="p-6">
+                                        <h2 className="text-xl font-display font-bold mb-6">
+                                            Método de Envío
+                                        </h2>
+                                        <div className="space-y-6">
+                                            {/* Level 1: Delivery vs Pickup */}
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, shippingMethod: 'delivery' })}
+                                                    className={`p-4 border-2 rounded-xl transition-all text-left ${formData.shippingMethod === 'delivery'
+                                                        ? 'border-primary-500 bg-primary-50 shadow-sm'
+                                                        : 'border-neutral-200 bg-white hover:border-neutral-300'
+                                                        }`}
+                                                >
+                                                    <Truck className={`w-6 h-6 mb-2 ${formData.shippingMethod === 'delivery' ? 'text-primary-600' : 'text-neutral-400'}`} />
+                                                    <div className="font-bold text-neutral-900">Envío a Domicilio</div>
+                                                    <div className="text-xs text-neutral-500 mt-1">Recibe en tu dirección</div>
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, shippingMethod: 'pickup' })}
+                                                    className={`p-4 border-2 rounded-xl transition-all text-left ${formData.shippingMethod === 'pickup'
+                                                        ? 'border-primary-500 bg-primary-50 shadow-sm'
+                                                        : 'border-neutral-200 bg-white hover:border-neutral-300'
+                                                        }`}
+                                                >
+                                                    <CheckCircle className={`w-6 h-6 mb-2 ${formData.shippingMethod === 'pickup' ? 'text-primary-600' : 'text-neutral-400'}`} />
+                                                    <div className="font-bold text-neutral-900">Retiro en Tienda</div>
+                                                    <div className="text-xs text-neutral-500 mt-1">Gratis en Ciénaga</div>
+                                                </button>
+                                            </div>
+
+                                            {/* Level 2: Delivery Locations (only if delivery selected) */}
+                                            {formData.shippingMethod === 'delivery' && (
+                                                <div className="space-y-3 pt-2">
+                                                    <p className="text-sm font-semibold text-neutral-700 mb-3">Selecciona tu ubicación:</p>
+                                                    {[
+                                                        { id: 'cienaga', name: 'Ciénaga', price: 5000, note: 'Precio puede variar según distancia' },
+                                                        { id: 'santa-marta', name: 'Santa Marta', price: 10000, note: 'Entrega en el casco urbano' },
+                                                        { id: 'resto-colombia', name: 'Resto de Colombia', price: 16000, note: 'Envíos nacionales' }
+                                                    ].map((loc) => (
+                                                        <button
+                                                            key={loc.id}
+                                                            type="button"
+                                                            onClick={() => setFormData({ ...formData, shippingLocation: loc.id })}
+                                                            className={`w-full p-4 border-2 rounded-xl flex items-center justify-between transition-all ${formData.shippingLocation === loc.id
+                                                                ? 'border-primary-500 bg-white ring-2 ring-primary-500/20'
+                                                                : 'border-neutral-100 bg-neutral-50/50 hover:border-neutral-200'
+                                                                }`}
+                                                        >
+                                                            <div className="flex items-center">
+                                                                <div className={`w-5 h-5 rounded-full border-2 mr-4 flex items-center justify-center ${formData.shippingLocation === loc.id ? 'border-primary-500 bg-primary-500' : 'border-neutral-300'}`}>
+                                                                    {formData.shippingLocation === loc.id && <div className="w-2 h-2 bg-white rounded-full" />}
+                                                                </div>
+                                                                <div className="text-left">
+                                                                    <div className="font-semibold text-neutral-900">{loc.name}</div>
+                                                                    <div className="text-xs text-neutral-500">{loc.note}</div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="font-bold text-primary-600">
+                                                                {formatPrice(loc.price)}
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Level 2: Pickup Details (only if pickup selected) */}
+                                            {formData.shippingMethod === 'pickup' && (
+                                                <div className="p-5 bg-neutral-50 border border-neutral-200 rounded-xl space-y-4">
+                                                    <div className="flex items-start space-x-3">
+                                                        <MapPin className="w-5 h-5 text-primary-600 mt-1 flex-shrink-0" />
+                                                        <div>
+                                                            <p className="font-bold text-neutral-900">Ubicación de la tienda:</p>
+                                                            <p className="text-neutral-600">Calle 9 #22-51, Ciénaga, Magdalena</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-start space-x-3">
+                                                        <CheckCircle className="w-5 h-5 text-green-500 mt-1 flex-shrink-0" />
+                                                        <div>
+                                                            <p className="font-bold text-neutral-900">Tiempo de preparación:</p>
+                                                            <p className="text-neutral-600">Normalmente el pedido está listo en 30 minutos.</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="pt-2 border-t border-neutral-200 flex justify-between items-center">
+                                                        <span className="text-sm font-medium text-neutral-500">Costo de retiro:</span>
+                                                        <span className="font-bold text-green-600 uppercase tracking-wider">Gratis</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </Card>
+
                                 {/* Shipping Address */}
                                 <Card>
                                     <div className="p-6">
                                         <h2 className="text-xl font-display font-bold mb-6">
-                                            Dirección de Envío
+                                            {formData.shippingMethod === 'delivery' ? 'Dirección de Envío' : 'Información de Contacto'}
                                         </h2>
                                         <div className="grid md:grid-cols-2 gap-4">
                                             <Input
@@ -238,7 +359,7 @@ export default function CheckoutClient() {
                                                     name="street"
                                                     value={formData.street}
                                                     onChange={handleChange}
-                                                    required
+                                                    required={formData.shippingMethod === 'delivery'}
                                                     placeholder="Calle 123 #45-67"
                                                 />
                                             </div>
@@ -247,16 +368,16 @@ export default function CheckoutClient() {
                                                 name="city"
                                                 value={formData.city}
                                                 onChange={handleChange}
-                                                required
-                                                placeholder="Bogotá"
+                                                required={formData.shippingMethod === 'delivery'}
+                                                placeholder="Ciénaga"
                                             />
                                             <Input
                                                 label="Departamento"
                                                 name="state"
                                                 value={formData.state}
                                                 onChange={handleChange}
-                                                required
-                                                placeholder="Cundinamarca"
+                                                required={formData.shippingMethod === 'delivery'}
+                                                placeholder="Magdalena"
                                             />
                                         </div>
                                     </div>
@@ -324,12 +445,12 @@ export default function CheckoutClient() {
                                         <div className="space-y-3 mb-6 border-t border-neutral-200 pt-4">
                                             <div className="flex justify-between text-neutral-600">
                                                 <span>Subtotal</span>
-                                                <span>{formatPrice(getSubtotal())}</span>
+                                                <span>{formatPrice(subtotal)}</span>
                                             </div>
                                             <div className="flex justify-between text-neutral-600">
                                                 <span>Envío</span>
                                                 <span>
-                                                    {getShipping() === 0 ? 'Gratis' : formatPrice(getShipping())}
+                                                    {shipping === 0 ? 'Gratis' : formatPrice(shipping)}
                                                 </span>
                                             </div>
                                         </div>
@@ -338,7 +459,7 @@ export default function CheckoutClient() {
                                             <div className="flex justify-between items-center">
                                                 <span className="text-lg font-bold">Total</span>
                                                 <span className="text-2xl font-bold font-display text-primary-600">
-                                                    {formatPrice(getTotal())}
+                                                    {formatPrice(total)}
                                                 </span>
                                             </div>
                                         </div>

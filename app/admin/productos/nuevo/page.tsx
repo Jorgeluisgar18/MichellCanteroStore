@@ -327,6 +327,47 @@ export default function ProductFormPage() {
                                         </select>
                                     </div>
                                 </div>
+
+                                {/* Subcategory dropdown - only show for makeup */}
+                                {formData.category === 'maquillaje' && (
+                                    <div className="space-y-1">
+                                        <label className="text-sm font-medium text-neutral-700">
+                                            Subcategoría de Maquillaje <span className="text-red-500">*</span>
+                                        </label>
+                                        <select
+                                            name="subcategory"
+                                            value={formData.subcategory}
+                                            onChange={handleChange}
+                                            required
+                                            className="w-full px-4 py-2 bg-white border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                                        >
+                                            <option value="">Seleccionar tipo de maquillaje...</option>
+                                            <optgroup label="Rostro">
+                                                <option value="rubores">Rubores</option>
+                                                <option value="brochas">Brochas</option>
+                                                <option value="piel">Piel</option>
+                                                <option value="polvos">Polvos</option>
+                                                <option value="contornos">Contornos</option>
+                                                <option value="bases">Bases</option>
+                                                <option value="correctores">Correctores</option>
+                                                <option value="fijadores">Fijadores</option>
+                                                <option value="iluminadores">Iluminadores</option>
+                                            </optgroup>
+                                            <optgroup label="Ojos">
+                                                <option value="lapiz-de-ojos">Lápiz de Ojos</option>
+                                                <option value="delineadores">Delineadores</option>
+                                                <option value="paletas-de-sombras">Paletas de Sombras</option>
+                                                <option value="pestanas-y-pestaninas">Pestañas y Pestañinas</option>
+                                                <option value="pigmentos">Pigmentos</option>
+                                            </optgroup>
+                                            <optgroup label="Labios y Cejas">
+                                                <option value="labios">Labios</option>
+                                                <option value="cejas">Cejas</option>
+                                            </optgroup>
+                                        </select>
+                                    </div>
+                                )}
+
                                 <div className="space-y-1">
                                     <label className="text-sm font-medium text-neutral-700">Descripción</label>
                                     <textarea

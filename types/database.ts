@@ -119,6 +119,8 @@ export interface Database {
                     shipping_state: string;
                     shipping_zip_code: string;
                     shipping_country: string;
+                    shipping_method: 'delivery' | 'pickup';
+                    shipping_location: string | null;
                     payment_method: string | null;
                     payment_status: PaymentStatus;
                     payment_id: string | null;
@@ -145,6 +147,8 @@ export interface Database {
                     shipping_state: string;
                     shipping_zip_code: string;
                     shipping_country?: string;
+                    shipping_method?: 'delivery' | 'pickup';
+                    shipping_location?: string | null;
                     payment_method?: string | null;
                     payment_status?: PaymentStatus;
                     payment_id?: string | null;
@@ -171,6 +175,8 @@ export interface Database {
                     shipping_state?: string;
                     shipping_zip_code?: string;
                     shipping_country?: string;
+                    shipping_method?: 'delivery' | 'pickup';
+                    shipping_location?: string | null;
                     payment_method?: string | null;
                     payment_status?: PaymentStatus;
                     payment_id?: string | null;

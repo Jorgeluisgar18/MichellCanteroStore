@@ -17,6 +17,27 @@ export async function GET(request: Request) {
         const inStock = searchParams.get('inStock');
         const slug = searchParams.get('slug');
         const limit = searchParams.get('limit');
+        const counts = searchParams.get('counts');
+
+        // Return category counts if requested
+        if (counts === 'true') {
+            const { data, error } = await supabase
+                .from('products')
+                .select('category');
+
+            if (error) {
+                console.error('Error fetching product counts:', error);
+                return ApiResponse.error('Error al obtener conteos de productos', 500);
+            }
+
+            // Count products by category
+            const categoryCounts = data.reduce((acc: Record<string, number>, product) => {
+                acc[product.category] = (acc[product.category] || 0) + 1;
+                return acc;
+            }, {});
+
+            return ApiResponse.success(categoryCounts);
+        }
 
         let query = supabase
             .from('products')
