@@ -4,7 +4,15 @@ import { applyCsrfProtection, setCsrfCookie } from '@/lib/security/csrf';
 
 export async function middleware(req: NextRequest) {
     const res = NextResponse.next();
-    const { pathname } = req.nextUrl;
+    const { pathname, searchParams } = req.nextUrl;
+
+    // 0. ⚓ Rescue: if landing with an auth code or error but not on the callback route,
+    // redirect to the callback route to handle session exchange or error display.
+    if ((searchParams.has('code') || searchParams.has('error')) && pathname !== '/auth/callback') {
+        const callbackUrl = req.nextUrl.clone();
+        callbackUrl.pathname = '/auth/callback';
+        return NextResponse.redirect(callbackUrl);
+    }
 
     // 1. ✅ CSRF Protection (Standardized)
     const csrfError = applyCsrfProtection(req);
