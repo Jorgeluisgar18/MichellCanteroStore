@@ -38,8 +38,12 @@ export function validateSupabaseConfig() {
 
 export function getSiteUrl(): string {
     // In production, always prefer the canonical URL from env
-    if (process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_SITE_URL) {
-        return process.env.NEXT_PUBLIC_SITE_URL;
+    if (process.env.NODE_ENV === 'production') {
+        if (process.env.NEXT_PUBLIC_SITE_URL) {
+            return process.env.NEXT_PUBLIC_SITE_URL;
+        }
+        // Hard fallback for this specific project if env is missing
+        return 'https://michellcanterostore.com';
     }
 
     if (typeof window !== 'undefined') {
@@ -48,9 +52,7 @@ export function getSiteUrl(): string {
 
     return (
         process.env.NEXT_PUBLIC_SITE_URL ||
-            process.env.VERCEL_URL
-            ? `https://${process.env.VERCEL_URL}`
-            : 'https://michellcanterostore.com'
+        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://michellcanterostore.com')
     );
 }
 
