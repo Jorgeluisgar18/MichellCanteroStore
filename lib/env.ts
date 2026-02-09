@@ -37,6 +37,11 @@ export function validateSupabaseConfig() {
 }
 
 export function getSiteUrl(): string {
+    // In production, always prefer the canonical URL from env
+    if (process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_SITE_URL) {
+        return process.env.NEXT_PUBLIC_SITE_URL;
+    }
+
     if (typeof window !== 'undefined') {
         return window.location.origin;
     }
