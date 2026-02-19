@@ -5,10 +5,6 @@
 
 import { useEffect, useState } from 'react';
 
-interface CsrfToken {
-    token: string;
-    expiresIn: number;
-}
 
 /**
  * Hook to get CSRF token
@@ -27,8 +23,14 @@ export function useCsrfToken() {
                     throw new Error('Failed to fetch CSRF token');
                 }
 
-                const data: CsrfToken = await response.json();
-                setToken(data.token);
+                // ApiResponse.success wraps data in { data: { token }, success: true }
+                const body = await response.json();
+                const token: string | undefined = body?.data?.token ?? body?.token;
+                if (token) {
+                    setToken(token);
+                } else {
+                    throw new Error('CSRF token not found in response');
+                }
             } catch (err) {
                 setError(err as Error);
             } finally {
@@ -60,16 +62,25 @@ export function withCsrfToken(token: string | null, options: RequestInit = {}): 
 }
 
 /**
- * Fetch wrapper with automatic CSRF token
+ * Fetch wrapper with automatic CSRF token.
+ * 
+ * NOTE: /api/csrf-token uses ApiResponse.success() which wraps the result
+ * in { data: { token, expiresIn }, success: true }.
+ * We must read from response.data.token, not response.token.
  */
 export async function fetchWithCsrf(
     url: string,
     options: RequestInit = {}
 ): Promise<Response> {
-    // Get CSRF token from API
+    // Fetch the CSRF token — response shape: { data: { token }, success: true }
     const tokenResponse = await fetch('/api/csrf-token');
-    const { token } = await tokenResponse.json();
+    const body = await tokenResponse.json();
+    const token: string | undefined = body?.data?.token ?? body?.token;
+
+    if (!token) {
+        console.error('[fetchWithCsrf] No CSRF token available. Response body:', body);
+    }
 
     // Add token to headers
-    return fetch(url, withCsrfToken(token, options));
+    return fetch(url, withCsrfToken(token ?? '', options));
 }
