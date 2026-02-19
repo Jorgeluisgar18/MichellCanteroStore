@@ -19,6 +19,7 @@ import {
     X,
 } from 'lucide-react';
 import type { PageContent, PageName } from '@/types';
+import { fetchWithCsrf } from '@/lib/hooks/useCsrfToken';
 
 // ─────────────────────────────────────────────
 // Content schema — defines every editable field
@@ -134,7 +135,7 @@ function ImageField({ field, currentUrl, page, onUploaded }: ImageFieldProps) {
             fd.append('file', file);
             fd.append('path', storagePath);
 
-            const res = await fetch('/api/admin/content/upload', { method: 'POST', body: fd });
+            const res = await fetchWithCsrf('/api/admin/content/upload', { method: 'POST', body: fd });
             const json = await res.json();
 
             if (!res.ok) {
@@ -275,7 +276,7 @@ export default function ContentAdminPage() {
             };
 
             try {
-                const res = await fetch('/api/admin/content', {
+                const res = await fetchWithCsrf('/api/admin/content', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload),
