@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, Truck, Shield, ShoppingBag, Instagram, Loader2, CheckCircle } from 'lucide-react';
@@ -11,6 +11,7 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import categoriesData from '@/data/categories.json';
 import type { Product, Category } from '@/types';
+import { usePageContent } from '@/lib/hooks/usePageContent';
 
 const categories = categoriesData as Category[];
 
@@ -18,6 +19,7 @@ export default function HomePage() {
     const [products, setProducts] = useState<Product[]>([]);
     const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
     const [loading, setLoading] = useState(true);
+    const { get, getImage } = usePageContent('home');
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -45,6 +47,15 @@ export default function HomePage() {
     const featuredProducts = products.filter((p) => p.featured).slice(0, 4);
     const newProducts = products.filter((p) => p.is_new).slice(0, 4);
 
+    // CMS values with hardcoded fallbacks
+    const heroBadge = get('hero', 'badge', 'Nueva Colección');
+    const heroTitle = get('hero', 'title', 'Eleva tu');
+    const heroSubtitle = get('hero', 'subtitle', 'belleza única');
+    const heroBody = get('hero', 'body', 'En <span>Michell Cantero Store</span> fusionamos la sofisticación con el estilo para que te sientas empoderada y radiante en cada ocasión.');
+    const heroImage = getImage('hero', 'image_url', '/hero-michell.jpg');
+    const catTitle = get('categories', 'title', 'Explora por Categoría');
+    const catDesc = get('categories', 'description', 'Encuentra exactamente lo que buscas en nuestras categorías cuidadosamente seleccionadas');
+
     return (
         <>
             <Header />
@@ -59,15 +70,21 @@ export default function HomePage() {
                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75"></span>
                                         <span className="relative inline-flex rounded-full h-2 w-2 bg-primary-500"></span>
                                     </span>
-                                    Nueva Colección
+                                    {heroBadge}
                                 </div>
                                 <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-medium text-neutral-900 leading-[1.1]">
-                                    Eleva tu <br />
-                                    <span className="font-script text-primary-500 italic lowercase block -mt-2">belleza única</span>
+                                    {heroTitle} <br />
+                                    <span className="font-script text-primary-500 italic lowercase block -mt-2">{heroSubtitle}</span>
                                 </h1>
-                                <p className="text-lg md:text-xl text-neutral-600 max-w-lg leading-relaxed">
-                                    En <span className="font-semibold text-primary-400">Michell Cantero Store</span> fusionamos la sofisticación con el estilo para que te sientas empoderada y radiante en cada ocasión.
-                                </p>
+                                <p
+                                    className="text-lg md:text-xl text-neutral-600 max-w-lg leading-relaxed"
+                                    dangerouslySetInnerHTML={{
+                                        __html: heroBody.replace(
+                                            /<span>(.*?)<\/span>/gi,
+                                            '<span class="font-semibold text-primary-400">$1</span>'
+                                        )
+                                    }}
+                                />
                                 <div className="flex flex-col sm:flex-row gap-4 pt-4">
                                     <Link href="/tienda">
                                         <Button
@@ -90,14 +107,15 @@ export default function HomePage() {
                                 <div className="absolute -inset-4 bg-gradient-to-tr from-primary-200/50 to-secondary-200/50 rounded-3xl blur-2xl opacity-50 group-hover:opacity-100 transition-opacity duration-700"></div>
                                 <div className="relative h-full w-full overflow-hidden rounded-3xl border-8 border-white shadow-strong">
                                     <Image
-                                        src="/hero-michell.jpg"
+                                        src={heroImage}
                                         alt="Michell Cantero - Fundadora"
                                         fill
                                         className="object-cover object-center group-hover:scale-105 transition-transform duration-1000"
                                         priority
+                                        unoptimized={heroImage.startsWith('https://')}
                                     />
                                 </div>
-                                {/* Floating elements */}
+                                {/* Floating element */}
                                 <div className="absolute -bottom-6 -left-6 bg-white p-6 rounded-2xl shadow-strong animate-slide-up delay-300 hidden md:block">
                                     <p className="text-3xl font-display font-bold text-primary-500 italic">100%</p>
                                     <p className="text-xs text-neutral-500 uppercase tracking-tighter">Calidad Garantizada</p>
@@ -161,10 +179,10 @@ export default function HomePage() {
                     <div className="container-custom">
                         <div className="text-center mb-12">
                             <h2 className="text-3xl md:text-4xl font-display font-bold text-neutral-900 mb-4">
-                                Explora por Categoría
+                                {catTitle}
                             </h2>
                             <p className="text-neutral-600 max-w-2xl mx-auto">
-                                Encuentra exactamente lo que buscas en nuestras categorías cuidadosamente seleccionadas
+                                {catDesc}
                             </p>
                         </div>
 

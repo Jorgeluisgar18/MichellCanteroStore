@@ -12,7 +12,8 @@ import {
     LogOut,
     Menu,
     X,
-    ExternalLink
+    ExternalLink,
+    Globe,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import Logo from '@/components/common/Logo';
@@ -22,6 +23,7 @@ const adminNavigation = [
     { name: 'Pedidos', href: '/admin/pedidos', icon: ShoppingBag },
     { name: 'Productos', href: '/admin/productos', icon: Package },
     { name: 'Usuarios', href: '/admin/usuarios', icon: Users },
+    { name: 'Contenido', href: '/admin/contenido', icon: Globe },
     { name: 'Ajustes', href: '/admin/ajustes', icon: Settings },
 ];
 

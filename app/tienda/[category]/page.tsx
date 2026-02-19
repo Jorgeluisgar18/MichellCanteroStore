@@ -3,15 +3,16 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import Image from 'next/image';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ProductGrid from '@/components/product/ProductGrid';
 import CategorySidebar from '@/components/product/CategorySidebar';
 import categoriesData from '@/data/categories.json';
 import type { Product, Category } from '@/types';
+import { usePageContent } from '@/lib/hooks/usePageContent';
 
 const categories = categoriesData as Category[];
-console.log('Categories loaded:', categories.find(c => c.slug === 'maquillaje')?.subcategories?.length);
 
 export default function CategoryPage() {
     const params = useParams();
@@ -21,6 +22,8 @@ export default function CategoryPage() {
 
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
+    const { get, getImage } = usePageContent('tienda');
+
     const category = categories.find((c) => c.slug === categorySlug);
 
     useEffect(() => {
@@ -47,25 +50,18 @@ export default function CategoryPage() {
     // Smart filter: match products to subcategories using keywords
     const filteredProducts = subcategorySlug
         ? products.filter((p) => {
-            // Direct match - if product already has this exact subcategory
-            if (p.subcategory === subcategorySlug) {
-                return true;
-            }
+            if (p.subcategory === subcategorySlug) return true;
 
-            // Find the selected subcategory definition
             const selectedSubcategory = category?.subcategories?.find(
                 (sub) => sub.slug === subcategorySlug
             );
 
             if (!selectedSubcategory) return false;
 
-            // Check if subcategory has keywords for intelligent matching
             const subcatWithKeywords = selectedSubcategory as { slug: string; name: string; keywords?: string[] };
             if (subcatWithKeywords.keywords && Array.isArray(subcatWithKeywords.keywords)) {
                 const keywords = subcatWithKeywords.keywords as string[];
                 const productName = p.name.toLowerCase();
-
-                // Match if product name contains any of the keywords
                 return keywords.some(keyword => productName.includes(keyword.toLowerCase()));
             }
 
@@ -75,6 +71,11 @@ export default function CategoryPage() {
 
     const isMakeupCategory = categorySlug === 'maquillaje';
     const hasSubcategories = category?.subcategories && category.subcategories.length > 0;
+
+    // CMS banner content for the tienda page (optional promotional banner)
+    const bannerTitle = get('banner', 'title', '');
+    const bannerDescription = get('banner', 'description', '');
+    const bannerImage = getImage('banner', 'image_url', '');
 
     if (loading) {
         return (
@@ -112,6 +113,32 @@ export default function CategoryPage() {
         <>
             <Header />
             <main className="min-h-screen bg-neutral-50">
+                {/* Optional CMS Banner — only shows if admin configured title or image */}
+                {(bannerTitle || bannerImage) && (
+                    <div className="relative bg-primary-50 border-b border-primary-100 overflow-hidden">
+                        {bannerImage && (
+                            <div className="absolute inset-0">
+                                <Image
+                                    src={bannerImage}
+                                    alt="Banner de tienda"
+                                    fill
+                                    className="object-cover opacity-20"
+                                />
+                            </div>
+                        )}
+                        <div className="container-custom relative py-10 text-center space-y-2">
+                            {bannerTitle && (
+                                <h2 className="text-2xl md:text-3xl font-display font-bold text-primary-800">
+                                    {bannerTitle}
+                                </h2>
+                            )}
+                            {bannerDescription && (
+                                <p className="text-primary-700 max-w-2xl mx-auto">{bannerDescription}</p>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {/* Category Header */}
                 <div className="bg-white border-b border-neutral-200">
                     <div className="container-custom py-8">

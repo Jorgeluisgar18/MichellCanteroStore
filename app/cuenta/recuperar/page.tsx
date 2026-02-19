@@ -54,7 +54,7 @@ export default function RecuperarPage() {
                                             Recuperar Contraseña
                                         </h1>
                                         <p className="text-neutral-600">
-                                            Ingresa tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.
+                                            Ingresa el correo electrónico asociado a tu cuenta y te enviaremos un enlace para restablecer tu contraseña.
                                         </p>
                                     </div>
 
@@ -97,14 +97,25 @@ export default function RecuperarPage() {
                                     <h2 className="text-2xl font-display font-bold text-neutral-900 mb-4">
                                         ¡Correo Enviado!
                                     </h2>
-                                    <p className="text-neutral-600 mb-8">
+                                    <p className="text-neutral-600 mb-2">
                                         Hemos enviado las instrucciones para restablecer tu contraseña a <strong>{email}</strong>.
                                     </p>
-                                    <Link href="/cuenta/login">
-                                        <Button variant="outline" className="w-full">
-                                            Volver al Login
-                                        </Button>
-                                    </Link>
+                                    <p className="text-sm text-neutral-500 mb-8 italic">
+                                        Si no recibes el correo en unos minutos, asegúrate de que el correo está registrado o revisa tu carpeta de spam. <strong>Solo enviamos correos a cuentas existentes.</strong>
+                                    </p>
+                                    <div className="space-y-4">
+                                        <Link href="/cuenta/login">
+                                            <Button variant="primary" className="w-full">
+                                                Volver al Login
+                                            </Button>
+                                        </Link>
+                                        <div className="pt-4 border-t border-neutral-100">
+                                            <p className="text-sm text-neutral-600 mb-2">¿No tienes una cuenta?</p>
+                                            <Link href="/cuenta/registro" className="text-primary-600 font-medium hover:underline text-sm">
+                                                Crear una cuenta nueva
+                                            </Link>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>

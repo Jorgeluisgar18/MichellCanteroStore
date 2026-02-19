@@ -1,10 +1,33 @@
+'use client';
+
 import Image from 'next/image';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Card } from '@/components/ui/Card';
 import { Heart, Award, Truck, Shield, Instagram } from 'lucide-react';
+import { usePageContent } from '@/lib/hooks/usePageContent';
 
 export default function NosotrosPage() {
+    const { get, getImage } = usePageContent('nosotros');
+
+    // CMS values with hardcoded fallbacks
+    const heroBadge = get('hero', 'badge', 'bienvenida a');
+    const heroTitle = get('hero', 'title', 'Nuestra Historia');
+    const heroSubtitle = get('hero', 'subtitle', '"Donde la pasión por la belleza se encuentra con la calidez de nuestro servicio."');
+    const storyTitle = get('story', 'title', 'Del Sueño a la Realidad:');
+    const storyBody1 = get('story', 'body1', '<span>Michell Cantero Store</span> no es solo una boutique de belleza; es el resultado de un compromiso inquebrantable con el empoderamiento femenino.');
+    const storyBody2 = get('story', 'body2', 'Lo que comenzó como una visión digital compartida con nuestra comunidad en Instagram, se materializó en una sede física diseñada para ser un santuario de estilo y confianza. Cada detalle de nuestra tienda ha sido pensado para brindarte una experiencia de compra personalizada y exclusiva.');
+    const storyQuote = get('story', 'quote', '¡Junto a Dios, viene una nueva temporada!');
+    const storyImage = getImage('story', 'image_url', '/nosotros-inauguracion.jpg');
+    const founderQuote = get('founder', 'quote', '"Cada mujer merece brillar con luz propia. Mi propósito es brindarles las herramientas para que se sientan seguras y empoderadas en su propia piel."');
+    const founderImage = getImage('founder', 'image_url', '/nosotros-collage.jpg');
+    const statClients = get('stats', 'clients', '5000+');
+    const statProducts = get('stats', 'products', '+200');
+    const statSatisfaction = get('stats', 'satisfaction', '98%');
+
+    const renderHtml = (text: string) =>
+        text.replace(/<span>(.*?)<\/span>/gi, '<span class="font-bold text-primary-500">$1</span>');
+
     return (
         <>
             <Header />
@@ -13,12 +36,12 @@ export default function NosotrosPage() {
                 <div className="bg-gradient-soft border-b border-primary-50">
                     <div className="container-custom py-20 md:py-28">
                         <div className="max-w-3xl mx-auto text-center space-y-6">
-                            <span className="font-script text-3xl text-primary-400">bienvenida a</span>
+                            <span className="font-script text-3xl text-primary-400">{heroBadge}</span>
                             <h1 className="text-5xl md:text-6xl font-display font-medium text-neutral-900">
-                                Nuestra Historia
+                                {heroTitle}
                             </h1>
                             <p className="text-lg text-neutral-600 leading-relaxed italic">
-                                &quot;Donde la pasión por la belleza se encuentra con la calidez de nuestro servicio.&quot;
+                                {heroSubtitle}
                             </p>
                         </div>
                     </div>
@@ -31,10 +54,11 @@ export default function NosotrosPage() {
                             <div className="absolute -inset-4 bg-primary-100 rounded-2xl blur-xl opacity-40 group-hover:opacity-60 transition-opacity"></div>
                             <div className="relative h-[500px] rounded-3xl overflow-hidden shadow-strong border-8 border-white">
                                 <Image
-                                    src="/nosotros-inauguracion.jpg"
+                                    src={storyImage}
                                     alt="Inauguración Michell Cantero Store"
                                     fill
                                     className="object-cover"
+                                    unoptimized={storyImage.startsWith('https://')}
                                 />
                             </div>
                         </div>
@@ -43,19 +67,13 @@ export default function NosotrosPage() {
                                 <Heart className="w-8 h-8 text-primary-500" />
                             </div>
                             <h2 className="text-4xl font-display font-bold text-neutral-900 leading-tight">
-                                Del Sueño a la Realidad:<br />
+                                {storyTitle}<br />
                                 <span className="text-primary-400">Una Experiencia Única</span>
                             </h2>
                             <div className="space-y-6 text-lg text-neutral-600 leading-relaxed">
-                                <p>
-                                    <span className="font-bold text-primary-500">Michell Cantero Store</span> no es solo una boutique de belleza; es el resultado de un compromiso inquebrantable con el empoderamiento femenino.
-                                </p>
-                                <p>
-                                    Lo que comenzó como una visión digital compartida con nuestra comunidad en Instagram, se materializó en una sede física diseñada para ser un santuario de estilo y confianza. Cada detalle de nuestra tienda ha sido pensado para brindarte una experiencia de compra personalizada y exclusiva.
-                                </p>
-                                <p className="font-script text-2xl text-primary-500">
-                                    ¡Junto a Dios, viene una nueva temporada!
-                                </p>
+                                <p dangerouslySetInnerHTML={{ __html: renderHtml(storyBody1) }} />
+                                <p>{storyBody2}</p>
+                                <p className="font-script text-2xl text-primary-500">{storyQuote}</p>
                             </div>
                         </div>
                     </div>
@@ -71,7 +89,7 @@ export default function NosotrosPage() {
                                     <span className="text-secondary-400">Michell Cantero</span>
                                 </h2>
                                 <p className="text-lg text-neutral-600 leading-relaxed italic">
-                                    &quot;Cada mujer merece brillar con luz propia. Mi propósito es brindarles las herramientas para que se sientan seguras y empoderadas en su propia piel.&quot;
+                                    {founderQuote}
                                 </p>
                                 <div className="pt-4">
                                     <a
@@ -88,10 +106,11 @@ export default function NosotrosPage() {
                                 <div className="absolute -inset-4 bg-secondary-100 rounded-3xl blur-xl opacity-40 group-hover:opacity-60 transition-opacity"></div>
                                 <div className="relative h-[600px] rounded-3xl overflow-hidden shadow-2xl border-4 border-white">
                                     <Image
-                                        src="/nosotros-collage.jpg"
+                                        src={founderImage}
                                         alt="Michell Cantero"
                                         fill
                                         className="object-cover"
+                                        unoptimized={founderImage.startsWith('https://')}
                                     />
                                 </div>
                             </div>
@@ -112,61 +131,22 @@ export default function NosotrosPage() {
                         </div>
 
                         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            <Card>
-                                <div className="p-6 text-center">
-                                    <div className="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <Heart className="w-8 h-8 text-primary-600" />
+                            {[
+                                { icon: Heart, title: 'Pasión', text: 'Amamos lo que hacemos y se refleja en cada producto que ofrecemos' },
+                                { icon: Award, title: 'Calidad', text: 'Trabajamos con las mejores marcas y productos de la más alta calidad' },
+                                { icon: Truck, title: 'Compromiso', text: 'Entregamos tus pedidos a tiempo y en perfectas condiciones' },
+                                { icon: Shield, title: 'Confianza', text: 'Tu satisfacción y seguridad son nuestra prioridad número uno' },
+                            ].map(({ icon: Icon, title, text }) => (
+                                <Card key={title}>
+                                    <div className="p-6 text-center">
+                                        <div className="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <Icon className="w-8 h-8 text-primary-600" />
+                                        </div>
+                                        <h3 className="font-semibold text-neutral-900 mb-2">{title}</h3>
+                                        <p className="text-sm text-neutral-600">{text}</p>
                                     </div>
-                                    <h3 className="font-semibold text-neutral-900 mb-2">
-                                        Pasión
-                                    </h3>
-                                    <p className="text-sm text-neutral-600">
-                                        Amamos lo que hacemos y se refleja en cada producto que ofrecemos
-                                    </p>
-                                </div>
-                            </Card>
-
-                            <Card>
-                                <div className="p-6 text-center">
-                                    <div className="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <Award className="w-8 h-8 text-primary-600" />
-                                    </div>
-                                    <h3 className="font-semibold text-neutral-900 mb-2">
-                                        Calidad
-                                    </h3>
-                                    <p className="text-sm text-neutral-600">
-                                        Trabajamos con las mejores marcas y productos de la más alta calidad
-                                    </p>
-                                </div>
-                            </Card>
-
-                            <Card>
-                                <div className="p-6 text-center">
-                                    <div className="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <Truck className="w-8 h-8 text-primary-600" />
-                                    </div>
-                                    <h3 className="font-semibold text-neutral-900 mb-2">
-                                        Compromiso
-                                    </h3>
-                                    <p className="text-sm text-neutral-600">
-                                        Entregamos tus pedidos a tiempo y en perfectas condiciones
-                                    </p>
-                                </div>
-                            </Card>
-
-                            <Card>
-                                <div className="p-6 text-center">
-                                    <div className="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <Shield className="w-8 h-8 text-primary-600" />
-                                    </div>
-                                    <h3 className="font-semibold text-neutral-900 mb-2">
-                                        Confianza
-                                    </h3>
-                                    <p className="text-sm text-neutral-600">
-                                        Tu satisfacción y seguridad son nuestra prioridad número uno
-                                    </p>
-                                </div>
-                            </Card>
+                                </Card>
+                            ))}
                         </div>
                     </div>
                 </div>
@@ -175,21 +155,15 @@ export default function NosotrosPage() {
                 <div className="container-custom py-16">
                     <div className="grid md:grid-cols-3 gap-8 text-center">
                         <div>
-                            <p className="text-4xl md:text-5xl font-bold text-gradient mb-2">
-                                5000+
-                            </p>
+                            <p className="text-4xl md:text-5xl font-bold text-gradient mb-2">{statClients}</p>
                             <p className="text-neutral-600">Clientas Felices</p>
                         </div>
                         <div>
-                            <p className="text-4xl md:text-5xl font-bold text-gradient mb-2">
-                                +200
-                            </p>
+                            <p className="text-4xl md:text-5xl font-bold text-gradient mb-2">{statProducts}</p>
                             <p className="text-neutral-600">Productos en Catálogo</p>
                         </div>
                         <div>
-                            <p className="text-4xl md:text-5xl font-bold text-gradient mb-2">
-                                98%
-                            </p>
+                            <p className="text-4xl md:text-5xl font-bold text-gradient mb-2">{statSatisfaction}</p>
                             <p className="text-neutral-600">Satisfacción del Cliente</p>
                         </div>
                     </div>
