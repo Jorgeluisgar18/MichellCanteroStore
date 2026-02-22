@@ -3,9 +3,10 @@ import { supabaseAdmin } from '@/lib/supabase';
 
 export async function POST(request: Request) {
     try {
-        const { email } = await request.json();
+        const email = (await request.json())?.email?.trim();
 
-        if (!email || !email.includes('@')) {
+        const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email || !EMAIL_REGEX.test(email)) {
             return NextResponse.json({ error: 'Email inválido' }, { status: 400 });
         }
 

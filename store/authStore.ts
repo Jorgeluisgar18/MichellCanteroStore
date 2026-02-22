@@ -193,6 +193,8 @@ export const useAuthStore = create<AuthStore>()(
                     const { data: { session } } = await supabase.auth.getSession();
 
                     if (!session) {
+                        // Clear both in-memory and persisted state.
+                        // Zustand persist will sync the updated state to localStorage.
                         set({ user: null, isAuthenticated: false });
                         return;
                     }

@@ -10,7 +10,7 @@ import Input from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { useCartStore } from '@/store/cartStore';
 import { formatPrice } from '@/lib/utils';
-import { CreditCard, CheckCircle, Truck, MapPin } from 'lucide-react';
+import { CreditCard, CheckCircle, Truck, MapPin, AlertCircle, X } from 'lucide-react';
 
 // Declare Wompi WidgetCheckout global type
 declare global {
@@ -24,6 +24,7 @@ export default function CheckoutClient() {
     const { items, getSubtotal, clearCart } = useCartStore();
     const [isProcessing, setIsProcessing] = useState(false);
     const [wompiLoaded, setWompiLoaded] = useState(false);
+    const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
     // Efecto para verificar si Wompi ya está cargado (por si el script termina antes del onLoad)
     useEffect(() => {
@@ -71,6 +72,7 @@ export default function CheckoutClient() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsProcessing(true);
+        setCheckoutError(null);
 
         try {
             // Verificar que Wompi esté cargado
@@ -166,7 +168,7 @@ export default function CheckoutClient() {
         } catch (error) {
             console.error('Checkout error:', error);
             const message = error instanceof Error ? error.message : 'Hubo un error al procesar tu pedido. Por favor intenta de nuevo.';
-            alert(message);
+            setCheckoutError(message);
         } finally {
             setIsProcessing(false);
         }
@@ -506,6 +508,16 @@ export default function CheckoutClient() {
                                             </label>
                                         </div>
 
+                                        {/* Checkout error banner */}
+                                        {checkoutError && (
+                                            <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 mb-4">
+                                                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                                                <span className="flex-1">{checkoutError}</span>
+                                                <button onClick={() => setCheckoutError(null)} className="opacity-60 hover:opacity-100">
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        )}
                                         <Button
                                             type="submit"
                                             variant="primary"

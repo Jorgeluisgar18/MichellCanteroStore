@@ -5,8 +5,20 @@ const nextConfig = {
     images: {
         remotePatterns: [
             {
+                // Supabase Storage — project bucket (CMS images)
                 protocol: 'https',
-                hostname: '**',
+                hostname: 'blvulymuoantnnwbzigs.supabase.co',
+                pathname: '/storage/v1/object/public/**',
+            },
+            {
+                // Google user content (profile avatars via Google OAuth)
+                protocol: 'https',
+                hostname: 'lh3.googleusercontent.com',
+            },
+            {
+                // Google static CDN
+                protocol: 'https',
+                hostname: '*.googleusercontent.com',
             },
         ],
         formats: ['image/webp', 'image/avif'],

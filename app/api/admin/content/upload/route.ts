@@ -75,6 +75,11 @@ export async function POST(request: Request) {
     if (!safePath) {
         return NextResponse.json({ error: 'Ruta de almacenamiento inválida.' }, { status: 400 });
     }
+    // Only allow safe characters in the storage path
+    const SAFE_PATH_REGEX = /^[a-zA-Z0-9/_.\-]+$/;
+    if (!SAFE_PATH_REGEX.test(safePath)) {
+        return NextResponse.json({ error: 'La ruta contiene caracteres no permitidos.' }, { status: 400 });
+    }
 
     // Convert file to ArrayBuffer
     const arrayBuffer = await file.arrayBuffer();

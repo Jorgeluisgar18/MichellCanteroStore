@@ -43,6 +43,21 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { product_id, full_name, rating, comment } = body;
 
+        // ── Input validation ────────────────────────────────
+        if (!product_id || typeof product_id !== 'string' || !product_id.trim()) {
+            return NextResponse.json({ error: 'El campo "product_id" es obligatorio' }, { status: 400 });
+        }
+
+        const parsedRating = Number(rating);
+        if (!Number.isInteger(parsedRating) || parsedRating < 1 || parsedRating > 5) {
+            return NextResponse.json({ error: 'La calificación debe ser un número entero entre 1 y 5' }, { status: 400 });
+        }
+
+        if (comment && typeof comment === 'string' && comment.length > 2000) {
+            return NextResponse.json({ error: 'El comentario no puede superar 2000 caracteres' }, { status: 400 });
+        }
+        // ─────────────────────────────────────────────────────
+
         // Opcional: Verificar que el usuario compró el producto anteriormente
         // const { data: purchased } = await supabaseAdmin
         //     .from('order_items')
