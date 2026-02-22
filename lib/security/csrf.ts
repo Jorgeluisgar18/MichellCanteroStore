@@ -108,11 +108,17 @@ export function applyCsrfProtection(request: NextRequest): NextResponse | null {
 }
 
 /**
- * Set CSRF token cookie in response
+ * Set CSRF token cookie in response.
+ *
+ * IMPORTANT: We check the incoming REQUEST cookies (not response cookies)
+ * because NextResponse.next() always starts with an empty cookie jar.
+ * If we checked response.cookies, we would generate a new token on every
+ * request, immediately invalidating any token the client just fetched.
  */
-export function setCsrfCookie(response: NextResponse): void {
-    // Check if cookie already exists
-    if (!response.cookies.get(CSRF_COOKIE_NAME)) {
+export function setCsrfCookie(request: NextRequest, response: NextResponse): void {
+    // Only generate a new token if one doesn't already exist in the request
+    const existingToken = request.cookies.get(CSRF_COOKIE_NAME)?.value;
+    if (!existingToken) {
         const token = generateToken();
 
         response.cookies.set(CSRF_COOKIE_NAME, token, {

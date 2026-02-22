@@ -66,7 +66,7 @@ export async function middleware(req: NextRequest) {
     }
 
     // 5. ✅ Finalize Response
-    setCsrfCookie(res);
+    setCsrfCookie(req, res);
     return res;
 }
 
