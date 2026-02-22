@@ -5,20 +5,35 @@ const nextConfig = {
     images: {
         remotePatterns: [
             {
-                // Supabase Storage — project bucket (CMS images)
+                // Supabase Storage — core project bucket (CMS images)
                 protocol: 'https',
-                hostname: 'blvulymuoantnnwbzigs.supabase.co',
+                hostname: '*.supabase.co',
                 pathname: '/storage/v1/object/public/**',
+            },
+            {
+                // Unsplash — category showcase images
+                protocol: 'https',
+                hostname: 'images.unsplash.com',
             },
             {
                 // Google user content (profile avatars via Google OAuth)
                 protocol: 'https',
-                hostname: 'lh3.googleusercontent.com',
+                hostname: '*.googleusercontent.com',
             },
             {
-                // Google static CDN
+                // Firebase Storage (Kyte) — legacy product images
                 protocol: 'https',
-                hostname: '*.googleusercontent.com',
+                hostname: 'firebasestorage.stagebeta.kyte.site',
+            },
+            {
+                // SHEIN product images
+                protocol: 'https',
+                hostname: 'comprassheinsv.com',
+            },
+            {
+                // LightInTheBox / SHEIN CDN product images
+                protocol: 'https',
+                hostname: 'img.ltwebstatic.com',
             },
         ],
         formats: ['image/webp', 'image/avif'],
