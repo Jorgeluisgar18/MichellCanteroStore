@@ -13,7 +13,7 @@ import { Mail, Lock } from 'lucide-react';
 
 export default function LoginPage() {
     const router = useRouter();
-    const { login, isAuthenticated } = useAuthStore();
+    const { login, isAuthenticated, signInWithGoogle } = useAuthStore();
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -156,7 +156,6 @@ export default function LoginPage() {
                                 variant="outline"
                                 className="w-full flex items-center justify-center gap-3 border-neutral-200 hover:bg-neutral-50"
                                 onClick={async () => {
-                                    const { signInWithGoogle } = useAuthStore.getState();
                                     const result = await signInWithGoogle();
                                     if (!result.success) {
                                         setError(result.error || 'Error al iniciar sesión con Google');

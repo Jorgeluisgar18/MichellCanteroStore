@@ -10,17 +10,17 @@ const config: Config = {
         extend: {
             colors: {
                 primary: {
-                    50: '#fdf3f4',
-                    100: '#fce4e6',
-                    200: '#f9cdd0',
-                    300: '#f4a8ad',
-                    400: '#ed7d83',
-                    500: '#E4777C', // Coral principal
-                    600: '#d45a60',
-                    700: '#b34045',
-                    800: '#943639',
-                    900: '#7b2f33',
-                    950: '#441518',
+                    50: '#fdf2f8',
+                    100: '#fce7f3',
+                    200: '#fbcfe8',
+                    300: '#f9a8d4',
+                    400: '#f472b6',
+                    500: '#E8558A', // Rosa principal
+                    600: '#db2777',
+                    700: '#be185d',
+                    800: '#9d174d',
+                    900: '#831843',
+                    950: '#500724',
                 },
                 secondary: {
                     50: '#f8f7fb',
@@ -118,7 +118,7 @@ const config: Config = {
                 'soft': '0 2px 15px -3px rgba(0,0,0,0.07), 0 10px 20px -2px rgba(0,0,0,0.04)',
                 'medium': '0 4px 25px -5px rgba(0,0,0,0.1),  0 10px 30px -5px rgba(0,0,0,0.08)',
                 'strong': '0 10px 40px -10px rgba(0,0,0,0.15), 0 20px 50px -10px rgba(0,0,0,0.12)',
-                'coral': '0 8px 30px -5px rgba(228,119,124,0.35)',
+                'coral': '0 8px 30px -5px rgba(232,85,138,0.35)',
             },
             transitionTimingFunction: {
                 'smooth': 'cubic-bezier(0.4, 0, 0.2, 1)',

@@ -13,7 +13,7 @@ import { Mail, Lock, User } from 'lucide-react';
 
 export default function RegistroPage() {
     const router = useRouter();
-    const { register, isAuthenticated } = useAuthStore();
+    const { register, isAuthenticated, signInWithGoogle } = useAuthStore();
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -192,7 +192,6 @@ export default function RegistroPage() {
                                 variant="outline"
                                 className="w-full flex items-center justify-center gap-3 border-neutral-200 hover:bg-neutral-50"
                                 onClick={async () => {
-                                    const { signInWithGoogle } = useAuthStore.getState();
                                     const result = await signInWithGoogle();
                                     if (!result.success) {
                                         setErrors({ general: result.error || 'Error al conectar con Google' });
