@@ -3,12 +3,15 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, Truck, Shield, ShoppingBag, Instagram, Loader2, CheckCircle } from 'lucide-react';
+import { ArrowRight, Truck, Shield, ShoppingBag, CheckCircle, Loader2 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import ProductGrid from '@/components/product/ProductGrid';
-import { Card } from '@/components/ui/Card';
+
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import HeroCarousel from '@/components/ui/HeroCarousel';
+import BrandsMarquee from '@/components/ui/BrandsMarquee';
+import ScrollReveal from '@/components/ui/ScrollReveal';
 import categoriesData from '@/data/categories.json';
 import type { Product, Category } from '@/types';
 import { usePageContent } from '@/lib/hooks/usePageContent';
@@ -28,10 +31,8 @@ export default function HomePage() {
                     fetch('/api/products'),
                     fetch('/api/products?counts=true')
                 ]);
-
                 const productsData = await productsRes.json();
                 const countsData = await countsRes.json();
-
                 setProducts(productsData.data || []);
                 setCategoryCounts(countsData.data || {});
             } catch (error) {
@@ -40,206 +41,237 @@ export default function HomePage() {
                 setLoading(false);
             }
         };
-
         fetchProducts();
     }, []);
 
     const featuredProducts = products.filter((p) => p.featured).slice(0, 4);
     const newProducts = products.filter((p) => p.is_new).slice(0, 4);
 
-    // CMS values with hardcoded fallbacks
-    const heroBadge = get('hero', 'badge', 'Nueva Colección');
-    const heroTitle = get('hero', 'title', 'Eleva tu');
-    const heroSubtitle = get('hero', 'subtitle', 'belleza única');
-    const heroBody = get('hero', 'body', 'En <span>Michell Cantero Store</span> fusionamos la sofisticación con el estilo para que te sientas empoderada y radiante en cada ocasión.');
-    const heroImage = getImage('hero', 'image_url', '/hero-michell.jpg');
+    // CMS values - consolidated
+    // Categories section (moved assignments below for clarity)
+
+    // Hero slides from CMS (with fallbacks)
+    const heroSlides = [
+        {
+            image: getImage('hero_slide_1', 'image_url', '/hero-michell.jpg'),
+            title: get('hero_slide_1', 'title', 'Eleva tu\nbelleza única'),
+            subtitle: get('hero_slide_1', 'subtitle', 'En Michell Cantero Store fusionamos la sofisticación con el estilo para que te sientas empoderada y radiante.'),
+            ctaText: get('hero_slide_1', 'cta_text', 'Comprar Ahora'),
+            ctaHref: '/tienda',
+        },
+        {
+            image: getImage('hero_slide_2', 'image_url', '/hero-michell.jpg'),
+            title: get('hero_slide_2', 'title', 'Nueva\nColección'),
+            subtitle: get('hero_slide_2', 'subtitle', 'Descubre los productos más exclusivos. Tendencias que se convierten en tu sello personal.'),
+            ctaText: get('hero_slide_2', 'cta_text', 'Ver Colección'),
+            ctaHref: '/tienda?filter=new',
+        },
+        {
+            image: getImage('hero_slide_3', 'image_url', '/hero-michell.jpg'),
+            title: get('hero_slide_3', 'title', 'Maquillaje\nde élite'),
+            subtitle: get('hero_slide_3', 'subtitle', 'Las mejores marcas del mundo, reunidas en un solo lugar para ti.'),
+            ctaText: get('hero_slide_3', 'cta_text', 'Explorar Marcas'),
+            ctaHref: '/tienda/maquillaje',
+        },
+    ];
+
+    // Welcome section CMS
+    const welcomeTitle = get('welcome', 'title', 'Todo lo que amas, unido por primera vez.');
+    const welcomeSubtitle = get('welcome', 'subtitle', 'Una colección exclusiva de tus marcas favoritas en un solo lugar. con envíos a toda Colombia.');
+    const promiseBadge = get('welcome', 'badge', 'Nuestra Promesa');
+    const buttonDiscover = get('welcome', 'button', 'Descubrir Ahora');
+
     const catTitle = get('categories', 'title', 'Explora por Categoría');
-    const catDesc = get('categories', 'description', 'Encuentra exactamente lo que buscas en nuestras categorías cuidadosamente seleccionadas');
+    const catBadge = get('categories', 'badge', 'Colecciones Exclusivas');
+    const catDesc = get('categories', 'description', 'Una selección curada de lo mejor en maquillaje, accesorios y moda femenina. Calidad premium en cada detalle.');
 
     return (
         <>
             <Header />
             <main>
-                {/* Hero Section */}
-                <section className="relative min-h-[80vh] flex items-center bg-gradient-soft overflow-hidden">
-                    <div className="container-custom py-12 md:py-20 lg:py-24">
-                        <div className="grid md:grid-cols-2 gap-12 items-center">
-                            <div className="space-y-8 animate-slide-up z-10">
-                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-100 text-primary-600 text-xs font-bold tracking-widest uppercase">
-                                    <span className="relative flex h-2 w-2">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-primary-500"></span>
-                                    </span>
-                                    {heroBadge}
-                                </div>
-                                <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-medium text-neutral-900 leading-[1.1]">
-                                    {heroTitle} <br />
-                                    <span className="font-script text-primary-500 italic lowercase block -mt-2">{heroSubtitle}</span>
-                                </h1>
-                                <p
-                                    className="text-lg md:text-xl text-neutral-600 max-w-lg leading-relaxed"
-                                    dangerouslySetInnerHTML={{
-                                        __html: heroBody.replace(
-                                            /<span>(.*?)<\/span>/gi,
-                                            '<span class="font-semibold text-primary-400">$1</span>'
-                                        )
-                                    }}
-                                />
-                                <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                                    <Link href="/tienda">
-                                        <Button
-                                            variant="primary"
-                                            size="lg"
-                                            className="px-10 rounded-full shadow-lg shadow-primary-200"
-                                            rightIcon={<ArrowRight className="w-5 h-5" />}
-                                        >
-                                            Comprar Ahora
-                                        </Button>
-                                    </Link>
-                                    <Link href="/nosotros">
-                                        <Button variant="outline" size="lg" className="px-10 rounded-full border-neutral-200">
-                                            Nuestra Historia
-                                        </Button>
-                                    </Link>
-                                </div>
-                            </div>
-                            <div className="relative h-[500px] md:h-[650px] lg:h-[750px] animate-fade-in group">
-                                <div className="absolute -inset-4 bg-gradient-to-tr from-primary-200/50 to-secondary-200/50 rounded-3xl blur-2xl opacity-50 group-hover:opacity-100 transition-opacity duration-700"></div>
-                                <div className="relative h-full w-full overflow-hidden rounded-3xl border-8 border-white shadow-strong">
-                                    <Image
-                                        src={heroImage}
-                                        alt="Michell Cantero - Fundadora"
-                                        fill
-                                        className="object-cover object-center group-hover:scale-105 transition-transform duration-1000"
-                                        priority
-                                        unoptimized={heroImage.startsWith('https://')}
-                                    />
-                                </div>
-                                {/* Floating element */}
-                                <div className="absolute -bottom-6 -left-6 bg-white p-6 rounded-2xl shadow-strong animate-slide-up delay-300 hidden md:block">
-                                    <p className="text-3xl font-display font-bold text-primary-500 italic">100%</p>
-                                    <p className="text-xs text-neutral-500 uppercase tracking-tighter">Calidad Garantizada</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                {/* ─── Hero Carousel ─── */}
+                <HeroCarousel slides={heroSlides} />
 
-                    {/* Decorative Background Elements */}
-                    <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-primary-50/50 to-transparent -z-10" />
-                    <div className="absolute -top-24 -right-24 w-96 h-96 bg-primary-100 rounded-full filter blur-3xl opacity-30 animate-pulse" />
-                    <div className="absolute top-1/2 left-0 w-64 h-64 bg-secondary-100 rounded-full filter blur-3xl opacity-30 animate-pulse delay-1000" />
-                </section>
-
-                {/* Trust Badges */}
-                <section className="border-y border-neutral-100 bg-white">
-                    <div className="container-custom py-10">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                            <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-4">
-                                <div className="p-4 bg-primary-50 rounded-2xl shadow-sm">
-                                    <Truck className="w-6 h-6 text-primary-500" />
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="font-display font-bold text-neutral-900">Envío Gratis</p>
-                                    <p className="text-xs text-neutral-600 font-medium tracking-tight">En compras mayores a $200k</p>
-                                </div>
-                            </div>
-                            <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-4">
-                                <div className="p-4 bg-secondary-50 rounded-2xl shadow-sm">
-                                    <ShoppingBag className="w-6 h-6 text-secondary-500" />
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="font-display font-bold text-neutral-900">Nuevas Marcas</p>
-                                    <p className="text-xs text-neutral-600 font-medium">Originales y Garantizadas</p>
-                                </div>
-                            </div>
-                            <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-4">
-                                <div className="p-4 bg-primary-50 rounded-2xl shadow-sm">
-                                    <Shield className="w-6 h-6 text-primary-500" />
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="font-display font-bold text-neutral-900">Pagos Seguros</p>
-                                    <p className="text-xs text-neutral-600 font-medium">Wompi, PSE, Nequi y más</p>
-                                </div>
-                            </div>
-                            <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-4">
-                                <div className="p-4 bg-secondary-50 rounded-2xl shadow-sm">
-                                    <CheckCircle className="w-6 h-6 text-secondary-500" />
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="font-display font-bold text-neutral-900">Garantía</p>
-                                    <p className="text-xs text-neutral-600 font-medium">100% Calidad Asegurada</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Categories */}
-                <section className="py-16 md:py-20 bg-white">
-                    <div className="container-custom">
-                        <div className="text-center mb-12">
-                            <h2 className="text-3xl md:text-4xl font-display font-bold text-neutral-900 mb-4">
-                                {catTitle}
-                            </h2>
-                            <p className="text-neutral-600 max-w-2xl mx-auto">
-                                {catDesc}
-                            </p>
-                        </div>
-
-                        <div className="grid md:grid-cols-3 gap-6">
-                            {categories.map((category) => (
-                                <Link key={category.id} href={`/tienda/${category.slug}`}>
-                                    <Card hover className="group overflow-hidden">
-                                        <div className="relative h-64">
-                                            <Image
-                                                src={category.image}
-                                                alt={category.name}
-                                                fill
-                                                className="object-cover transition-transform duration-300 group-hover:scale-110"
-                                            />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                                            <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                                                <h3 className="text-2xl font-display font-bold mb-2">
-                                                    {category.name}
-                                                </h3>
-                                                <p className="text-sm text-white/90 mb-3">
-                                                    {categoryCounts[category.slug] || 0} productos
-                                                </p>
-                                                <span className="inline-flex items-center text-sm font-medium group-hover:gap-2 transition-all">
-                                                    Ver más <ArrowRight className="w-4 h-4 ml-1" />
-                                                </span>
-                                            </div>
+                {/* ─── Trust Badges ─── */}
+                <section className="border-b border-neutral-100 bg-white">
+                    <div className="container-custom py-8 md:py-10">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+                            {[
+                                { Icon: Truck, color: 'primary', title: 'Envío Gratis', sub: 'En compras mayores a $200k' },
+                                { Icon: ShoppingBag, color: 'secondary', title: 'Nuevas Marcas', sub: 'Originales y Garantizadas' },
+                                { Icon: Shield, color: 'primary', title: 'Pagos Seguros', sub: 'Wompi, PSE, Nequi y más' },
+                                { Icon: CheckCircle, color: 'secondary', title: 'Garantía', sub: '100% Calidad Asegurada' },
+                            ].map(({ Icon, color, title, sub }, i) => (
+                                <ScrollReveal key={title} delay={(i + 1) as 1 | 2 | 3 | 4}>
+                                    <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-3">
+                                        <div className={`p-3.5 bg-${color}-50 rounded-xl shadow-sm flex-shrink-0`}>
+                                            <Icon className={`w-5 h-5 text-${color}-500`} />
                                         </div>
-                                    </Card>
-                                </Link>
+                                        <div className="space-y-0.5">
+                                            <p className="font-display font-bold text-neutral-900 text-sm">{title}</p>
+                                            <p className="text-xs text-neutral-500">{sub}</p>
+                                        </div>
+                                    </div>
+                                </ScrollReveal>
                             ))}
                         </div>
                     </div>
                 </section>
 
-                {/* Featured Products */}
-                <section className="py-16 md:py-20 bg-neutral-50">
+                {/* ─── Brands Marquee ─── */}
+                <BrandsMarquee />
+
+                {/* ─── Welcome / Value Proposition Section ─── */}
+                <section className="py-16 md:py-20 bg-gradient-to-br from-primary-50 via-white to-secondary-50 overflow-hidden">
                     <div className="container-custom">
-                        <div className="flex items-center justify-between mb-12">
-                            <div>
-                                <h2 className="text-3xl md:text-4xl font-display font-bold text-neutral-900 mb-2">
-                                    Productos Destacados
+                        <ScrollReveal>
+                            <div className="max-w-3xl mx-auto text-center space-y-6">
+                                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-100 text-primary-600 text-xs font-bold tracking-widest uppercase mb-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse" />
+                                    {promiseBadge}
+                                </div>
+                                <h2 className="text-3xl sm:text-4xl md:text-5xl font-display font-bold text-neutral-900 leading-tight">
+                                    {welcomeTitle}
                                 </h2>
-                                <p className="text-neutral-600">
-                                    Los favoritos de nuestras clientas
+                                <p className="text-lg md:text-xl text-neutral-600 leading-relaxed max-w-2xl mx-auto">
+                                    {welcomeSubtitle}
+                                </p>
+                                <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+                                    <Link href="/tienda">
+                                        <Button variant="primary" size="lg" className="rounded-full px-10 shadow-coral" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                                            {buttonDiscover}
+                                        </Button>
+                                    </Link>
+                                    <Link href="/nosotros">
+                                        <Button variant="outline" size="lg" className="rounded-full px-10 border-neutral-300">
+                                            Quiénes Somos
+                                        </Button>
+                                    </Link>
+                                </div>
+                            </div>
+                        </ScrollReveal>
+                    </div>
+                </section>
+
+                {/* ─── Categories — Editorial Chic ─── */}
+                <section className="py-20 md:py-32 bg-white overflow-hidden">
+                    <div className="container-custom">
+                        <ScrollReveal>
+                            <div className="flex flex-col md:flex-row items-end justify-between mb-16 gap-5">
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-3">
+                                        <span className="w-12 h-[1px] bg-primary-300" />
+                                        <p className="text-[11px] font-bold tracking-[0.4em] text-primary-500 uppercase">{catBadge}</p>
+                                    </div>
+                                    <h2 className="text-4xl md:text-6xl font-display font-bold text-neutral-900 leading-none">
+                                        {catTitle}
+                                    </h2>
+                                </div>
+                                <p className="text-neutral-500 text-sm max-w-xs md:text-right leading-relaxed font-light italic">
+                                    &ldquo;{catDesc}&rdquo;
                                 </p>
                             </div>
-                            <Link href="/tienda">
-                                <Button variant="outline">
-                                    Ver Todos
-                                    <ArrowRight className="w-4 h-4 ml-2" />
-                                </Button>
-                            </Link>
+                        </ScrollReveal>
+
+                        {/* Asymmetric Category Grid */}
+                        <div className="grid md:grid-cols-12 md:grid-rows-2 gap-4 md:gap-6 h-auto md:h-[700px]">
+                            {categories.slice(0, 3).map((category, i) => {
+                                // i=0: Maquillaje (Large), i=1: Accesorios (Small), i=2: Ropa (Small)
+                                const gridClass = i === 0
+                                    ? "md:col-span-8 md:row-span-2 h-[450px] md:h-full"
+                                    : i === 1
+                                        ? "md:col-span-4 md:row-span-1 h-[250px] md:h-full"
+                                        : "md:col-span-4 md:row-span-1 h-[250px] md:h-full";
+
+                                return (
+                                    <ScrollReveal
+                                        key={category.id}
+                                        delay={(i + 1) as 1 | 2 | 3}
+                                        className={gridClass}
+                                    >
+                                        <Link href={`/tienda/${category.slug}`} className="group relative block h-full w-full overflow-hidden rounded-3xl bg-neutral-100 shadow-sm transition-all duration-500 hover:shadow-xl">
+                                            <Image
+                                                src={category.image}
+                                                alt={category.name}
+                                                fill
+                                                className="object-cover object-center transition-transform duration-[1200ms] ease-out group-hover:scale-110"
+                                                priority={i === 0}
+                                            />
+
+                                            {/* Overlays */}
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 transition-opacity duration-500 group-hover:opacity-90" />
+                                            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary-900/40 to-transparent opacity-0 transition-opacity duration-700 group-hover:opacity-100" />
+
+                                            {/* Content */}
+                                            <div className="absolute inset-0 p-8 md:p-10 flex flex-col justify-between z-10">
+                                                <div className="flex justify-between items-start">
+                                                    <div className="px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
+                                                        <span className="text-[10px] font-bold text-white tracking-widest uppercase">0{i + 1}</span>
+                                                    </div>
+                                                    <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center opacity-0 -translate-y-4 transition-all duration-500 group-hover:opacity-100 group-hover:translate-y-0">
+                                                        <ArrowRight className="w-5 h-5 text-white" />
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-2 md:space-y-4 translate-y-4 transition-transform duration-500 group-hover:translate-y-0">
+                                                    <p className="text-primary-300 text-[10px] md:text-xs font-bold tracking-[0.3em] uppercase">Explorar</p>
+                                                    <h3 className={`font-display font-bold text-white transition-all duration-500 group-hover:text-primary-100 ${i === 0 ? 'text-4xl md:text-6xl' : 'text-2xl md:text-4xl'}`}>
+                                                        {category.name}
+                                                    </h3>
+                                                    {i === 0 && (
+                                                        <p className="text-white/70 text-sm max-w-md hidden md:block font-light leading-relaxed">
+                                                            {category.description}
+                                                        </p>
+                                                    )}
+                                                    <div className="pt-2 flex items-center gap-2">
+                                                        <div className="h-[1px] w-0 bg-primary-400 transition-all duration-700 group-hover:w-12" />
+                                                        <span className="text-white/60 text-[10px] font-medium opacity-0 transition-opacity duration-700 group-hover:opacity-100 uppercase tracking-widest">
+                                                            {categoryCounts[category.slug] || 0} Artículos
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Decorative Border on Hover */}
+                                            <div className="absolute inset-4 border border-white/0 rounded-2xl transition-all duration-700 group-hover:border-white/20" />
+                                        </Link>
+                                    </ScrollReveal>
+                                );
+                            })}
                         </div>
+
+                        {/* Store CTA */}
+                        <ScrollReveal>
+                            <div className="mt-16 text-center">
+                                <Link href="/tienda" className="group inline-flex items-center gap-4 px-10 py-4 bg-neutral-900 text-white rounded-full text-sm font-bold tracking-widest uppercase transition-all duration-300 hover:bg-primary-600 hover:shadow-coral active:scale-95">
+                                    Ver toda la boutique
+                                    <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-2" />
+                                </Link>
+                            </div>
+                        </ScrollReveal>
+                    </div>
+                </section>
+
+                {/* ─── Featured Products ─── */}
+                <section className="py-16 md:py-20 bg-neutral-50">
+                    <div className="container-custom">
+                        <ScrollReveal>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-12 gap-4">
+                                <div>
+                                    <h2 className="text-3xl md:text-4xl font-display font-bold text-neutral-900 mb-1">Productos Destacados</h2>
+                                    <p className="text-neutral-500">Los favoritos de nuestras clientas</p>
+                                </div>
+                                <Link href="/tienda">
+                                    <Button variant="outline" className="rounded-full border-neutral-300">
+                                        Ver Todos <ArrowRight className="w-4 h-4 ml-1.5" />
+                                    </Button>
+                                </Link>
+                            </div>
+                        </ScrollReveal>
 
                         {loading ? (
                             <div className="flex justify-center py-20">
-                                <Loader2 className="w-10 h-10 animate-spin text-primary-600" />
+                                <Loader2 className="w-10 h-10 animate-spin text-primary-500" />
                             </div>
                         ) : (
                             <ProductGrid products={featuredProducts} />
@@ -247,29 +279,26 @@ export default function HomePage() {
                     </div>
                 </section>
 
-                {/* New Arrivals */}
+                {/* ─── New Arrivals ─── */}
                 <section className="py-16 md:py-20 bg-white">
                     <div className="container-custom">
-                        <div className="flex items-center justify-between mb-12">
-                            <div>
-                                <h2 className="text-3xl md:text-4xl font-display font-bold text-neutral-900 mb-2">
-                                    Recién Llegados
-                                </h2>
-                                <p className="text-neutral-600">
-                                    Las últimas novedades en maquillaje y moda
-                                </p>
+                        <ScrollReveal>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-12 gap-4">
+                                <div>
+                                    <h2 className="text-3xl md:text-4xl font-display font-bold text-neutral-900 mb-1">Recién Llegados</h2>
+                                    <p className="text-neutral-500">Las últimas novedades en maquillaje y moda</p>
+                                </div>
+                                <Link href="/tienda?filter=new">
+                                    <Button variant="outline" className="rounded-full border-neutral-300">
+                                        Ver Todos <ArrowRight className="w-4 h-4 ml-1.5" />
+                                    </Button>
+                                </Link>
                             </div>
-                            <Link href="/tienda?filter=new">
-                                <Button variant="outline">
-                                    Ver Todos
-                                    <ArrowRight className="w-4 h-4 ml-2" />
-                                </Button>
-                            </Link>
-                        </div>
+                        </ScrollReveal>
 
                         {loading ? (
                             <div className="flex justify-center py-20">
-                                <Loader2 className="w-10 h-10 animate-spin text-primary-600" />
+                                <Loader2 className="w-10 h-10 animate-spin text-primary-500" />
                             </div>
                         ) : (
                             <ProductGrid products={newProducts} />
@@ -277,30 +306,23 @@ export default function HomePage() {
                     </div>
                 </section>
 
-                <section className="py-6 bg-primary-50 overflow-hidden border-y border-primary-100 flex mb-20">
-                    <div className="flex w-max animate-scroll items-center gap-0">
+                {/* ─── Scrolling Benefits Banner ─── */}
+                <section className="py-5 bg-primary-500 overflow-hidden border-y border-primary-400">
+                    <div className="marquee-track gap-0 items-center">
                         {[1, 2, 3].map((i) => (
                             <div key={i} className="flex shrink-0 items-center">
-                                <div className="flex items-center gap-4 px-12 text-primary-600">
-                                    <CheckCircle className="w-5 h-5 opacity-80" />
-                                    <span className="text-lg font-display font-medium tracking-wide leading-none">Excelente calidad</span>
-                                </div>
-                                <div className="h-6 w-[1px] bg-primary-200 opacity-50"></div>
-                                <div className="flex items-center gap-4 px-12 text-primary-600">
-                                    <Instagram className="w-5 h-5 opacity-80" />
-                                    <span className="text-lg font-display font-medium tracking-wide leading-none">Asesoría personalizada</span>
-                                </div>
-                                <div className="h-6 w-[1px] bg-primary-200 opacity-50"></div>
-                                <div className="flex items-center gap-4 px-12 text-primary-600">
-                                    <ShoppingBag className="w-5 h-5 opacity-80" />
-                                    <span className="text-lg font-display font-medium tracking-wide leading-none">Compra fácil y segura</span>
-                                </div>
-                                <div className="h-6 w-[1px] bg-primary-200 opacity-50"></div>
-                                <div className="flex items-center gap-4 px-12 text-primary-600">
-                                    <Truck className="w-5 h-5 opacity-80" />
-                                    <span className="text-lg font-display font-medium tracking-wide leading-none">Envíos a nivel nacional</span>
-                                </div>
-                                <div className="h-6 w-[1px] bg-primary-200 opacity-50 flex-shrink-0"></div>
+                                {[
+                                    { Icon: CheckCircle, text: 'Excelente calidad' },
+                                    { Icon: ShoppingBag, text: 'Asesoría personalizada' },
+                                    { Icon: Truck, text: 'Envíos a nivel nacional' },
+                                    { Icon: Shield, text: 'Compra 100% segura' },
+                                ].map(({ Icon, text }) => (
+                                    <div key={text} className="flex items-center gap-3 px-10 text-white">
+                                        <Icon className="w-4 h-4 opacity-80 flex-shrink-0" />
+                                        <span className="text-sm font-semibold tracking-wide uppercase whitespace-nowrap">{text}</span>
+                                        <span className="mx-4 text-white/30 select-none">✦</span>
+                                    </div>
+                                ))}
                             </div>
                         ))}
                     </div>

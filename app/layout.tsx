@@ -1,16 +1,16 @@
 import type { Metadata } from 'next';
-import { Inter, Playfair_Display, Great_Vibes } from 'next/font/google';
+import { Jost, Cabin, Great_Vibes } from 'next/font/google';
 import './globals.css';
 
-const inter = Inter({
+const jost = Jost({
     subsets: ['latin'],
-    variable: '--font-inter',
+    variable: '--font-jost',
     display: 'swap',
 });
 
-const playfair = Playfair_Display({
+const cabin = Cabin({
     subsets: ['latin'],
-    variable: '--font-playfair',
+    variable: '--font-cabin',
     display: 'swap',
 });
 
@@ -20,7 +20,6 @@ const greatVibes = Great_Vibes({
     variable: '--font-script',
     display: 'swap',
 });
-
 
 export const metadata: Metadata = {
     title: 'Michell Cantero Store - Maquillaje, Accesorios y Ropa Femenina',
@@ -62,7 +61,7 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="es" className={`${inter.variable} ${playfair.variable} ${greatVibes.variable}`}>
+        <html lang="es" className={`${jost.variable} ${cabin.variable} ${greatVibes.variable}`}>
             <body className="font-sans">
                 <ErrorBoundary>
                     {children}

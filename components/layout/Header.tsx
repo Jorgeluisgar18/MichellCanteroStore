@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useWishlistStore } from '@/store/wishlistStore';
 import Logo from '@/components/common/Logo';
 import ProductImage from '@/components/product/ProductImage';
+import { usePageContent } from '@/lib/hooks/usePageContent';
 
 interface ProductSuggestion {
     id: string;
@@ -21,14 +22,23 @@ interface ProductSuggestion {
 }
 
 const Header: React.FC = () => {
+    const { get } = usePageContent('global');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchSuggestions, setSearchSuggestions] = useState<ProductSuggestion[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
+    const [isScrolled, setIsScrolled] = useState(false);
     const router = useRouter();
     const searchRef = useRef<HTMLDivElement>(null);
+
+    // Scroll-aware sticky header
+    useEffect(() => {
+        const handleScroll = () => setIsScrolled(window.scrollY > 20);
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     const itemCount = useCartStore((state) => state.getItemCount());
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -103,12 +113,11 @@ const Header: React.FC = () => {
     ];
 
     return (
-        <header className="sticky top-0 z-40 w-full bg-white border-b border-neutral-100 shadow-sm">
-            {/* Top Bar */}
+        <header className={`sticky top-0 z-40 w-full border-b transition-all duration-300 ${isScrolled ? 'header-scrolled border-neutral-100/50' : 'bg-white border-neutral-100 shadow-sm'}`}>
             <div className="bg-primary-50 text-primary-600 py-2 border-b border-primary-100">
                 <div className="container-custom">
-                    <p className="text-center text-xs md:text-sm font-medium tracking-wide font-display">
-                        ✨ ENVÍO GRATIS EN COMPRAS SUPERIORES A $200.000 COP ✨
+                    <p className="text-center text-xs md:text-sm font-medium tracking-wide font-display uppercase">
+                        {get('header', 'top_bar', '✨ ENVÍO GRATIS EN COMPRAS SUPERIORES A $200.000 COP ✨')}
                     </p>
                 </div>
             </div>

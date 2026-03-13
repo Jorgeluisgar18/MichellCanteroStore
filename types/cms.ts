@@ -2,7 +2,7 @@
  * CMS - Page Content types
  */
 
-export type PageName = 'home' | 'nosotros' | 'tienda';
+export type PageName = 'home' | 'nosotros' | 'tienda' | 'categorias' | 'global' | 'contacto';
 
 export interface PageContent {
     id: string;

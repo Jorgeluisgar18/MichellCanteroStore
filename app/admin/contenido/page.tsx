@@ -16,6 +16,7 @@ import {
     Home,
     Users,
     ShoppingBag,
+    Mail,
     X,
 } from 'lucide-react';
 import type { PageContent, PageName } from '@/types';
@@ -35,13 +36,44 @@ interface FieldDef {
 
 const PAGE_FIELDS: Record<PageName, FieldDef[]> = {
     home: [
-        { section: 'hero', key: 'badge', label: 'Badge (ej. "Nueva Colección")', type: 'text', placeholder: 'Nueva Colección', maxLength: 60 },
-        { section: 'hero', key: 'title', label: 'Título principal (línea 1)', type: 'text', placeholder: 'Eleva tu', maxLength: 80 },
-        { section: 'hero', key: 'subtitle', label: 'Título principal (línea 2)', type: 'text', placeholder: 'belleza única', maxLength: 80 },
-        { section: 'hero', key: 'body', label: 'Descripción del hero', type: 'textarea', placeholder: 'En Michell Cantero Store…', maxLength: 300 },
-        { section: 'hero', key: 'image_url', label: 'Imagen principal del hero', type: 'image' },
-        { section: 'categories', key: 'title', label: 'Título sección categorías', type: 'text', placeholder: 'Explora por Categoría', maxLength: 80 },
-        { section: 'categories', key: 'description', label: 'Descripción sección categorías', type: 'textarea', placeholder: 'Encuentra exactamente…', maxLength: 300 },
+        // ── Welcome Section ──
+        { section: 'welcome', key: 'title', label: 'Frase de bienvenida – Título', type: 'text', placeholder: 'Todo lo que amas, unido por primera vez.', maxLength: 100 },
+        { section: 'welcome', key: 'subtitle', label: 'Frase de bienvenida – Subtítulo', type: 'textarea', placeholder: 'Una colección exclusiva de tus marcas favoritas...', maxLength: 220 },
+
+        // ── Hero Slide 1 ──
+        { section: 'hero_slide_1', key: 'image_url', label: 'Hero Slide 1 – Imagen', type: 'image' },
+        { section: 'hero_slide_1', key: 'title', label: 'Hero Slide 1 – Título', type: 'text', placeholder: 'Eleva tu\nbelleza única', maxLength: 60 },
+        { section: 'hero_slide_1', key: 'subtitle', label: 'Hero Slide 1 – Subtítulo', type: 'textarea', placeholder: 'En Michell Cantero Store...', maxLength: 180 },
+        { section: 'hero_slide_1', key: 'cta_text', label: 'Hero Slide 1 – Texto botón', type: 'text', placeholder: 'Comprar Ahora', maxLength: 40 },
+
+        // ── Hero Slide 2 ──
+        { section: 'hero_slide_2', key: 'image_url', label: 'Hero Slide 2 – Imagen', type: 'image' },
+        { section: 'hero_slide_2', key: 'title', label: 'Hero Slide 2 – Título', type: 'text', placeholder: 'Nueva\nColección', maxLength: 60 },
+        { section: 'hero_slide_2', key: 'subtitle', label: 'Hero Slide 2 – Subtítulo', type: 'textarea', placeholder: 'Descubre los últimos productos...', maxLength: 180 },
+        { section: 'hero_slide_2', key: 'cta_text', label: 'Hero Slide 2 – Texto botón', type: 'text', placeholder: 'Ver Colección', maxLength: 40 },
+
+        // ── Hero Slide 3 ──
+        { section: 'hero_slide_3', key: 'image_url', label: 'Hero Slide 3 – Imagen', type: 'image' },
+        { section: 'hero_slide_3', key: 'title', label: 'Hero Slide 3 – Título', type: 'text', placeholder: 'Maquillaje\nde élite', maxLength: 60 },
+        { section: 'hero_slide_3', key: 'subtitle', label: 'Hero Slide 3 – Subtítulo', type: 'textarea', placeholder: 'Las mejores marcas...', maxLength: 180 },
+        { section: 'hero_slide_3', key: 'cta_text', label: 'Slide 3 – Texto Botón', type: 'text', placeholder: 'Explorar Marcas', maxLength: 40 },
+
+        { section: 'welcome', key: 'badge', label: 'Sección Bienvenida – Badge', type: 'text', placeholder: 'Nuestra Promesa', maxLength: 40 },
+        { section: 'welcome', key: 'title', label: 'Sección Bienvenida – Título', type: 'text', placeholder: 'Todo lo que amas...', maxLength: 100 },
+        { section: 'welcome', key: 'subtitle', label: 'Sección Bienvenida – Subtítulo', type: 'textarea', placeholder: 'Una colección exclusiva...', maxLength: 300 },
+        { section: 'welcome', key: 'button', label: 'Sección Bienvenida – Texto Botón', type: 'text', placeholder: 'Descubrir Ahora', maxLength: 40 },
+
+        { section: 'categories', key: 'badge', label: 'Sección Categorías – Badge', type: 'text', placeholder: 'Colecciones Exclusivas', maxLength: 40 },
+        { section: 'categories', key: 'title', label: 'Sección Categorías – Título', type: 'text', placeholder: 'Explora por Categoría', maxLength: 80 },
+        { section: 'categories', key: 'description', label: 'Sección Categorías – Descripción', type: 'textarea', placeholder: 'Una selección curada...', maxLength: 300 },
+
+        // ── 16 Brands ──
+        ...Array.from({ length: 16 }, (_, i) => ({
+            section: `brand_${i + 1}`,
+            key: 'logo_url',
+            label: `Marca #${i + 1} – Logo`,
+            type: 'image' as const,
+        })),
     ],
     nosotros: [
         { section: 'hero', key: 'badge', label: 'Texto decorativo (bienvenida)', type: 'text', placeholder: 'bienvenida a', maxLength: 60 },
@@ -63,12 +95,52 @@ const PAGE_FIELDS: Record<PageName, FieldDef[]> = {
         { section: 'banner', key: 'description', label: 'Descripción del banner', type: 'textarea', placeholder: 'Descubre todos…', maxLength: 300 },
         { section: 'banner', key: 'image_url', label: 'Imagen del banner', type: 'image' },
     ],
+    categorias: [
+        { section: 'cat_maquillaje', key: 'title', label: 'Maquillaje – Título banner', type: 'text', placeholder: 'Maquillaje', maxLength: 80 },
+        { section: 'cat_maquillaje', key: 'description', label: 'Maquillaje – Descripción', type: 'textarea', placeholder: 'Descubre nuestra colección...', maxLength: 300 },
+        { section: 'cat_maquillaje', key: 'image_url', label: 'Maquillaje – Imagen banner', type: 'image' },
+
+        { section: 'cat_accesorios', key: 'title', label: 'Accesorios – Título banner', type: 'text', placeholder: 'Accesorios', maxLength: 80 },
+        { section: 'cat_accesorios', key: 'description', label: 'Accesorios – Descripción', type: 'textarea', placeholder: 'Complementa tu look...', maxLength: 300 },
+        { section: 'cat_accesorios', key: 'image_url', label: 'Accesorios – Imagen banner', type: 'image' },
+
+        { section: 'cat_ropa', key: 'title', label: 'Ropa – Título banner', type: 'text', placeholder: 'Ropa', maxLength: 80 },
+        { section: 'cat_ropa', key: 'description', label: 'Ropa – Descripción', type: 'textarea', placeholder: 'Ropa femenina elegante...', maxLength: 300 },
+        { section: 'cat_ropa', key: 'image_url', label: 'Ropa – Imagen banner', type: 'image' },
+    ],
+    global: [
+        { section: 'info', key: 'address', label: 'Dirección física', type: 'text', placeholder: 'Calle 9 #22-51, Ciénaga', maxLength: 100 },
+        { section: 'info', key: 'phone', label: 'Teléfono / WhatsApp', type: 'text', placeholder: '311 363 3618', maxLength: 20 },
+        { section: 'info', key: 'email', label: 'Email de contacto', type: 'text', placeholder: 'mcanterostore@gmail.com', maxLength: 60 },
+
+        { section: 'header', key: 'top_bar', label: 'Header – Texto Barra Superior', type: 'text', placeholder: '✨ ENVÍO GRATIS... ✨', maxLength: 100 },
+        { section: 'header', key: 'logo_url', label: 'Branding – Logo Principal', type: 'image' },
+
+        { section: 'social', key: 'instagram_store', label: 'Instagram (Tienda) - Link', type: 'text', placeholder: 'https://...', maxLength: 200 },
+        { section: 'social', key: 'instagram_ceo', label: 'Instagram (CEO) - Link', type: 'text', placeholder: 'https://...', maxLength: 200 },
+        { section: 'social', key: 'tiktok', label: 'TikTok - Link', type: 'text', placeholder: 'https://...', maxLength: 200 },
+        { section: 'social', key: 'facebook', label: 'Facebook - Link', type: 'text', placeholder: 'https://...', maxLength: 200 },
+
+        { section: 'footer', key: 'pay_subtitle', label: 'Footer – Texto Métodos Pago', type: 'text', placeholder: 'Wompi, PSE, Nequi...', maxLength: 100 },
+        { section: 'footer', key: 'shipping_text', label: 'Footer – Texto Envíos', type: 'text', placeholder: 'Envíos a todo Colombia', maxLength: 100 },
+    ],
+    contacto: [
+        { section: 'hero', key: 'badge', label: 'Badge Hero', type: 'text', placeholder: 'Estamos aquí para ti', maxLength: 60 },
+        { section: 'hero', key: 'title', label: 'Título Hero', type: 'text', placeholder: 'Contáctanos', maxLength: 80 },
+        { section: 'hero', key: 'subtitle', label: 'Subtítulo Hero', type: 'textarea', placeholder: '¿Tienes alguna pregunta?', maxLength: 300 },
+
+        { section: 'whatsapp', key: 'title', label: 'WhatsApp Box – Título', type: 'text', placeholder: '¿Prefieres WhatsApp?', maxLength: 60 },
+        { section: 'whatsapp', key: 'description', label: 'WhatsApp Box – Texto', type: 'textarea', placeholder: 'Chatea con nosotros...', maxLength: 200 },
+    ],
 };
 
 const PAGES: { key: PageName; label: string; icon: React.ElementType }[] = [
     { key: 'home', label: 'Inicio', icon: Home },
     { key: 'nosotros', label: 'Nosotros', icon: Users },
     { key: 'tienda', label: 'Tienda', icon: ShoppingBag },
+    { key: 'categorias', label: 'Categorías', icon: ImageIcon },
+    { key: 'contacto', label: 'Contacto', icon: Mail },
+    { key: 'global', label: 'Config Global', icon: Globe },
 ];
 
 // ─────────────────────────────────────────────

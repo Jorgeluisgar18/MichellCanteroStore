@@ -1,10 +1,22 @@
-'use client';
-
 import React from 'react';
 import Link from 'next/link';
 import { Instagram, Facebook, Mail, Phone, MapPin, CreditCard, ShieldCheck, Truck } from 'lucide-react';
+import { usePageContent } from '@/lib/hooks/usePageContent';
 
 const Footer: React.FC = () => {
+    const { get } = usePageContent('global');
+
+    // Global data
+    const address = get('info', 'address', 'Calle 9 #22-51, Ciénaga');
+    const phone = get('info', 'phone', '311 363 3618');
+    const email = get('info', 'email', 'mcanterostore@gmail.com');
+
+    // Social links
+    const igStore = get('social', 'instagram_store', 'https://www.instagram.com/michellcantero.store/');
+    const igCeo = get('social', 'instagram_ceo', 'https://www.instagram.com/michellcantero/');
+    const tiktok = get('social', 'tiktok', 'https://www.tiktok.com/@michellcantero.st');
+    const facebook = get('social', 'facebook', 'https://www.facebook.com/share/16tdadH8Rd/');
+
     return (
         <footer className="bg-primary-50 text-primary-600 border-t border-primary-100">
             {/* Main Footer */}
@@ -45,22 +57,21 @@ const Footer: React.FC = () => {
                                 <MapPin className="w-5 h-5 text-primary-600 flex-shrink-0 mt-0.5" />
                                 <div>
                                     <p className="font-semibold text-primary-700 mb-1">Tienda Física</p>
-                                    <p>Ciénaga, Magdalena</p>
-                                    <p>Calle 9 #22-51</p>
+                                    <p>{address}</p>
                                 </div>
                             </li>
                             <li className="flex items-start space-x-3">
                                 <Phone className="w-5 h-5 text-primary-600 flex-shrink-0 mt-0.5" />
                                 <div>
                                     <p className="font-semibold text-primary-700 mb-1">WhatsApp</p>
-                                    <p>311 363 3618</p>
+                                    <p>{phone}</p>
                                 </div>
                             </li>
                             <li className="flex items-start space-x-3">
                                 <Mail className="w-5 h-5 text-primary-600 flex-shrink-0 mt-0.5" />
                                 <div>
                                     <p className="font-semibold text-primary-700 mb-1">Email</p>
-                                    <p>mcanterostore@gmail.com</p>
+                                    <p>{email}</p>
                                 </div>
                             </li>
                         </ul>
@@ -73,7 +84,7 @@ const Footer: React.FC = () => {
                             <h4 className="text-primary-700 font-display font-semibold text-lg mb-6">Síguenos</h4>
                             <div className="flex space-x-4">
                                 <a
-                                    href="https://www.instagram.com/michellcantero.store/"
+                                    href={igStore}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="p-3 bg-gradient-to-tr from-purple-600 via-pink-600 to-orange-500 rounded-xl hover:scale-110 transition-all hover:-translate-y-1"
@@ -82,7 +93,7 @@ const Footer: React.FC = () => {
                                     <Instagram className="w-6 h-6 text-white" />
                                 </a>
                                 <a
-                                    href="https://www.tiktok.com/@michellcantero.st?is_from_webapp=1&sender_device=pc"
+                                    href={tiktok}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="p-3 bg-black rounded-xl hover:scale-110 transition-all hover:-translate-y-1"
@@ -93,7 +104,7 @@ const Footer: React.FC = () => {
                                     </svg>
                                 </a>
                                 <a
-                                    href="https://www.facebook.com/share/16tdadH8Rd/"
+                                    href={facebook}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="p-3 bg-blue-600 rounded-xl hover:bg-blue-700 hover:scale-110 transition-all hover:-translate-y-1"
@@ -108,7 +119,7 @@ const Footer: React.FC = () => {
                         <div className="pt-2 border-t border-primary-100/50">
                             <p className="text-sm font-semibold text-primary-700 mb-2 font-display">CEO:</p>
                             <a
-                                href="https://www.instagram.com/michellcantero/"
+                                href={igCeo}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-sm hover:text-primary-700 transition-colors flex items-center gap-2"
@@ -129,7 +140,9 @@ const Footer: React.FC = () => {
                         </div>
                         <div>
                             <p className="text-sm font-semibold text-primary-700">Métodos de Pago</p>
-                            <p className="text-xs text-primary-600 font-medium">Wompi, PSE, Nequi, Crédito y más</p>
+                            <p className="text-xs text-primary-600 font-medium">
+                                {get('footer', 'pay_subtitle', 'Wompi, PSE, Nequi, Crédito y más')}
+                            </p>
                         </div>
                     </div>
                     <div className="flex flex-wrap items-center justify-start md:justify-end gap-6 text-sm">
@@ -139,7 +152,7 @@ const Footer: React.FC = () => {
                         </span>
                         <span className="flex items-center gap-2 text-primary-600 font-medium tracking-tight">
                             <Truck className="w-5 h-5" />
-                            Envíos a todo Colombia
+                            {get('footer', 'shipping_text', 'Envíos a todo Colombia')}
                         </span>
                     </div>
                 </div>

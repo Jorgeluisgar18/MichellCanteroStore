@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePageContent } from '@/lib/hooks/usePageContent';
 
 interface LogoProps {
     className?: string;
@@ -8,9 +9,12 @@ interface LogoProps {
 }
 
 const Logo: React.FC<LogoProps> = ({ className = "", size = 'base' }) => {
+    const { getImage } = usePageContent('global');
     const dimensions = size === 'small'
         ? "w-32 h-8 md:w-40 md:h-10"
         : "w-48 h-12 md:w-64 md:h-16";
+
+    const logoUrl = getImage('header', 'logo_url', '/logo.jpg');
 
     return (
         <Link
@@ -19,11 +23,12 @@ const Logo: React.FC<LogoProps> = ({ className = "", size = 'base' }) => {
         >
             <div className={`relative ${dimensions}`}>
                 <Image
-                    src="/logo.jpg"
+                    src={logoUrl}
                     alt="Michell Cantero Store"
                     fill
                     className="object-contain"
                     priority
+                    unoptimized={logoUrl.startsWith('https://')}
                 />
             </div>
         </Link>

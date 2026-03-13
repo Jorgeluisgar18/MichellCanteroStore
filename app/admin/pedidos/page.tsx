@@ -13,6 +13,7 @@ import { formatPrice } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { OrderDetailsModal } from '@/components/admin/OrderDetailsModal';
+import { fetchWithCsrf } from '@/lib/hooks/useCsrfToken';
 
 interface OrderItem {
     id: string;
@@ -70,7 +71,7 @@ export default function AdminOrdersPage() {
 
     const updateOrderStatus = async (orderId: string, newStatus: string) => {
         try {
-            const res = await fetch(`/api/orders/${orderId}`, {
+            const res = await fetchWithCsrf(`/api/orders/${orderId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: newStatus }),
@@ -89,7 +90,7 @@ export default function AdminOrdersPage() {
 
     const deleteOrder = async (orderId: string) => {
         try {
-            const res = await fetch(`/api/orders/${orderId}`, {
+            const res = await fetchWithCsrf(`/api/orders/${orderId}`, {
                 method: 'DELETE',
             });
             if (res.ok) {

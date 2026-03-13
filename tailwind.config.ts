@@ -10,24 +10,24 @@ const config: Config = {
         extend: {
             colors: {
                 primary: {
-                    50: '#fdf2f4',
-                    100: '#fce6ea',
-                    200: '#f9d1d8',
-                    300: '#f4b5b5',
-                    400: '#ec8c9a',
-                    500: '#f4b5b5', // Main Pink
-                    600: '#d12d74',
-                    700: '#b31f5c',
-                    800: '#941d4d',
-                    900: '#7c1d43',
-                    950: '#4b0b25',
+                    50: '#fdf3f4',
+                    100: '#fce4e6',
+                    200: '#f9cdd0',
+                    300: '#f4a8ad',
+                    400: '#ed7d83',
+                    500: '#E4777C', // Coral principal
+                    600: '#d45a60',
+                    700: '#b34045',
+                    800: '#943639',
+                    900: '#7b2f33',
+                    950: '#441518',
                 },
                 secondary: {
                     50: '#f8f7fb',
                     100: '#f1f0f7',
                     200: '#e3e1f0',
                     300: '#cfcae6',
-                    400: '#bface0', // Main Lavender
+                    400: '#bface0', // Lavanda principal
                     500: '#9b8bcb',
                     600: '#7d6ba9',
                     700: '#625189',
@@ -38,7 +38,7 @@ const config: Config = {
                 accent: {
                     gold: '#D4AF37',
                     light: '#E5D5B0',
-                    blue: '#ADD8E6', // Heart blue
+                    rose: '#E4777C',
                 },
                 neutral: {
                     50: '#fafafa',
@@ -50,27 +50,36 @@ const config: Config = {
                     600: '#525252',
                     700: '#404040',
                     800: '#262626',
-                    900: '#171717',
+                    900: '#212326', // Gris oscuro principal
                     950: '#0a0a0a',
                 },
             },
             fontFamily: {
-                sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
-                display: ['var(--font-playfair)', 'serif'],
+                sans: ['var(--font-jost)', 'system-ui', 'sans-serif'],
+                display: ['var(--font-cabin)', 'system-ui', 'sans-serif'],
                 script: ['var(--font-script)', 'cursive'],
             },
             animation: {
-                'fade-in': 'fadeIn 0.5s ease-in-out',
+                'fade-in': 'fadeIn 0.6s ease-in-out',
+                'fade-up': 'fadeUp 0.6s ease-out',
                 'slide-up': 'slideUp 0.5s ease-out',
                 'slide-down': 'slideDown 0.3s ease-out',
                 'scale-in': 'scaleIn 0.3s ease-out',
-                'scroll': 'scroll 30s linear infinite',
-                'scroll-reverse': 'scroll-reverse 30s linear infinite',
+                'scroll': 'marqueeScroll 35s linear infinite',
+                'scroll-reverse': 'marqueeScrollReverse 35s linear infinite',
+                'hero-fade': 'heroFade 0.9s ease-in-out',
+                'ping-slow': 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite',
+                'float': 'float 3s ease-in-out infinite',
+                'gradient-shift': 'gradientShift 6s ease infinite',
             },
             keyframes: {
                 fadeIn: {
                     '0%': { opacity: '0' },
                     '100%': { opacity: '1' },
+                },
+                fadeUp: {
+                    '0%': { opacity: '0', transform: 'translateY(30px)' },
+                    '100%': { opacity: '1', transform: 'translateY(0)' },
                 },
                 slideUp: {
                     '0%': { transform: 'translateY(20px)', opacity: '0' },
@@ -84,19 +93,35 @@ const config: Config = {
                     '0%': { transform: 'scale(0.95)', opacity: '0' },
                     '100%': { transform: 'scale(1)', opacity: '1' },
                 },
-                scroll: {
+                heroFade: {
+                    '0%': { opacity: '0', transform: 'scale(1.04)' },
+                    '100%': { opacity: '1', transform: 'scale(1)' },
+                },
+                marqueeScroll: {
                     '0%': { transform: 'translateX(0)' },
                     '100%': { transform: 'translateX(-50%)' },
                 },
-                'scroll-reverse': {
+                marqueeScrollReverse: {
                     '0%': { transform: 'translateX(-50%)' },
                     '100%': { transform: 'translateX(0)' },
                 },
+                float: {
+                    '0%, 100%': { transform: 'translateY(0px)' },
+                    '50%': { transform: 'translateY(-10px)' },
+                },
+                gradientShift: {
+                    '0%, 100%': { backgroundPosition: '0% 50%' },
+                    '50%': { backgroundPosition: '100% 50%' },
+                },
             },
             boxShadow: {
-                'soft': '0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04)',
-                'medium': '0 4px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 30px -5px rgba(0, 0, 0, 0.08)',
-                'strong': '0 10px 40px -10px rgba(0, 0, 0, 0.15), 0 20px 50px -10px rgba(0, 0, 0, 0.12)',
+                'soft': '0 2px 15px -3px rgba(0,0,0,0.07), 0 10px 20px -2px rgba(0,0,0,0.04)',
+                'medium': '0 4px 25px -5px rgba(0,0,0,0.1),  0 10px 30px -5px rgba(0,0,0,0.08)',
+                'strong': '0 10px 40px -10px rgba(0,0,0,0.15), 0 20px 50px -10px rgba(0,0,0,0.12)',
+                'coral': '0 8px 30px -5px rgba(228,119,124,0.35)',
+            },
+            transitionTimingFunction: {
+                'smooth': 'cubic-bezier(0.4, 0, 0.2, 1)',
             },
         },
     },
