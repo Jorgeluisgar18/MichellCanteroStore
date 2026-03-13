@@ -58,7 +58,7 @@ export const UpdateProfileSchema = z.object({
 export const AdminUpdateUserSchema = z.object({
     role: z.enum(['customer', 'admin']).optional(),
     full_name: z.string().min(1).max(100).optional(),
-    phone: z.string().regex(/^\+?[0-9]{10,15}$/).optional(),
+    phone: z.string().regex(/^\+?[0-9]{10,15}$/).optional().or(z.literal('')).transform(v => v === '' ? undefined : v),
 });
 
 // Newsletter Schema

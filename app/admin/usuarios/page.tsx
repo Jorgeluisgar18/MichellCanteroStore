@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
+import { fetchWithCsrf } from '@/lib/hooks/useCsrfToken';
 
 interface UserProfile {
     id: string;
@@ -63,17 +64,25 @@ export default function AdminUsersPage() {
         if (!selectedUser) return;
 
         try {
-            const res = await fetch(`/api/admin/users/${selectedUser.id}`, {
+            // Clean phone: send undefined if empty string to pass schema validation
+            const payload = {
+                full_name: editForm.full_name || undefined,
+                role: editForm.role || undefined,
+                phone: editForm.phone?.trim() || undefined,
+            };
+
+            const res = await fetchWithCsrf(`/api/admin/users/${selectedUser.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editForm),
+                body: JSON.stringify(payload),
             });
 
             if (res.ok) {
                 setIsEditModalOpen(false);
                 fetchProfiles();
             } else {
-                alert('Error al actualizar el usuario');
+                const data = await res.json().catch(() => ({}));
+                alert(data.error || 'Error al actualizar el usuario');
             }
         } catch (error) {
             console.error('Error updating user:', error);
@@ -85,11 +94,13 @@ export default function AdminUsersPage() {
         if (!window.confirm('¿Estás seguro de que deseas eliminar este perfil? Esto no eliminará la cuenta de acceso, solo los datos del perfil.')) return;
 
         try {
-            const res = await fetch(`/api/admin/users/${id}`, {
+            const res = await fetchWithCsrf(`/api/admin/users/${id}`, {
                 method: 'DELETE',
             });
             if (res.ok) {
                 fetchProfiles();
+            } else {
+                alert('Error al eliminar el perfil');
             }
         } catch (error) {
             console.error('Error deleting user:', error);
