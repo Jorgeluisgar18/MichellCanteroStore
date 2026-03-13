@@ -18,6 +18,7 @@ import Input from '@/components/ui/Input';
 import Link from 'next/link';
 import ProductImage from '@/components/product/ProductImage';
 import { Product } from '@/types';
+import { fetchWithCsrf } from '@/lib/hooks/useCsrfToken';
 
 export default function AdminProductsPage() {
     const [products, setProducts] = useState<Product[]>([]);
@@ -45,7 +46,7 @@ export default function AdminProductsPage() {
         if (!confirm('¿Estás segura de que deseas eliminar este producto?')) return;
 
         try {
-            const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+            const res = await fetchWithCsrf(`/api/products/${id}`, { method: 'DELETE' });
             if (res.ok) {
                 fetchProducts();
             }

@@ -5,6 +5,7 @@ import { Star } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { useAuthStore } from '@/store/authStore';
+import { fetchWithCsrf } from '@/lib/hooks/useCsrfToken';
 
 interface ReviewFormProps {
     productId: string;
@@ -30,7 +31,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ productId, onSuccess }) => {
         setError(null);
 
         try {
-            const res = await fetch('/api/reviews', {
+            const res = await fetchWithCsrf('/api/reviews', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

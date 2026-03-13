@@ -37,14 +37,6 @@ function needsCsrfProtection(request: NextRequest): boolean {
         return false;
     }
 
-    // Protect these API routes
-    const protectedPaths = [
-        '/api/orders',
-        '/api/products',
-        '/api/admin',
-        '/api/profile',
-    ];
-
     // Exclude these paths (they have other protection)
     const excludedPaths = [
         '/api/payments/webhook',  // Webhook signature
@@ -57,8 +49,8 @@ function needsCsrfProtection(request: NextRequest): boolean {
         return false;
     }
 
-    // Check if path should be protected
-    return protectedPaths.some(path => pathname.startsWith(path));
+    // Protect all other API routes by default (Fail-closed approach)
+    return pathname.startsWith('/api');
 }
 
 /**

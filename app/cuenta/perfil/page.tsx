@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Address } from '@/types';
 import { supabase } from '@/lib/supabase';
+import { fetchWithCsrf } from '@/lib/hooks/useCsrfToken';
 
 type TabType = 'personal' | 'addresses' | 'security';
 
@@ -118,7 +119,7 @@ export default function PerfilPage() {
         }
 
         try {
-            const res = await fetch('/api/profiles', {
+            const res = await fetchWithCsrf('/api/profiles', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
@@ -159,7 +160,7 @@ export default function PerfilPage() {
                 : '/api/addresses';
             const method = editingAddress ? 'PUT' : 'POST';
 
-            const res = await fetch(url, {
+            const res = await fetchWithCsrf(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(addressForm),
@@ -197,7 +198,7 @@ export default function PerfilPage() {
         if (!confirm('¿Estás segura de que deseas eliminar esta dirección?')) return;
 
         try {
-            const res = await fetch(`/api/addresses/${id}`, { method: 'DELETE' });
+            const res = await fetchWithCsrf(`/api/addresses/${id}`, { method: 'DELETE' });
             if (res.ok) {
                 await fetchAddresses();
                 setSuccess(true);

@@ -11,6 +11,7 @@ import { Card } from '@/components/ui/Card';
 import { useCartStore } from '@/store/cartStore';
 import { formatPrice } from '@/lib/utils';
 import { CreditCard, CheckCircle, Truck, MapPin, AlertCircle, X } from 'lucide-react';
+import { fetchWithCsrf } from '@/lib/hooks/useCsrfToken';
 
 // Declare Wompi WidgetCheckout global type
 declare global {
@@ -85,7 +86,7 @@ export default function CheckoutClient() {
             const idempotencyKey = crypto.randomUUID();
 
             // 1. Crear la orden en la base de datos a través de la API
-            const orderResponse = await fetch('/api/orders', {
+            const orderResponse = await fetchWithCsrf('/api/orders', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -120,7 +121,7 @@ export default function CheckoutClient() {
             }
 
             // 2. Obtener parámetros de Wompi
-            const paramsResponse = await fetch('/api/payments/checkout-params', {
+            const paramsResponse = await fetchWithCsrf('/api/payments/checkout-params', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
