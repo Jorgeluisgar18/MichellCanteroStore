@@ -309,15 +309,15 @@ export default function ContentAdminPage() {
 
     useEffect(() => { loadContent(activePage); }, [activePage, loadContent]);
 
-    const fieldKey = (section: string, key: string) => `${section}::${key}`;
+    const fieldKey = (page: string, section: string, key: string) => `${page}::${section}::${key}`;
 
     const getValue = (section: string, key: string) => {
-        const fk = fieldKey(section, key);
+        const fk = fieldKey(activePage, section, key);
         return fk in edits ? edits[fk] : getContentValue(items, section, key);
     };
 
     const handleChange = (section: string, key: string, value: string) => {
-        setEdits((prev) => ({ ...prev, [fieldKey(section, key)]: value }));
+        setEdits((prev) => ({ ...prev, [fieldKey(activePage, section, key)]: value }));
     };
 
     const handleImageUploaded = (field: FieldDef, url: string) => {
@@ -326,9 +326,9 @@ export default function ContentAdminPage() {
 
     // Save all dirty fields
     const handleSave = async () => {
-        const dirtyKeys = Object.keys(edits);
+        const dirtyKeys = Object.keys(edits).filter(k => k.startsWith(`${activePage}::`));
         if (dirtyKeys.length === 0) {
-            setFeedback({ type: 'success', message: 'No hay cambios pendientes.' });
+            setFeedback({ type: 'success', message: 'No hay cambios pendientes para esta página.' });
             return;
         }
         setSaving(true);
@@ -336,7 +336,7 @@ export default function ContentAdminPage() {
         const errors: string[] = [];
 
         for (const fk of dirtyKeys) {
-            const [section, key] = fk.split('::');
+            const [, section, key] = fk.split('::');
             const value = edits[fk];
             const isImage = key === 'image_url';
 
@@ -367,13 +367,19 @@ export default function ContentAdminPage() {
             setFeedback({ type: 'error', message: `Algunos campos no se guardaron: ${errors.join('; ')}` });
         } else {
             setFeedback({ type: 'success', message: `¡Cambios guardados exitosamente! (${dirtyKeys.length} campo${dirtyKeys.length > 1 ? 's' : ''})` });
+            // Clear edits for this page
+            setEdits(prev => {
+                const copy = { ...prev };
+                for (const fk of dirtyKeys) delete copy[fk];
+                return copy;
+            });
             // Refresh stored items
             await loadContent(activePage);
         }
     };
 
     const currentFields = PAGE_FIELDS[activePage];
-    const dirtyCount = Object.keys(edits).length;
+    const dirtyCount = Object.keys(edits).filter(k => k.startsWith(`${activePage}::`)).length;
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -444,7 +450,8 @@ export default function ContentAdminPage() {
                                 <div className="p-6 grid gap-6">
                                     {sectionFields.map((field) => {
                                         const val = getValue(field.section, field.key);
-                                        const isDirty = fieldKey(field.section, field.key) in edits;
+                                        const fk = fieldKey(activePage, field.section, field.key);
+                                        const isDirty = fk in edits;
 
                                         if (field.type === 'image') {
                                             return (

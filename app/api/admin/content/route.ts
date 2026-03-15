@@ -92,7 +92,7 @@ export async function PUT(request: Request) {
     }
 
     // Allowed pages
-    const ALLOWED_PAGES = ['home', 'nosotros', 'tienda'] as const;
+    const ALLOWED_PAGES = ['home', 'nosotros', 'tienda', 'global', 'contacto'] as const;
     if (!ALLOWED_PAGES.includes(page as typeof ALLOWED_PAGES[number])) {
         return NextResponse.json(
             { error: `Página no válida. Válidas: ${ALLOWED_PAGES.join(', ')}` },
