@@ -11,8 +11,6 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { orderId, amount, email, orderNumber } = body;
 
-        console.log('Generating checkout params for:', { orderNumber, amount, email });
-
         if (!orderId || !amount || !email || !orderNumber) {
             return NextResponse.json({ error: 'Faltan parámetros' }, { status: 400 });
         }
@@ -31,7 +29,6 @@ export async function POST(request: Request) {
         if (WOMPI_INTEGRITY_SECRET) {
             const concatenation = `${orderNumber}${amountInCents}COP${WOMPI_INTEGRITY_SECRET}`;
             signature = crypto.createHash('sha256').update(concatenation).digest('hex');
-            console.log('Integrity signature generated successfully for order:', orderNumber);
         } else {
             console.error('CRITICAL: WOMPI_INTEGRITY_SECRET is not defined. Integrity signature is required for Wompi Sandbox/Production.');
             return NextResponse.json({ error: 'Configuración de seguridad incompleta (Integrity Secret missing)' }, { status: 500 });

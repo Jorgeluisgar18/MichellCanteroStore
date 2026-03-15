@@ -28,13 +28,13 @@ export default function LoginPage() {
         const messageParam = params.get('message');
 
         if (errorParam) {
-            setError(
-                messageParam ||
-                    errorParam === 'auth_error' ? 'Error al autenticar. Por favor intenta de nuevo.' :
-                    errorParam === 'config_error' ? 'Error de configuración. Contacta al administrador.' :
-                        errorParam === 'exchange_error' ? 'Error al procesar la autenticación.' :
-                            'Ocurrió un error. Por favor intenta de nuevo.'
-            );
+            let msg = 'Ocurrió un error. Por favor intenta de nuevo.';
+            if (messageParam) msg = messageParam;
+            else if (errorParam === 'auth_error') msg = 'Error al autenticar. Por favor intenta de nuevo.';
+            else if (errorParam === 'config_error') msg = 'Error de configuración. Contacta al administrador.';
+            else if (errorParam === 'exchange_error') msg = 'Error al procesar la autenticación.';
+            
+            setError(msg);
             // Clean URL
             router.replace('/cuenta/login', { scroll: false });
         }

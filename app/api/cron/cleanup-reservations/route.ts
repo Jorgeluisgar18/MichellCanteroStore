@@ -42,8 +42,6 @@ export async function GET(request: Request) {
             );
         }
 
-        console.log('Cleanup completed:', data);
-
         return NextResponse.json({
             success: true,
             ...data
