@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase';
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/avif', 'image/gif'];
 const MAX_SIZE_BYTES = 5 * 1024 * 1024;
 const SAFE_PATH_REGEX = /^[a-zA-Z0-9/_.\-]+$/;
+const PRODUCT_IMAGES_BUCKET = 'page-images';
 
 export async function POST(request: Request) {
     const supabase = createClient();
@@ -68,7 +69,7 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(arrayBuffer);
 
     const { error: uploadError } = await supabaseAdmin.storage
-        .from('products')
+        .from(PRODUCT_IMAGES_BUCKET)
         .upload(safePath, buffer, {
             contentType: file.type,
             upsert: false,
@@ -82,7 +83,7 @@ export async function POST(request: Request) {
         );
     }
 
-    const { data } = supabaseAdmin.storage.from('products').getPublicUrl(safePath);
+    const { data } = supabaseAdmin.storage.from(PRODUCT_IMAGES_BUCKET).getPublicUrl(safePath);
 
     return NextResponse.json({ url: data.publicUrl });
 }
