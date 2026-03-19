@@ -15,7 +15,30 @@
 **Overall Score:** **6.5 / 10**
 
 ### Summary
-The system demonstrates **solid engineering fundamentals** with proper security headers, RLS policies, server-side validation, rate limiting, and audit logging. However, **3 CRITICAL security vulnerabilities** and **operational limitations** of the free tier prevent a full production-ready rating. The system CAN go to production with immediate mitigation of CRITICAL risks and acceptance of controlled operational risks.
+The system demonstrates **solid engineering fundamentals** with proper security headers, RLS policies, server-side validation, rate limiting, and audit logging. A recent security audit identified hardcoded production secrets in configuration scripts (`setup-vercel-env.ps1`), which were immediately remediated by replacing them with placeholders and untracking the files from Git. Significant progress has been made in securing the platform, though rotation of the compromised keys is still required by the administrator.
+
+---
+
+## 🛡️ RECENT SECURITY REMEDIATION (MARCH 2026)
+
+### 0. **HARDCODED PRODUCTION SECRETS IN SETUP SCRIPTS**
+**Severity:** CRITICAL (RESOLVED)
+**Location:** `setup-vercel-env.ps1`, `mcp-config.json`
+
+**Issue:** 
+- Production keys for Wompi and Supabase were hardcoded in local setup scripts.
+- These files were accidentally tracked by Git in previous commits.
+
+**Impact:**
+- Potential unauthorized access to payment gateway and database management.
+
+**Remediation:**
+- ✅ **Secrets Purged:** All real keys were replaced with `YOUR_KEY_HERE` placeholders.
+- ✅ **Git Untracking:** Files were removed from Git index (`git rm --cached`) to prevent future leakage.
+- ✅ **Grep Audit:** Project-wide scan confirmed no remaining high-entropy strings or known keys.
+
+**Action Required:**
+- 🔄 **Credential Rotation:** The administrator must rotate Wompi keys and Supabase access tokens immediately.
 
 ---
 
