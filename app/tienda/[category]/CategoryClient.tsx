@@ -33,6 +33,26 @@ const CATEGORY_THEMES: Record<string, { from: string; to: string; badge: string;
     },
 };
 
+const DEFAULT_THEME: { from: string; to: string; badge: string; dot: string } = {
+    from: 'from-[#2d1b1f]',
+    to: 'to-[#6b2c3e]',
+    badge: 'bg-rose-900/40 text-rose-200 border-rose-700/40',
+    dot: 'bg-rose-400',
+};
+
+function getCategoryTheme(categorySlug: string): { from: string; to: string; badge: string; dot: string } {
+    switch (categorySlug) {
+        case 'accesorios':
+            return CATEGORY_THEMES.accesorios!;
+        case 'ropa':
+            return CATEGORY_THEMES.ropa!;
+        case 'maquillaje':
+            return CATEGORY_THEMES.maquillaje!;
+        default:
+            return DEFAULT_THEME;
+    }
+}
+
 interface CategoryClientProps {
     category: Category;
     initialProducts: Product[];
@@ -58,12 +78,7 @@ export default function CategoryClient({ category, initialProducts, categorySlug
 
     const { getImage, get } = usePageContent('categorias');
     
-    const theme = CATEGORY_THEMES[categorySlug] || CATEGORY_THEMES['maquillaje'] || {
-        from: 'from-[#2d1b1f]',
-        to: 'to-[#6b2c3e]',
-        badge: 'bg-rose-900/40 text-rose-200 border-rose-700/40',
-        dot: 'bg-rose-400',
-    };
+    const theme = getCategoryTheme(categorySlug);
 
     const bannerTitle = get(`cat_${categorySlug}`, 'title', category?.name || '');
     const bannerDesc = get(`cat_${categorySlug}`, 'description', category?.description || '');

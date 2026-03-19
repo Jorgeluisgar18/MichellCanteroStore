@@ -1,31 +1,18 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { createBrowserClient } from '@supabase/ssr';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 /**
- * Singleton instance for browser
+ * Public Supabase client for server-side reads without user session.
  */
-let _supabaseClient: SupabaseClient | null = null;
-
-/**
- * Get the Supabase client for browser/client-side usage.
- */
-export function getSupabase(): SupabaseClient {
-    if (!_supabaseClient) {
-        _supabaseClient = createBrowserClient(supabaseUrl, supabaseAnonKey);
-    }
-    return _supabaseClient;
-}
-
-/**
- * Supabase client instance for client-side use.
- */
-export const supabase: SupabaseClient = typeof window !== 'undefined'
-    ? getSupabase()
-    : createBrowserClient(supabaseUrl, supabaseAnonKey);
+export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+    },
+});
 
 /**
  * Admin client for server-side operations (API routes).

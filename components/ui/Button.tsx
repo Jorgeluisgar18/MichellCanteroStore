@@ -9,6 +9,34 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
     rightIcon?: React.ReactNode;
 }
 
+function getVariantClasses(variant: NonNullable<ButtonProps['variant']>): string {
+    switch (variant) {
+        case 'secondary':
+            return 'bg-secondary-600 text-white hover:bg-secondary-700 focus:ring-secondary-500';
+        case 'outline':
+            return 'border-2 border-primary-600 text-primary-700 hover:bg-primary-50 focus:ring-primary-500';
+        case 'ghost':
+            return 'text-primary-700 hover:bg-primary-50 focus:ring-primary-500';
+        case 'danger':
+            return 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500';
+        case 'primary':
+        default:
+            return 'bg-primary-600 text-neutral-900 font-semibold hover:bg-primary-700 focus:ring-primary-500';
+    }
+}
+
+function getSizeClasses(size: NonNullable<ButtonProps['size']>): string {
+    switch (size) {
+        case 'sm':
+            return 'px-3 py-1.5 text-sm';
+        case 'lg':
+            return 'px-6 py-3 text-lg';
+        case 'md':
+        default:
+            return 'px-4 py-2.5 text-base';
+    }
+}
+
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     (
         {
@@ -24,27 +52,13 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         },
         ref
     ) => {
-        const variants = {
-            primary: 'bg-primary-600 text-neutral-900 font-semibold hover:bg-primary-700 focus:ring-primary-500',
-            secondary: 'bg-secondary-600 text-white hover:bg-secondary-700 focus:ring-secondary-500',
-            outline: 'border-2 border-primary-600 text-primary-700 hover:bg-primary-50 focus:ring-primary-500',
-            ghost: 'text-primary-700 hover:bg-primary-50 focus:ring-primary-500',
-            danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
-        };
-
-        const sizes = {
-            sm: 'px-3 py-1.5 text-sm',
-            md: 'px-4 py-2.5 text-base',
-            lg: 'px-6 py-3 text-lg',
-        };
-
         return (
             <button
                 ref={ref}
                 className={cn(
                     'btn-base',
-                    variants[variant],
-                    sizes[size],
+                    getVariantClasses(variant),
+                    getSizeClasses(size),
                     isLoading && 'cursor-wait',
                     className
                 )}

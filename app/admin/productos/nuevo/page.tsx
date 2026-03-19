@@ -12,10 +12,10 @@ import {
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import { createBrowserClient } from '@supabase/ssr';
 import { fetchWithCsrf } from '@/lib/hooks/useCsrfToken';
 import { useToast } from '@/components/ui/Toast';
 import Image from 'next/image';
+import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
 
 interface Variant {
     id: string;
@@ -28,10 +28,7 @@ interface Variant {
 
 // Utilidad para subir imagen
 const uploadImage = async (file: File): Promise<string> => {
-    const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const supabase = getSupabaseBrowserClient();
 
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
     if (!allowedTypes.includes(file.type)) {

@@ -13,12 +13,13 @@ import {
     MapPin, Plus, Edit2, Trash2, Lock, AlertCircle, Star
 } from 'lucide-react';
 import { Address } from '@/types';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
 import { fetchWithCsrf } from '@/lib/hooks/useCsrfToken';
 
 type TabType = 'personal' | 'addresses' | 'security';
 
 export default function PerfilPage() {
+    const supabase = getSupabaseBrowserClient();
     const router = useRouter();
     const { user, checkSession } = useAuthStore();
     const [activeTab, setActiveTab] = useState<TabType>('personal');

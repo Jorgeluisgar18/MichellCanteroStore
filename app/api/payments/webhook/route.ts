@@ -1,6 +1,20 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 
+function getNestedValue(source: unknown, path: string): unknown {
+    let current: unknown = source;
+
+    for (const segment of path.split('.')) {
+        if (!current || typeof current !== 'object') {
+            return undefined;
+        }
+
+        current = Reflect.get(current, segment);
+    }
+
+    return current;
+}
+
 // POST /api/payments/webhook - Manejar notificaciones de Wompi
 export async function POST(request: Request) {
     try {
@@ -35,11 +49,7 @@ export async function POST(request: Request) {
 
         let concatenation = '';
         for (const prop of signature.properties) {
-            const parts = prop.split('.');
-            let value: unknown = data;
-            for (const part of parts) {
-                value = (value as Record<string, unknown>)?.[part];
-            }
+            const value = getNestedValue(data, prop);
             concatenation += String(value ?? '');
         }
         concatenation += timestamp;

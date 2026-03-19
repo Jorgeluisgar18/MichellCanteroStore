@@ -7,7 +7,7 @@ import Footer from '@/components/layout/Footer';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
 import { Lock, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -21,6 +21,7 @@ export default function ActualizarPasswordPage() {
 
     useEffect(() => {
         const checkSession = async () => {
+            const supabase = getSupabaseBrowserClient();
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) {
                 // If no session, the user didn't come from a valid recovery link
@@ -47,6 +48,7 @@ export default function ActualizarPasswordPage() {
         setIsLoading(true);
 
         try {
+            const supabase = getSupabaseBrowserClient();
             const { error } = await supabase.auth.updateUser({
                 password: newPassword
             });

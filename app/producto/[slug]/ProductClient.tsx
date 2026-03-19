@@ -24,16 +24,33 @@ interface ProductClientProps {
     initialReviews: Review[];
 }
 
+function getInitialVariant(product: Product): ProductVariant | undefined {
+    if (!product.variants || product.variants.length === 0) {
+        return undefined;
+    }
+
+    return product.variants.find((variant) => variant.inStock) ?? product.variants.at(0);
+}
+
+function getVariantLabel(product: Product): string {
+    const firstVariantType = product.variants?.at(0)?.type;
+
+    if (firstVariantType === 'color') {
+        return 'Selecciona un Color';
+    }
+
+    if (firstVariantType === 'size') {
+        return 'Selecciona tu Talla';
+    }
+
+    return 'Selecciona un Tono';
+}
+
 export default function ProductClient({ initialProduct, relatedProducts, initialReviews }: ProductClientProps) {
     const [product] = useState<Product>(initialProduct);
     const [reviews, setReviews] = useState<Review[]>(initialReviews);
     const [selectedImage, setSelectedImage] = useState(0);
-    const [selectedVariant, setSelectedVariant] = useState<ProductVariant | undefined>(() => {
-        if (initialProduct.variants && initialProduct.variants.length > 0) {
-            return initialProduct.variants.find((v: ProductVariant) => v.inStock) || initialProduct.variants[0];
-        }
-        return undefined;
-    });
+    const [selectedVariant, setSelectedVariant] = useState<ProductVariant | undefined>(() => getInitialVariant(initialProduct));
     const [quantity, setQuantity] = useState(1);
 
     const addItem = useCartStore((state) => state.addItem);
@@ -44,6 +61,8 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
     const discount = product.compare_at_price
         ? calculateDiscount(product.price, product.compare_at_price)
         : 0;
+    const selectedProductImage = product.images?.at(selectedImage);
+    const variantLabel = getVariantLabel(product);
 
     const handleAddToCart = () => {
         if (product && product.variants && product.variants.length > 0 && !selectedVariant) {
@@ -86,9 +105,9 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
                         {/* Images */}
                         <div className="space-y-4">
                             <div className="relative aspect-square bg-white rounded-2xl overflow-hidden">
-                                {product.images?.[selectedImage] ? (
+                                {selectedProductImage ? (
                                     <ProductImage
-                                        src={product.images[selectedImage]}
+                                        src={selectedProductImage}
                                         alt={product.name}
                                         fill
                                         className="object-cover"
@@ -181,8 +200,7 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
                             {product.variants && product.variants.length > 0 && (
                                 <div className="space-y-4">
                                     <label className="block text-sm font-medium text-neutral-900">
-                                        {product.variants[0]?.type === 'color' ? 'Selecciona un Color' :
-                                            product.variants[0]?.type === 'size' ? 'Selecciona tu Talla' : 'Selecciona un Tono'}
+                                        {variantLabel}
                                     </label>
                                     <div className="flex flex-wrap gap-3">
                                         {product.variants.map((variant) => {

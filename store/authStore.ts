@@ -3,14 +3,10 @@ import { persist } from 'zustand/middleware';
 import type { User } from '@/types';
 import { getAuthErrorMessage } from '@/lib/errors';
 import { getSiteUrl } from '@/lib/env';
-
-import { supabase } from '@/lib/supabase';
-
-// Initialize the client component client - lazy initialization
-// Removed local supabaseInstance to use shared one from @/lib/supabase
+import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
 
 const getSupabaseClient = () => {
-    return supabase;
+    return getSupabaseBrowserClient();
 };
 
 interface AuthStore {

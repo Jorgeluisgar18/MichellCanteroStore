@@ -41,21 +41,21 @@ function sanitize(obj: unknown): unknown {
         return obj.map(sanitize);
     }
 
-    const sanitized: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+    const sanitizedEntries = Object.entries(obj as Record<string, unknown>).map(([key, value]) => {
         const lowerKey = key.toLowerCase();
 
-        // Check if field is sensitive
         if (sensitiveFields.some(field => lowerKey.includes(field))) {
-            sanitized[key] = '[REDACTED]';
-        } else if (typeof value === 'object' && value !== null) {
-            sanitized[key] = sanitize(value);
-        } else {
-            sanitized[key] = value;
+            return [key, '[REDACTED]'] as const;
         }
-    }
 
-    return sanitized;
+        if (typeof value === 'object' && value !== null) {
+            return [key, sanitize(value)] as const;
+        }
+
+        return [key, value] as const;
+    });
+
+    return Object.fromEntries(sanitizedEntries);
 }
 
 /**

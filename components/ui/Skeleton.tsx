@@ -5,18 +5,24 @@ export interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
     variant?: 'text' | 'circular' | 'rectangular';
 }
 
+function getVariantClasses(variant: NonNullable<SkeletonProps['variant']>): string {
+    switch (variant) {
+        case 'text':
+            return 'h-4 w-full rounded';
+        case 'circular':
+            return 'rounded-full';
+        case 'rectangular':
+        default:
+            return 'rounded-lg';
+    }
+}
+
 const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
     ({ className, variant = 'rectangular', ...props }, ref) => {
-        const variants = {
-            text: 'h-4 w-full rounded',
-            circular: 'rounded-full',
-            rectangular: 'rounded-lg',
-        };
-
         return (
             <div
                 ref={ref}
-                className={cn('shimmer', variants[variant], className)}
+                className={cn('shimmer', getVariantClasses(variant), className)}
                 {...props}
             />
         );

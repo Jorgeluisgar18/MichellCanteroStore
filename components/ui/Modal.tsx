@@ -14,6 +14,20 @@ export interface ModalProps {
     showCloseButton?: boolean;
 }
 
+function getSizeClasses(size: NonNullable<ModalProps['size']>): string {
+    switch (size) {
+        case 'sm':
+            return 'max-w-md';
+        case 'lg':
+            return 'max-w-2xl';
+        case 'xl':
+            return 'max-w-4xl';
+        case 'md':
+        default:
+            return 'max-w-lg';
+    }
+}
+
 const Modal: React.FC<ModalProps> = ({
     isOpen,
     onClose,
@@ -47,13 +61,6 @@ const Modal: React.FC<ModalProps> = ({
 
     if (!isOpen) return null;
 
-    const sizes = {
-        sm: 'max-w-md',
-        md: 'max-w-lg',
-        lg: 'max-w-2xl',
-        xl: 'max-w-4xl',
-    };
-
     const modalContent = (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop */}
@@ -66,7 +73,7 @@ const Modal: React.FC<ModalProps> = ({
             <div
                 className={cn(
                     'relative w-full bg-white rounded-2xl shadow-strong animate-scale-in',
-                    sizes[size]
+                    getSizeClasses(size)
                 )}
             >
                 {/* Header */}

@@ -4,7 +4,8 @@
  */
 
 export function getEnvVar(key: string, defaultValue?: string): string {
-    const value = process.env[key] || defaultValue;
+    const rawValue = Reflect.get(process.env, key);
+    const value = typeof rawValue === 'string' ? rawValue : defaultValue;
 
     if (!value) {
         if (typeof window === 'undefined') {

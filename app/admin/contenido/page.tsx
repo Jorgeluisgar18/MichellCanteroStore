@@ -156,6 +156,45 @@ function getContentValue(items: PageContent[], section: string, key: string): st
     return row?.value ?? '';
 }
 
+function hasOwnEdit(edits: Record<string, string>, key: string): boolean {
+    return Object.prototype.hasOwnProperty.call(edits, key);
+}
+
+function getEditValue(edits: Record<string, string>, key: string): string | undefined {
+    if (!hasOwnEdit(edits, key)) {
+        return undefined;
+    }
+
+    const value = Reflect.get(edits, key);
+    return typeof value === 'string' ? value : undefined;
+}
+
+function omitKeys(source: Record<string, string>, keysToRemove: string[]): Record<string, string> {
+    const blocked = new Set(keysToRemove);
+    return Object.fromEntries(
+        Object.entries(source).filter(([key]) => !blocked.has(key))
+    );
+}
+
+function getPageFields(page: PageName): FieldDef[] {
+    switch (page) {
+        case 'home':
+            return PAGE_FIELDS.home;
+        case 'nosotros':
+            return PAGE_FIELDS.nosotros;
+        case 'tienda':
+            return PAGE_FIELDS.tienda;
+        case 'categorias':
+            return PAGE_FIELDS.categorias;
+        case 'global':
+            return PAGE_FIELDS.global;
+        case 'contacto':
+            return PAGE_FIELDS.contacto;
+        default:
+            return [];
+    }
+}
+
 // ─────────────────────────────────────────────
 // Sub-components
 // ─────────────────────────────────────────────
@@ -317,7 +356,7 @@ export default function ContentAdminPage() {
 
     const getValue = (section: string, key: string): string => {
         const fk = fieldKey(activePage, section, key);
-        return (fk in edits ? edits[fk] : getContentValue(items, section, key)) ?? '';
+        return getEditValue(edits, fk) ?? getContentValue(items, section, key);
     };
 
     const handleChange = (section: string, key: string, value: string) => {
@@ -341,8 +380,8 @@ export default function ContentAdminPage() {
 
         for (const fk of dirtyKeys) {
             const [, section, key] = fk.split('::');
-            const value = edits[fk];
-            const field = PAGE_FIELDS[activePage as PageName].find(f => f.section === section && f.key === key);
+            const value = getEditValue(edits, fk) ?? '';
+            const field = getPageFields(activePage).find(f => f.section === section && f.key === key);
             const isImage = field?.type === 'image';
 
             const payload = {
@@ -373,17 +412,13 @@ export default function ContentAdminPage() {
         } else {
             setFeedback({ type: 'success', message: `¡Cambios guardados exitosamente! (${dirtyKeys.length} campo${dirtyKeys.length > 1 ? 's' : ''})` });
             // Clear edits for this page
-            setEdits(prev => {
-                const copy = { ...prev };
-                for (const fk of dirtyKeys) delete copy[fk];
-                return copy;
-            });
+            setEdits(prev => omitKeys(prev, dirtyKeys));
             // Refresh stored items
             await loadContent(activePage);
         }
     };
 
-    const currentFields = PAGE_FIELDS[activePage];
+    const currentFields = getPageFields(activePage);
     const dirtyCount = Object.keys(edits).filter(k => k.startsWith(`${activePage}::`)).length;
 
     return (

@@ -59,8 +59,9 @@ export function getAuthErrorMessage(error: unknown): string {
     };
 
     // Check for exact match
-    if (errorMap[errorMessage]) {
-        return errorMap[errorMessage];
+    const exactMatch = Object.entries(errorMap).find(([key]) => key === errorMessage);
+    if (exactMatch) {
+        return exactMatch[1];
     }
 
     // Check for partial matches

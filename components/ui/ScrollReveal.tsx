@@ -9,14 +9,23 @@ interface ScrollRevealProps {
     threshold?: number;
 }
 
-const DELAY_CLASS: Record<number, string> = {
-    0: '',
-    1: 'reveal-delay-1',
-    2: 'reveal-delay-2',
-    3: 'reveal-delay-3',
-    4: 'reveal-delay-4',
-    5: 'reveal-delay-5',
-};
+function getDelayClass(delay: ScrollRevealProps['delay']): string {
+    switch (delay) {
+        case 1:
+            return 'reveal-delay-1';
+        case 2:
+            return 'reveal-delay-2';
+        case 3:
+            return 'reveal-delay-3';
+        case 4:
+            return 'reveal-delay-4';
+        case 5:
+            return 'reveal-delay-5';
+        case 0:
+        default:
+            return '';
+    }
+}
 
 export default function ScrollReveal({
     children,
@@ -47,7 +56,7 @@ export default function ScrollReveal({
     return (
         <div
             ref={ref}
-            className={`reveal ${DELAY_CLASS[delay]} ${className}`}
+            className={`reveal ${getDelayClass(delay)} ${className}`}
         >
             {children}
         </div>

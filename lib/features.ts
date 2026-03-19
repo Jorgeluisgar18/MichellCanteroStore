@@ -92,7 +92,18 @@ export function isFeatureEnabled(
     feature: keyof typeof features,
     context?: FeatureContext
 ): boolean {
-    return features[feature](context);
+    switch (feature) {
+        case 'newCheckoutFlow':
+            return features.newCheckoutFlow(context);
+        case 'enhancedSearch':
+            return features.enhancedSearch();
+        case 'newPaymentProvider':
+            return features.newPaymentProvider(context);
+        case 'betaFeatures':
+            return features.betaFeatures(context);
+        default:
+            return false;
+    }
 }
 
 /**
