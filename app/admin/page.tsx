@@ -44,6 +44,15 @@ interface DashboardProduct {
     images: string[];
 }
 
+interface ApiSuccessResponse<T> {
+    data: T;
+    success: boolean;
+}
+
+interface ProductsPayload {
+    products: DashboardProduct[];
+}
+
 export default function AdminDashboardPage() {
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [recentOrders, setRecentOrders] = useState<SimpleOrder[]>([]);
@@ -55,13 +64,13 @@ export default function AdminDashboardPage() {
         // En una implementación real, esto vendría de un endpoint de estadísticas
         // /api/admin/stats
         Promise.all([
-            fetch('/api/orders?limit=5').then(res => res.json()),
-            fetch('/api/products?featured=true&limit=3').then(res => res.json()),
-            fetch('/api/admin/stats').then(res => res.json()),
-        ]).then(([ordersData, productsData, statsData]: [Record<string, unknown>, Record<string, unknown>, Record<string, unknown>]) => {
-            setRecentOrders((ordersData.data as SimpleOrder[]) || []);
-            setFeaturedProducts((productsData.data.products as DashboardProduct[]) || []);
-            setStats((statsData.data as DashboardStats) || null);
+            fetch('/api/orders?limit=5').then(res => res.json() as Promise<ApiSuccessResponse<SimpleOrder[]>>),
+            fetch('/api/products?featured=true&limit=3').then(res => res.json() as Promise<ApiSuccessResponse<ProductsPayload>>),
+            fetch('/api/admin/stats').then(res => res.json() as Promise<ApiSuccessResponse<DashboardStats>>),
+        ]).then(([ordersData, productsData, statsData]) => {
+            setRecentOrders(ordersData.data || []);
+            setFeaturedProducts(productsData.data?.products || []);
+            setStats(statsData.data || null);
             setLoading(false);
         }).catch(err => {
             console.error(err);
