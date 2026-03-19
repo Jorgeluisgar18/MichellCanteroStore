@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Menu, X, Search, ShoppingBag, User, Heart } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
@@ -35,7 +35,10 @@ const Header: React.FC = () => {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
+    const [isPointerNearTop, setIsPointerNearTop] = useState(false);
+    const [isHeaderHovered, setIsHeaderHovered] = useState(false);
     const router = useRouter();
+    const pathname = usePathname();
     const searchRef = useRef<HTMLDivElement>(null);
 
     // Scroll-aware sticky header
@@ -43,6 +46,15 @@ const Header: React.FC = () => {
         const handleScroll = () => setIsScrolled(window.scrollY > 20);
         window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    useEffect(() => {
+        const handleMouseMove = (event: MouseEvent) => {
+            setIsPointerNearTop(event.clientY <= 110);
+        };
+
+        window.addEventListener('mousemove', handleMouseMove, { passive: true });
+        return () => window.removeEventListener('mousemove', handleMouseMove);
     }, []);
 
     const itemCount = useCartStore((state) => state.getItemCount());
@@ -117,17 +129,23 @@ const Header: React.FC = () => {
         { name: 'Ropa', href: '/tienda/ropa' },
     ];
 
+    const isHome = pathname === '/';
+    const isCompact = (!isHome || isScrolled) && !isPointerNearTop && !isHeaderHovered && !isSearchOpen && !isMobileMenuOpen;
+    const shouldShowTopBar = isHome && !isCompact;
+
     return (
         <header 
-            className={`sticky top-0 z-40 w-full border-b transition-all duration-300 ${isScrolled ? 'header-scrolled border-neutral-100/50' : 'border-neutral-100 shadow-sm'}`}
-            style={{ backgroundColor: isScrolled ? `${headerBg}F9` : headerBg }}
+            className={`sticky top-0 z-40 w-full border-b transition-all duration-500 ${isScrolled || !isHome ? 'header-scrolled border-neutral-100/50' : 'border-neutral-100 shadow-sm'}`}
+            style={{ backgroundColor: isScrolled || !isHome ? `${headerBg}F9` : headerBg }}
+            onMouseEnter={() => setIsHeaderHovered(true)}
+            onMouseLeave={() => setIsHeaderHovered(false)}
         >
             <div 
-                className="py-2 border-b border-primary-100"
+                className={`overflow-hidden border-primary-100 transition-all duration-500 ${shouldShowTopBar ? 'max-h-12 border-b opacity-100' : 'max-h-0 border-b-0 opacity-0'}`}
                 style={{ backgroundColor: topBarBg, color: topBarText }}
             >
                 <div className="container-custom">
-                    <p className="text-center text-xs md:text-sm font-medium tracking-wide font-display uppercase">
+                    <p className="py-2 text-center text-xs md:text-sm font-medium tracking-wide font-display uppercase">
                         {get('header', 'top_bar', '✨ ENVÍO GRATIS EN COMPRAS SUPERIORES A $200.000 COP ✨')}
                     </p>
                 </div>
@@ -135,10 +153,10 @@ const Header: React.FC = () => {
 
             {/* Main Header */}
             <div className="container-custom">
-                <div className="flex flex-col items-center py-6 md:py-8 gap-6">
+                <div className={`flex flex-col items-center transition-all duration-500 ${isCompact ? 'py-3 md:py-4 gap-3' : 'py-6 md:py-8 gap-6'}`}>
                     {/* Logo Centered */}
                     <div className="flex justify-center w-full">
-                        <Logo className="scale-125 md:scale-150 transition-transform duration-500" />
+                        <Logo className={`transition-transform duration-500 ${isCompact ? 'scale-90 md:scale-100' : 'scale-125 md:scale-150'}`} />
                     </div>
 
                     <div className="flex items-center justify-between w-full">
@@ -154,10 +172,10 @@ const Header: React.FC = () => {
                         </div>
 
                         {/* Desktop Navigation - Centered */}
-                        <nav className="hidden md:flex items-center justify-center flex-1 space-x-12">
+                        <nav className={`hidden md:flex items-center justify-center flex-1 transition-all duration-500 ${isCompact ? 'space-x-8' : 'space-x-12'}`}>
                             <Link 
                                 href="/tienda" 
-                                className="hover:opacity-75 font-semibold text-sm uppercase tracking-[0.2em] transition-all"
+                                className={`hover:opacity-75 font-semibold uppercase tracking-[0.2em] transition-all ${isCompact ? 'text-xs' : 'text-sm'}`}
                                 style={{ color: headerText }}
                             >
                                 Tienda
@@ -166,7 +184,7 @@ const Header: React.FC = () => {
                                 <Link
                                     key={category.href}
                                     href={category.href}
-                                    className="hover:opacity-75 font-semibold text-sm uppercase tracking-[0.2em] transition-all"
+                                    className={`hover:opacity-75 font-semibold uppercase tracking-[0.2em] transition-all ${isCompact ? 'text-xs' : 'text-sm'}`}
                                     style={{ color: headerText }}
                                 >
                                     {category.name}
@@ -174,14 +192,14 @@ const Header: React.FC = () => {
                             ))}
                             <Link 
                                 href="/nosotros" 
-                                className="hover:opacity-75 font-semibold text-sm uppercase tracking-[0.2em] transition-all"
+                                className={`hover:opacity-75 font-semibold uppercase tracking-[0.2em] transition-all ${isCompact ? 'text-xs' : 'text-sm'}`}
                                 style={{ color: headerText }}
                             >
                                 Nosotros
                             </Link>
                             <Link 
                                 href="/contacto" 
-                                className="hover:opacity-75 font-semibold text-sm uppercase tracking-[0.2em] transition-all"
+                                className={`hover:opacity-75 font-semibold uppercase tracking-[0.2em] transition-all ${isCompact ? 'text-xs' : 'text-sm'}`}
                                 style={{ color: headerText }}
                             >
                                 Contacto
