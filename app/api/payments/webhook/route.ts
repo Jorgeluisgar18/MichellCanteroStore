@@ -19,43 +19,51 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Configuración incompleta' }, { status: 500 });
         }
 
-        if (signature && signature.checksum && signature.properties) {
-            // Reconstruir la cadena para validar el checksum
-            // Orden: valores de properties -> timestamp -> secreto
-            let concatenation = '';
-            for (const prop of signature.properties) {
-                // Navegar por el objeto data usando el path (ej: "transaction.id")
-                const parts = prop.split('.');
-                let value = data;
-                for (const part of parts) {
-                    value = value?.[part];
-                }
-                concatenation += value;
-            }
-            concatenation += timestamp;
-            concatenation += WOMPI_EVENTS_SECRET;
-
-            const expectedChecksum = crypto.createHash('sha256').update(concatenation).digest('hex');
-
-            if (expectedChecksum !== signature.checksum) {
-                logger.error('INVALID WEBHOOK SIGNATURE', {
-                    received: signature.checksum,
-                    expected: expectedChecksum
-                });
-                return NextResponse.json({ error: 'Firma inválida' }, { status: 401 });
-            }
-            logger.info('Webhook signature verified successfully');
-        } else {
-            // ✅ SECURITY FIX: Signature is REQUIRED in production
-            if (process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production') {
-                logger.error('WEBHOOK REJECTED: Missing signature in production environment');
-                return NextResponse.json({
-                    error: 'Firma requerida en producción'
-                }, { status: 401 });
-            }
-            // Allow in development/sandbox for testing
-            logger.warn('Webhook received without signature (development/sandbox only)');
+        if (!signature || !signature.checksum || !signature.properties) {
+            logger.error('[webhook] RECHAZADO: Firma ausente o incompleta.', {
+                event,
+                hasSignature: !!signature,
+                hasChecksum: !!signature?.checksum,
+                hasProperties: !!signature?.properties,
+                timestamp: new Date().toISOString()
+            });
+            return NextResponse.json(
+                { error: 'Webhook signature is required' },
+                { status: 401 }
+            );
         }
+
+        let concatenation = '';
+        for (const prop of signature.properties) {
+            const parts = prop.split('.');
+            let value: unknown = data;
+            for (const part of parts) {
+                value = (value as Record<string, unknown>)?.[part];
+            }
+            concatenation += String(value ?? '');
+        }
+        concatenation += timestamp;
+        concatenation += WOMPI_EVENTS_SECRET;
+
+        const expectedChecksum = crypto.createHash('sha256')
+            .update(concatenation)
+            .digest('hex');
+
+        const Buffer = (await import('buffer')).Buffer;
+        const signaturesMatch = crypto.timingSafeEqual(
+            Buffer.from(expectedChecksum, 'hex'),
+            Buffer.from(signature.checksum, 'hex')
+        );
+
+        if (!signaturesMatch) {
+            logger.error('[webhook] FIRMA INVÁLIDA — posible intento de suplantación', {
+                event,
+                timestamp: new Date().toISOString()
+            });
+            return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+        }
+
+        logger.info('[webhook] Firma verificada correctamente.');
 
         // ✅ SECURITY: Sanitized logging (no sensitive data)
         logger.info('Wompi webhook received', {

@@ -3,16 +3,32 @@ import { supabaseAdmin } from '@/lib/supabase';
 
 export async function POST(request: Request) {
     try {
-        const email = (await request.json())?.email?.trim();
+        const { checkRateLimit, getClientIdentifier } = await import('@/lib/middleware/ratelimit');
+        const clientId = getClientIdentifier(request);
+        const rl = await checkRateLimit(clientId, {
+            maxRequests: 3,
+            windowMs: 5 * 60 * 1000  // 5 minutos
+        });
 
-        const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!email || !EMAIL_REGEX.test(email)) {
+        if (!rl.success) {
+            return NextResponse.json(
+                { error: 'Demasiadas solicitudes. Por favor espera unos minutos.' },
+                { status: 429 }
+            );
+        }
+
+        const email = (await request.json())?.email?.trim();
+        const { z } = await import('zod');
+        const EmailSchema = z.string().email().max(254);
+        const emailParsed = EmailSchema.safeParse(email);
+
+        if (!emailParsed.success) {
             return NextResponse.json({ error: 'Email inválido' }, { status: 400 });
         }
 
         const { error } = await supabaseAdmin
             .from('newsletter_subscriptions')
-            .insert([{ email }]);
+            .insert([{ email: emailParsed.data }]);
 
         if (error) {
             if (error.code === '23505') { // Unique violation

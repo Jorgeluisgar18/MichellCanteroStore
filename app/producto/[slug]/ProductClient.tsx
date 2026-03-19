@@ -1,9 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { ShoppingCart, Heart, Minus, Plus, Star, Truck, Shield } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
+import { ShoppingCart, Heart, Minus, Plus, Star, Truck, Shield, ChevronRight } from 'lucide-react';
+import { STORE_CONFIG } from '@/lib/config';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import Link from 'next/link';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import ProductGrid from '@/components/product/ProductGrid';
@@ -35,6 +38,7 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
 
     const addItem = useCartStore((state) => state.addItem);
     const { isInWishlist, toggleItem } = useWishlistStore();
+    const { showToast } = useToast();
 
     const inWishlist = isInWishlist(product.id);
     const discount = product.compare_at_price
@@ -43,13 +47,13 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
 
     const handleAddToCart = () => {
         if (product && product.variants && product.variants.length > 0 && !selectedVariant) {
-            alert('Por favor selecciona una opción');
+            showToast('Por favor selecciona una opción', 'error');
             return;
         }
 
         if (product) {
             addItem(product, quantity, selectedVariant);
-            alert('Producto agregado al carrito');
+            showToast('¡Producto agregado al carrito!');
         }
     };
 
@@ -58,6 +62,25 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
             <Header />
             <main className="min-h-screen bg-neutral-50">
                 <div className="container-custom py-8">
+                    {/* Breadcrumbs */}
+                    <nav className="flex items-center gap-2 text-sm text-neutral-500 mb-8 overflow-x-auto whitespace-nowrap pb-2 md:pb-0">
+                        <Link href="/" className="hover:text-primary-600 transition-colors">Inicio</Link>
+                        <ChevronRight className="w-4 h-4 flex-shrink-0" />
+                        <Link href="/tienda" className="hover:text-primary-600 transition-colors">Tienda</Link>
+                        {product.category && (
+                            <>
+                                <ChevronRight className="w-4 h-4 flex-shrink-0" />
+                                <Link
+                                    href={`/tienda/${product.category}`}
+                                    className="hover:text-primary-600 transition-colors whitespace-nowrap"
+                                >
+                                    {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
+                                </Link>
+                            </>
+                        )}
+                        <ChevronRight className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-neutral-900 font-medium truncate">{product.name}</span>
+                    </nav>
                     {/* Product Details */}
                     <div className="grid md:grid-cols-2 gap-8 md:gap-12 mb-16">
                         {/* Images */}
@@ -158,8 +181,8 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
                             {product.variants && product.variants.length > 0 && (
                                 <div className="space-y-4">
                                     <label className="block text-sm font-medium text-neutral-900">
-                                        {product.variants[0].type === 'color' ? 'Selecciona un Color' :
-                                            product.variants[0].type === 'size' ? 'Selecciona tu Talla' : 'Selecciona un Tono'}
+                                        {product.variants[0]?.type === 'color' ? 'Selecciona un Color' :
+                                            product.variants[0]?.type === 'size' ? 'Selecciona tu Talla' : 'Selecciona un Tono'}
                                     </label>
                                     <div className="flex flex-wrap gap-3">
                                         {product.variants.map((variant) => {
@@ -268,7 +291,7 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
                             <div className="border-t border-neutral-200 pt-6 space-y-3">
                                 <div className="flex items-center gap-3 text-sm text-neutral-600">
                                     <Truck className="w-5 h-5 text-primary-600" />
-                                    <span>Envío gratis en compras superiores a $200.000</span>
+                                    <span>Envío gratis en compras superiores a {formatPrice(STORE_CONFIG.FREE_SHIPPING_THRESHOLD)}</span>
                                 </div>
                                 <div className="flex items-center gap-3 text-sm text-neutral-600">
                                     <Shield className="w-5 h-5 text-primary-600" />

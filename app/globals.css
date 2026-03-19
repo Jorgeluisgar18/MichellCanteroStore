@@ -4,10 +4,10 @@
 
 @layer base {
   :root {
-    --primary-50: 253 242 248;
-    --primary-500: 232 85 138;
-    --primary-600: 219 39 119;
-    --primary-700: 190 24 93;
+    --primary-50: 253 247 249;
+    --primary-500: 244 126 171; /* f47eab */
+    --primary-600: 212 89 136; /* d45988 hover */
+    --primary-700: 241 195 213; /* F1C3D5 */
 
     --secondary-500: 191 172 224;
     --secondary-600: 125 107 169;

@@ -22,14 +22,14 @@ const DEFAULT_SLIDES: HeroSlide[] = [
         ctaHref: '/tienda',
     },
     {
-        image: '/hero-michell.jpg',
+        image: '/hero-2.jpg',
         title: 'Nueva\nColección',
         subtitle: 'Descubre los productos más exclusivos. Tendencias que se convierten en tu sello personal.',
         ctaText: 'Ver Colección',
         ctaHref: '/tienda?filter=new',
     },
     {
-        image: '/hero-michell.jpg',
+        image: '/hero-3.jpg',
         title: 'Maquillaje\nde élite',
         subtitle: 'Las mejores marcas del mundo, reunidas en un solo lugar para ti.',
         ctaText: 'Explorar Marcas',
@@ -68,7 +68,10 @@ export default function HeroCarousel({ slides = DEFAULT_SLIDES, autoPlayInterval
         return () => clearInterval(timer);
     }, [next, autoPlayInterval]);
 
+    // eslint-disable-next-line security/detect-object-injection
     const slide = slides[current];
+
+    if (!slide) return null;
 
     return (
         <section className="relative w-full overflow-hidden" style={{ height: 'min(90vh, 720px)' }}>
@@ -84,7 +87,8 @@ export default function HeroCarousel({ slides = DEFAULT_SLIDES, autoPlayInterval
                         fill
                         priority={i === 0}
                         className={`object-cover object-center transition-transform duration-[7000ms] ease-linear ${i === current ? 'scale-105' : 'scale-100'}`}
-                        unoptimized={s.image.startsWith('https://')}
+                        sizes="100vw"
+                        quality={90}
                     />
                     {/* Overlay gradient */}
                     <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />

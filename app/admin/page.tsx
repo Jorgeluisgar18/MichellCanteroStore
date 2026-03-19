@@ -60,7 +60,7 @@ export default function AdminDashboardPage() {
             fetch('/api/admin/stats').then(res => res.json()),
         ]).then(([ordersData, productsData, statsData]: [Record<string, unknown>, Record<string, unknown>, Record<string, unknown>]) => {
             setRecentOrders((ordersData.data as SimpleOrder[]) || []);
-            setFeaturedProducts((productsData.data as DashboardProduct[]) || []);
+            setFeaturedProducts((productsData.data.products as DashboardProduct[]) || []);
             setStats((statsData.data as DashboardStats) || null);
             setLoading(false);
         }).catch(err => {

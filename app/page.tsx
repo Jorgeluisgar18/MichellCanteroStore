@@ -10,7 +10,7 @@ import ProductGrid from '@/components/product/ProductGrid';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import HeroCarousel from '@/components/ui/HeroCarousel';
-import BrandsMarquee from '@/components/ui/BrandsMarquee';
+import BrandsMarquee, { Brand, DEFAULT_BRANDS } from '@/components/ui/BrandsMarquee';
 import ScrollReveal from '@/components/ui/ScrollReveal';
 import categoriesData from '@/data/categories.json';
 import type { Product, Category } from '@/types';
@@ -22,7 +22,7 @@ export default function HomePage() {
     const [products, setProducts] = useState<Product[]>([]);
     const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
     const [loading, setLoading] = useState(true);
-    const { get, getImage } = usePageContent('home');
+    const { items, loading: contentLoading, get, getImage } = usePageContent('home');
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -33,7 +33,7 @@ export default function HomePage() {
                 ]);
                 const productsData = await productsRes.json();
                 const countsData = await countsRes.json();
-                setProducts(productsData.data || []);
+                setProducts(productsData.data.products || []);
                 setCategoryCounts(countsData.data || {});
             } catch (error) {
                 console.error('Error fetching products:', error);
@@ -46,6 +46,16 @@ export default function HomePage() {
 
     const featuredProducts = products.filter((p) => p.featured).slice(0, 4);
     const newProducts = products.filter((p) => p.is_new).slice(0, 4);
+ 
+    // Extract dynamic brands from CMS
+    const brandItems = items.filter((i) => i.section.startsWith('brand_'));
+    const cmsBrands: Brand[] = Array.from(new Set(brandItems.map((i) => i.section)))
+        .map((section) => {
+            const logo = brandItems.find((i) => i.section === section && i.key === 'logo_url')?.value || '';
+            const name = brandItems.find((i) => i.section === section && i.key === 'name')?.value || section.replace('brand_', 'Marca ');
+            return { name, logo };
+        })
+        .filter((b) => b.logo);
 
     // CMS values - consolidated
     // Categories section (moved assignments below for clarity)
@@ -119,7 +129,19 @@ export default function HomePage() {
                 </section>
 
                 {/* ─── Brands Marquee ─── */}
-                <BrandsMarquee />
+                {contentLoading ? (
+                    <div className="py-20 border-y border-neutral-100 bg-white">
+                        <div className="container-custom flex justify-center gap-12 overflow-hidden opacity-20">
+                            {[1, 2, 3, 4, 5, 6].map((i) => (
+                                <div key={i} className="h-10 w-28 bg-neutral-200 rounded-lg animate-pulse" />
+                            ))}
+                        </div>
+                    </div>
+                ) : (
+                    <BrandsMarquee 
+                        brands={cmsBrands.length > 0 ? cmsBrands : DEFAULT_BRANDS.slice(0, 10)} 
+                    />
+                )}
 
                 {/* ─── Welcome / Value Proposition Section ─── */}
                 <section className="py-16 md:py-20 bg-gradient-to-br from-primary-50 via-white to-secondary-50 overflow-hidden">
@@ -307,7 +329,7 @@ export default function HomePage() {
                 </section>
 
                 {/* ─── Scrolling Benefits Banner ─── */}
-                <section className="py-5 bg-primary-500 overflow-hidden border-y border-primary-400">
+                <section className="py-5 bg-[#f47eab] overflow-hidden border-y border-[#e56d9a]">
                     <div className="marquee-track gap-0 items-center">
                         {[1, 2, 3].map((i) => (
                             <div key={i} className="flex shrink-0 items-center">
@@ -317,10 +339,10 @@ export default function HomePage() {
                                     { Icon: Truck, text: 'Envíos a nivel nacional' },
                                     { Icon: Shield, text: 'Compra 100% segura' },
                                 ].map(({ Icon, text }) => (
-                                    <div key={text} className="flex items-center gap-3 px-10 text-white">
+                                    <div key={text} className="flex items-center gap-3 px-10 text-black">
                                         <Icon className="w-4 h-4 opacity-80 flex-shrink-0" />
                                         <span className="text-sm font-semibold tracking-wide uppercase whitespace-nowrap">{text}</span>
-                                        <span className="mx-4 text-white/30 select-none">✦</span>
+                                        <span className="mx-4 text-black/20 select-none">✦</span>
                                     </div>
                                 ))}
                             </div>

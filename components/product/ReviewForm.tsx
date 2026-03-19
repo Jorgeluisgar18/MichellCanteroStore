@@ -13,7 +13,7 @@ interface ReviewFormProps {
 }
 
 const ReviewForm: React.FC<ReviewFormProps> = ({ productId, onSuccess }) => {
-    const { user, isAuthenticated } = useAuthStore();
+    const { isAuthenticated } = useAuthStore();
     const [rating, setRating] = useState(0);
     const [hover, setHover] = useState(0);
     const [comment, setComment] = useState('');
@@ -36,8 +36,6 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ productId, onSuccess }) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     product_id: productId,
-                    user_id: user?.id,
-                    full_name: user?.name || 'Cliente',
                     rating,
                     comment
                 })
@@ -51,7 +49,6 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ productId, onSuccess }) => {
             setRating(0);
             setComment('');
             onSuccess();
-            alert('¡Gracias por tu reseña!');
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : 'Error al enviar reseña');
         } finally {

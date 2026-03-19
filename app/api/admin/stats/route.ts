@@ -45,9 +45,9 @@ export async function GET() {
             totalOrders,
             totalCustomers: totalCustomers || 0,
             lowStockProducts: lowStockProducts || 0,
-            revenueTrend: 15.2, // Mock 
-            ordersTrend: 10.5,   // Mock
-            customersTrend: 5.4  // Mock
+            revenueTrend: 0,
+            ordersTrend: 0,
+            customersTrend: 0
         };
 
         return NextResponse.json({ data: stats });

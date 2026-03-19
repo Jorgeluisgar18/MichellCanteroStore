@@ -1,12 +1,14 @@
 import type { MetadataRoute } from 'next';
 
 export default function robots(): MetadataRoute.Robots {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://michell-cantero-store.vercel.app';
+    
     return {
         rules: {
             userAgent: '*',
             allow: '/',
-            disallow: ['/cuenta/', '/checkout/'],
+            disallow: ['/admin/', '/api/', '/cuenta/', '/checkout/confirmacion'],
         },
-        sitemap: 'https://michellcanterostore.com/sitemap.xml',
+        sitemap: `${siteUrl}/sitemap.xml`,
     };
 }

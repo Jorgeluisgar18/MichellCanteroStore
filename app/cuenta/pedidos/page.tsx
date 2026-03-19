@@ -193,8 +193,8 @@ export default function PedidosPage() {
                                                     <div className="hidden md:block">
                                                         <p className="text-sm font-bold text-neutral-900 mb-0.5">
                                                             {order.order_items.length === 1
-                                                                ? order.order_items[0].product_name
-                                                                : `${order.order_items[0].product_name} y ${order.order_items.length - 1} más`}
+                                                                ? order.order_items[0]?.product_name ?? 'Producto'
+                                                                : `${order.order_items[0]?.product_name ?? 'Producto'} y ${order.order_items.length - 1} más`}
                                                         </p>
                                                         <p className="text-xs text-neutral-500 font-medium">
                                                             {order.order_items.reduce((acc, item) => acc + item.quantity, 0)} artículos • Haz clic para ver detalle

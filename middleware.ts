@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { applyCsrfProtection, setCsrfCookie } from '@/lib/security/csrf';
 
@@ -6,14 +6,11 @@ export async function middleware(req: NextRequest) {
     const res = NextResponse.next();
     const { pathname, searchParams } = req.nextUrl;
 
-    // 0. ⚓ Rescue: if landing with an auth code or error but not on the callback route,
-    // redirect to the callback route to handle session exchange or error display.
+    // Rescue: auth code redirect
     if ((searchParams.has('code') || searchParams.has('error')) && pathname !== '/auth/callback') {
         const callbackUrl = req.nextUrl.clone();
         callbackUrl.pathname = '/auth/callback';
 
-        // If we have a code but no destination, assume it's a recovery flow 
-        // that fell back to the homepage and send them to the password update page.
         if (searchParams.has('code') && !searchParams.has('next')) {
             callbackUrl.searchParams.set('next', '/cuenta/actualizar-password');
         }
@@ -21,51 +18,62 @@ export async function middleware(req: NextRequest) {
         return NextResponse.redirect(callbackUrl);
     }
 
-    // 1. ✅ CSRF Protection (Standardized)
+    // CSRF Protection
     const csrfError = applyCsrfProtection(req);
     if (csrfError) return csrfError;
 
-    // 2. ✅ Auth Helpers Connection
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
             cookies: {
-                get: (name) => req.cookies.get(name)?.value,
-                set: (name, value, options) => {
-                    req.cookies.set({ name, value, ...options });
-                    res.cookies.set({ name, value, ...options });
+                getAll() {
+                    return req.cookies.getAll();
                 },
-                remove: (name, options) => {
-                    req.cookies.set({ name, value: '', ...options });
-                    res.cookies.set({ name, value: '', ...options });
+                setAll(cookiesToSet) {
+                    cookiesToSet.forEach(({ name, value, options }) => {
+                        req.cookies.set(name, value);
+                        res.cookies.set(name, value, options);
+                    });
                 },
             },
         }
     );
 
-    // 3. ✅ Session Management
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    // 4. ✅ Route Protection Logic
+    // Protección rutas admin
     if (pathname.startsWith('/admin')) {
-        if (!session) {
-            return NextResponse.redirect(new URL(`/cuenta/login?redirect=${pathname}`, req.url));
+        if (authError || !user) {
+            return NextResponse.redirect(
+                new URL(`/cuenta/login?redirect=${encodeURIComponent(pathname)}`, req.url)
+            );
         }
 
-        const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+        const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+
+        if (profileError) {
+            console.error('[MIDDLEWARE] Error verificando rol admin:', profileError.message);
+            return NextResponse.redirect(new URL('/', req.url));
+        }
+
         if (profile?.role !== 'admin') {
             return NextResponse.redirect(new URL('/', req.url));
         }
     }
 
     if (pathname.startsWith('/cuenta') && !['/cuenta/login', '/cuenta/registro', '/cuenta/recuperar'].some(p => pathname.startsWith(p))) {
-        if (!session) {
-            return NextResponse.redirect(new URL(`/cuenta/login?redirect=${pathname}`, req.url));
+        if (authError || !user) {
+            return NextResponse.redirect(
+                new URL(`/cuenta/login?redirect=${encodeURIComponent(pathname)}`, req.url)
+            );
         }
     }
 
-    // 5. ✅ Finalize Response
     setCsrfCookie(req, res);
     return res;
 }

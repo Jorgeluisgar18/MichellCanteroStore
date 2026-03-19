@@ -56,7 +56,20 @@ export default function LoginPage() {
                 // We keep it loading while the router pushes
                 router.push('/cuenta');
             } else {
-                setError(result.error || 'Error al iniciar sesión');
+                let detailedError = 'Error al iniciar sesión';
+                const errorMsg = result.error?.toLowerCase() || '';
+                
+                if (errorMsg.includes('invalid login credentials')) {
+                    detailedError = 'Correo o contraseña incorrectos. Por favor verifica tus datos.';
+                } else if (errorMsg.includes('email not confirmed')) {
+                    detailedError = 'Por favor confirma tu correo electrónico antes de iniciar sesión.';
+                } else if (errorMsg.includes('too many requests')) {
+                    detailedError = 'Demasiados intentos fallidos. Por favor intenta más tarde.';
+                } else if (result.error) {
+                    detailedError = result.error;
+                }
+                
+                setError(detailedError);
                 setIsLoading(false);
             }
         } catch {

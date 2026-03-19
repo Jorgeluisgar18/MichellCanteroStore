@@ -18,59 +18,57 @@ const Footer: React.FC = () => {
     const facebook = get('social', 'facebook', 'https://www.facebook.com/share/16tdadH8Rd/');
 
     return (
-        <footer className="bg-primary-50 text-primary-600 border-t border-primary-100">
+        <footer className="bg-primary-50 text-neutral-900 border-t border-primary-100">
             {/* Main Footer */}
             <div className="container-custom py-16 md:py-20">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-16">
-                    {/* Customer Service */}
                     <div>
-                        <h4 className="text-primary-700 font-display font-semibold text-lg mb-6">Servicio al Cliente</h4>
+                        <h4 className="text-black font-display font-semibold text-lg mb-6">Servicio al Cliente</h4>
                         <ul className="space-y-4 text-sm">
                             <li>
-                                <Link href="/politicas/envios" className="hover:text-primary-700 transition-colors">
+                                <Link href="/politicas/envios" className="hover:text-[#f47eab] transition-colors">
                                     Envíos y Entregas
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/politicas/devoluciones" className="hover:text-primary-700 transition-colors">
+                                <Link href="/politicas/devoluciones" className="hover:text-[#f47eab] transition-colors">
                                     Devoluciones
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/politicas/privacidad" className="hover:text-primary-700 transition-colors">
+                                <Link href="/politicas/privacidad" className="hover:text-[#f47eab] transition-colors">
                                     Política de Privacidad
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/politicas/terminos" className="hover:text-primary-700 transition-colors">
+                                <Link href="/politicas/terminos" className="hover:text-[#f47eab] transition-colors">
                                     Términos y Condiciones
                                 </Link>
                             </li>
                         </ul>
                     </div>
 
-                    {/* Contact Info */}
                     <div>
-                        <h4 className="text-primary-700 font-display font-semibold text-lg mb-6">Contáctanos</h4>
+                        <h4 className="text-black font-display font-semibold text-lg mb-6">Contáctanos</h4>
                         <ul className="space-y-6 text-sm">
                             <li className="flex items-start space-x-3">
-                                <MapPin className="w-5 h-5 text-primary-600 flex-shrink-0 mt-0.5" />
+                                <MapPin className="w-5 h-5 text-[#f47eab] flex-shrink-0 mt-0.5" />
                                 <div>
-                                    <p className="font-semibold text-primary-700 mb-1">Tienda Física</p>
+                                    <p className="font-semibold text-black mb-1">Tienda Física</p>
                                     <p>{address}</p>
                                 </div>
                             </li>
                             <li className="flex items-start space-x-3">
-                                <Phone className="w-5 h-5 text-primary-600 flex-shrink-0 mt-0.5" />
+                                <Phone className="w-5 h-5 text-[#f47eab] flex-shrink-0 mt-0.5" />
                                 <div>
-                                    <p className="font-semibold text-primary-700 mb-1">WhatsApp</p>
+                                    <p className="font-semibold text-black mb-1">WhatsApp</p>
                                     <p>{phone}</p>
                                 </div>
                             </li>
                             <li className="flex items-start space-x-3">
-                                <Mail className="w-5 h-5 text-primary-600 flex-shrink-0 mt-0.5" />
+                                <Mail className="w-5 h-5 text-[#f47eab] flex-shrink-0 mt-0.5" />
                                 <div>
-                                    <p className="font-semibold text-primary-700 mb-1">Email</p>
+                                    <p className="font-semibold text-black mb-1">Email</p>
                                     <p>{email}</p>
                                 </div>
                             </li>
@@ -81,7 +79,7 @@ const Footer: React.FC = () => {
                     <div className="space-y-8">
                         {/* Social */}
                         <div>
-                            <h4 className="text-primary-700 font-display font-semibold text-lg mb-6">Síguenos</h4>
+                            <h4 className="text-black font-display font-semibold text-lg mb-6">Síguenos</h4>
                             <div className="flex space-x-4">
                                 <a
                                     href={igStore}
@@ -117,12 +115,12 @@ const Footer: React.FC = () => {
 
                         {/* CEO */}
                         <div className="pt-2 border-t border-primary-100/50">
-                            <p className="text-sm font-semibold text-primary-700 mb-2 font-display">CEO:</p>
+                            <p className="text-sm font-semibold text-black mb-2 font-display">CEO:</p>
                             <a
                                 href={igCeo}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-sm hover:text-primary-700 transition-colors flex items-center gap-2"
+                                className="text-sm hover:text-[#f47eab] transition-colors flex items-center gap-2"
                             >
                                 <Instagram className="w-4 h-4" /> @michellcantero
                             </a>
@@ -132,25 +130,25 @@ const Footer: React.FC = () => {
             </div>
 
             {/* Payment & Trust Badges */}
-            <div className="bg-primary-100/30 py-12">
+            <div className="bg-[#f47eab] py-12">
                 <div className="container-custom grid md:grid-cols-2 gap-8 items-center">
                     <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-primary-100 rounded-lg">
-                            <CreditCard className="w-5 h-5 text-primary-600" />
+                        <div className="p-2 bg-white/20 rounded-lg">
+                            <CreditCard className="w-5 h-5 text-black" />
                         </div>
                         <div>
-                            <p className="text-sm font-semibold text-primary-700">Métodos de Pago</p>
-                            <p className="text-xs text-primary-600 font-medium">
+                            <p className="text-sm font-semibold text-black">Métodos de Pago</p>
+                            <p className="text-xs text-black/80 font-medium">
                                 {get('footer', 'pay_subtitle', 'Wompi, PSE, Nequi, Crédito y más')}
                             </p>
                         </div>
                     </div>
                     <div className="flex flex-wrap items-center justify-start md:justify-end gap-6 text-sm">
-                        <span className="flex items-center gap-2 text-primary-600 font-medium tracking-tight">
+                        <span className="flex items-center gap-2 text-black font-bold tracking-tight">
                             <ShieldCheck className="w-5 h-5" />
                             Pago Seguro
                         </span>
-                        <span className="flex items-center gap-2 text-primary-600 font-medium tracking-tight">
+                        <span className="flex items-center gap-2 text-black font-bold tracking-tight">
                             <Truck className="w-5 h-5" />
                             {get('footer', 'shipping_text', 'Envíos a todo Colombia')}
                         </span>
@@ -159,9 +157,9 @@ const Footer: React.FC = () => {
             </div>
 
             {/* Bottom Bar */}
-            <div className="bg-primary-700 py-8">
+            <div className="bg-primary-600 py-8">
                 <div className="container-custom">
-                    <p className="text-center text-xs tracking-widest font-display text-white" suppressHydrationWarning>
+                    <p className="text-center text-xs tracking-widest font-display text-neutral-900 font-semibold" suppressHydrationWarning>
                         © {new Date().getFullYear()} MICHELL CANTERO STORE. TODOS LOS DERECHOS RESERVADOS.
                     </p>
                 </div>

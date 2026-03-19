@@ -23,6 +23,11 @@ interface ProductSuggestion {
 
 const Header: React.FC = () => {
     const { get } = usePageContent('global');
+    const headerBg = get('header', 'bg_color', '#ffffff');
+    const headerText = get('header', 'text_color', '#000000'); // Negro por defecto
+    const topBarBg = get('header', 'top_bar_bg', '#F1C3D5'); // primary-600 (Header pink)
+    const topBarText = get('header', 'top_bar_text', '#000000'); // Negro por defecto
+
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -113,8 +118,14 @@ const Header: React.FC = () => {
     ];
 
     return (
-        <header className={`sticky top-0 z-40 w-full border-b transition-all duration-300 ${isScrolled ? 'header-scrolled border-neutral-100/50' : 'bg-white border-neutral-100 shadow-sm'}`}>
-            <div className="bg-primary-50 text-primary-600 py-2 border-b border-primary-100">
+        <header 
+            className={`sticky top-0 z-40 w-full border-b transition-all duration-300 ${isScrolled ? 'header-scrolled border-neutral-100/50' : 'border-neutral-100 shadow-sm'}`}
+            style={{ backgroundColor: isScrolled ? `${headerBg}F9` : headerBg }}
+        >
+            <div 
+                className="py-2 border-b border-primary-100"
+                style={{ backgroundColor: topBarBg, color: topBarText }}
+            >
                 <div className="container-custom">
                     <p className="text-center text-xs md:text-sm font-medium tracking-wide font-display uppercase">
                         {get('header', 'top_bar', '✨ ENVÍO GRATIS EN COMPRAS SUPERIORES A $200.000 COP ✨')}
@@ -144,22 +155,35 @@ const Header: React.FC = () => {
 
                         {/* Desktop Navigation - Centered */}
                         <nav className="hidden md:flex items-center justify-center flex-1 space-x-12">
-                            <Link href="/tienda" className="text-neutral-700 hover:text-primary-600 font-semibold text-sm uppercase tracking-[0.2em] transition-colors">
+                            <Link 
+                                href="/tienda" 
+                                className="hover:opacity-75 font-semibold text-sm uppercase tracking-[0.2em] transition-all"
+                                style={{ color: headerText }}
+                            >
                                 Tienda
                             </Link>
                             {categories.map((category) => (
                                 <Link
                                     key={category.href}
                                     href={category.href}
-                                    className="text-neutral-700 hover:text-primary-600 font-semibold text-sm uppercase tracking-[0.2em] transition-colors"
+                                    className="hover:opacity-75 font-semibold text-sm uppercase tracking-[0.2em] transition-all"
+                                    style={{ color: headerText }}
                                 >
                                     {category.name}
                                 </Link>
                             ))}
-                            <Link href="/nosotros" className="text-neutral-700 hover:text-primary-600 font-semibold text-sm uppercase tracking-[0.2em] transition-colors">
+                            <Link 
+                                href="/nosotros" 
+                                className="hover:opacity-75 font-semibold text-sm uppercase tracking-[0.2em] transition-all"
+                                style={{ color: headerText }}
+                            >
                                 Nosotros
                             </Link>
-                            <Link href="/contacto" className="text-neutral-700 hover:text-primary-600 font-semibold text-sm uppercase tracking-[0.2em] transition-colors">
+                            <Link 
+                                href="/contacto" 
+                                className="hover:opacity-75 font-semibold text-sm uppercase tracking-[0.2em] transition-all"
+                                style={{ color: headerText }}
+                            >
                                 Contacto
                             </Link>
                         </nav>
@@ -169,7 +193,8 @@ const Header: React.FC = () => {
                             {/* Search */}
                             <button
                                 onClick={() => setIsSearchOpen(!isSearchOpen)}
-                                className="p-2 text-neutral-600 hover:text-neutral-900 transition-colors"
+                                className="p-2 hover:opacity-75 transition-all"
+                                style={{ color: headerText }}
                                 aria-label="Buscar"
                             >
                                 <Search className="w-5 h-5" />
@@ -178,7 +203,8 @@ const Header: React.FC = () => {
                             {/* Wishlist */}
                             <Link
                                 href="/favoritos"
-                                className="hidden sm:block p-2 text-neutral-600 hover:text-neutral-900 transition-colors relative"
+                                className="hidden sm:block p-2 hover:opacity-75 transition-all relative"
+                                style={{ color: headerText }}
                                 aria-label="Favoritos"
                             >
                                 <Heart className="w-5 h-5" />
@@ -192,7 +218,8 @@ const Header: React.FC = () => {
                             {/* User */}
                             <Link
                                 href={isMounted && isAuthenticated ? '/cuenta' : '/cuenta/login'}
-                                className="hidden sm:flex items-center gap-2 p-2 text-neutral-600 hover:text-neutral-900 transition-colors"
+                                className="hidden sm:flex items-center gap-2 p-2 hover:opacity-75 transition-all"
+                                style={{ color: headerText }}
                                 aria-label="Cuenta"
                             >
                                 <div className="flex items-center gap-2">
@@ -208,7 +235,8 @@ const Header: React.FC = () => {
                             {/* Cart */}
                             <Link
                                 href="/carrito"
-                                className="p-2 text-neutral-600 hover:text-neutral-900 transition-colors relative"
+                                className="p-2 hover:opacity-75 transition-all relative"
+                                style={{ color: headerText }}
                                 aria-label="Carrito"
                             >
                                 <ShoppingBag className="w-5 h-5" />
@@ -284,11 +312,15 @@ const Header: React.FC = () => {
 
             {/* Mobile Menu */}
             {isMobileMenuOpen && (
-                <div className="md:hidden border-t border-neutral-200 bg-white animate-slide-down shadow-xl">
+                <div 
+                    className="md:hidden border-t border-neutral-200 animate-slide-down shadow-xl"
+                    style={{ backgroundColor: headerBg }}
+                >
                     <nav className="container-custom py-8 space-y-4">
                         <Link
                             href="/tienda"
-                            className="block text-xl text-neutral-900 hover:text-primary-600 font-display font-medium border-b border-neutral-50 pb-2"
+                            className="block text-xl font-display font-medium border-b border-neutral-50 pb-2 transition-colors"
+                            style={{ color: headerText }}
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
                             Tienda
@@ -297,7 +329,8 @@ const Header: React.FC = () => {
                             <Link
                                 key={category.href}
                                 href={category.href}
-                                className="block text-xl text-neutral-900 hover:text-primary-600 font-display font-medium border-b border-neutral-50 pb-2"
+                                className="block text-xl font-display font-medium border-b border-neutral-50 pb-2 transition-colors"
+                                style={{ color: headerText }}
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
                                 {category.name}
@@ -305,14 +338,16 @@ const Header: React.FC = () => {
                         ))}
                         <Link
                             href="/nosotros"
-                            className="block text-xl text-neutral-900 hover:text-primary-600 font-display font-medium border-b border-neutral-50 pb-2"
+                            className="block text-xl font-display font-medium border-b border-neutral-50 pb-2 transition-colors"
+                            style={{ color: headerText }}
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
                             Nosotros
                         </Link>
                         <Link
                             href="/contacto"
-                            className="block text-xl text-neutral-900 hover:text-primary-600 font-display font-medium border-b border-neutral-50 pb-2"
+                            className="block text-xl font-display font-medium border-b border-neutral-50 pb-2 transition-colors"
+                            style={{ color: headerText }}
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
                             Contacto

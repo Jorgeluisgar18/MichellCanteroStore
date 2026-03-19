@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Save, Globe, Mail, Instagram, CreditCard } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import { fetchWithCsrf } from '@/lib/hooks/useCsrfToken';
 import Input from '@/components/ui/Input';
 
 export default function AjustesPage() {
     const [isSaving, setIsSaving] = useState(false);
+    const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [settings, setSettings] = useState({
         storeName: 'Michell Cantero Store',
         storeEmail: 'mcanterostore@gmail.com',
@@ -21,11 +23,35 @@ export default function AjustesPage() {
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
-        // Simulación de guardado
-        setTimeout(() => {
+        setSaveStatus('idle');
+
+        try {
+            const response = await fetchWithCsrf('/api/admin/content', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    pageName: 'global',
+                    updates: [
+                        { section: 'store', key: 'name', value: settings.storeName },
+                        { section: 'store', key: 'email', value: settings.storeEmail },
+                        { section: 'social', key: 'instagram', value: settings.instagram },
+                        { section: 'social', key: 'whatsapp', value: settings.whatsapp },
+                        { section: 'shipping', key: 'free_threshold', value: String(settings.freeShippingThreshold) },
+                        { section: 'store', key: 'currency', value: settings.currency },
+                    ]
+                })
+            });
+
+            if (!response.ok) throw new Error('Error al guardar');
+
+            setSaveStatus('success');
+            setTimeout(() => setSaveStatus('idle'), 3000);
+        } catch (error) {
+            console.error('[ajustes] Error guardando:', error);
+            setSaveStatus('error');
+        } finally {
             setIsSaving(false);
-            alert('Ajustes guardados correctamente (Simulación)');
-        }, 1000);
+        }
     };
 
     return (
@@ -118,7 +144,13 @@ export default function AjustesPage() {
                     </div>
                 </Card>
 
-                <div className="flex justify-end">
+                <div className="flex justify-end items-center gap-4">
+                    {saveStatus === 'success' && (
+                        <div className="text-green-600 text-sm font-medium">✓ Ajustes guardados correctamente</div>
+                    )}
+                    {saveStatus === 'error' && (
+                        <div className="text-red-600 text-sm font-medium">✗ Error al guardar. Intenta de nuevo.</div>
+                    )}
                     <Button
                         type="submit"
                         variant="primary"

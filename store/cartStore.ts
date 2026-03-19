@@ -30,7 +30,10 @@ export const useCartStore = create<CartStore>()(
 
                     if (existingItemIndex > -1) {
                         const newItems = [...state.items];
-                        newItems[existingItemIndex].quantity += quantity;
+                        const item = newItems[existingItemIndex];
+                        if (item) {
+                            item.quantity += quantity;
+                        }
                         return { items: newItems };
                     }
 

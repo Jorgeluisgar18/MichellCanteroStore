@@ -40,7 +40,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             <Card hover className="group h-full">
                 <div className="relative aspect-square overflow-hidden">
                     <ProductImage
-                        src={product.images[0]}
+                        src={product.images[0] ?? ''}
                         alt={product.name}
                         fill
                         className="object-cover transition-transform duration-300 group-hover:scale-110"

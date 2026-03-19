@@ -87,12 +87,18 @@ export async function POST(request: Request) {
             shipping_zip_code,
             payment_method,
             items,
-            userId,
             customer_notes,
-            idempotency_key
+            idempotency_key,
+            shipping_method,
+            shipping_location
         } = validatedData;
+        
+        // SECURITY: Verify user from session
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        const authenticatedUserId = user?.id ?? null;
 
-        logApiRequest('POST', '/api/orders', userId || 'guest');
+        logApiRequest('POST', '/api/orders', authenticatedUserId || 'guest');
 
         // SECURITY: Check idempotency
         if (idempotency_key) {
@@ -112,7 +118,7 @@ export async function POST(request: Request) {
         const productIds = items.map((item) => item.product_id);
         const { data: productsInDb, error: productsError } = await supabaseAdmin
             .from('products')
-            .select('id, name, price, stock_quantity, in_stock, images')
+            .select('id, name, price, stock_quantity, in_stock, images, variants')
             .in('id', productIds);
 
         if (productsError) throw new Error('Error al verificar inventario');
@@ -127,10 +133,21 @@ export async function POST(request: Request) {
                 return ApiResponse.badRequest(`Stock insuficiente para ${product.name}`);
             }
 
+            // Aplicar priceModifier si la variante lo tiene
+            let finalPrice = product.price;
+            if (item.variant_id && Array.isArray(product.variants)) {
+                const variant = (product.variants as Array<{
+                    id: string; priceModifier?: number
+                }>).find(v => v.id === item.variant_id);
+                if (variant?.priceModifier) {
+                    finalPrice = product.price + variant.priceModifier;
+                }
+            }
+
             validatedItems.push({
                 product_id: item.product_id,
                 product_name: product.name,
-                product_price: product.price,
+                product_price: finalPrice,
                 product_image: product.images?.[0] || '',
                 quantity: item.quantity,
                 variant_name: item.variant_name || null,
@@ -139,18 +156,31 @@ export async function POST(request: Request) {
         }
 
         // Calculate totals
+        const calculateShippingCost = (subtotal: number, shippingMethod: string, shippingLocation?: string | null): number => {
+            if (shippingMethod === 'pickup') return 0;
+            if (subtotal >= 200000) return 0;
+            const rates: Record<string, number> = {
+                'cienaga': 5000,
+                'santa-marta': 10000,
+                'resto-colombia': 16000,
+            };
+            return rates[shippingLocation ?? ''] ?? 16000;
+        }
+
         const subtotal = validatedItems.reduce((acc, item) => acc + (item.product_price * item.quantity), 0);
-        const shipping = subtotal >= 200000 ? 0 : 12000;
+        const shipping = calculateShippingCost(subtotal, shipping_method, shipping_location);
         const total = subtotal + shipping;
 
         // Create order
+        const { randomBytes } = await import('crypto');
         const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-        const orderNumber = `MC-${dateStr}-${Math.floor(1000 + Math.random() * 9000)}`;
+        const suffix = randomBytes(3).toString('hex').toUpperCase();
+        const orderNumber = `MC-${dateStr}-${suffix}`;
 
         const { data: order, error: orderError } = await supabaseAdmin
             .from('orders')
             .insert([{
-                user_id: userId || null,
+                user_id: authenticatedUserId,
                 order_number: orderNumber,
                 status: 'pending',
                 payment_status: 'pending',
@@ -168,6 +198,8 @@ export async function POST(request: Request) {
                 payment_method: payment_method || 'wompi',
                 customer_notes: customer_notes || null,
                 idempotency_key: idempotency_key || null,
+                shipping_method,
+                shipping_location,
             }])
             .select()
             .single();

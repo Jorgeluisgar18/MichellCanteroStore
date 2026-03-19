@@ -10,17 +10,17 @@ const config: Config = {
         extend: {
             colors: {
                 primary: {
-                    50: '#fdf2f8',
-                    100: '#fce7f3',
-                    200: '#fbcfe8',
-                    300: '#f9a8d4',
-                    400: '#f472b6',
-                    500: '#E8558A', // Rosa principal
-                    600: '#db2777',
-                    700: '#be185d',
-                    800: '#9d174d',
-                    900: '#831843',
-                    950: '#500724',
+                    50: '#FDF7F9',  // Fondo muy claro
+                    100: '#FDF7F9',
+                    200: '#F1C3D5', // Soft Pink (Logo/Header bg)
+                    300: '#F1C3D5',
+                    400: '#f47eab', // Vibrant Pink (Banners)
+                    500: '#f47eab', // Vibrant Pink (Botones principal)
+                    600: '#d45988', // Vibrant Pink Hover
+                    700: '#d45988',
+                    800: '#d45988',
+                    900: '#d45988',
+                    950: '#d45988',
                 },
                 secondary: {
                     50: '#f8f7fb',

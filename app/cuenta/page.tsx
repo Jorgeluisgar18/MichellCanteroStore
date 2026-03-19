@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import Header from '@/components/layout/Header';
@@ -12,15 +12,41 @@ import { User, Package, Heart, LogOut } from 'lucide-react';
 export default function CuentaPage() {
     const router = useRouter();
     const { user, isAuthenticated, logout, checkSession } = useAuthStore();
+    const [isVerifying, setIsVerifying] = useState(true);
 
     useEffect(() => {
-        checkSession();
+        const verify = async () => {
+            await checkSession();
+            setIsVerifying(false);
+        };
+        verify();
     }, [checkSession]);
 
     const handleLogout = async () => {
         await logout();
         router.push('/');
     };
+
+    if (isVerifying) {
+        return (
+            <>
+                <Header />
+                <main className="min-h-screen bg-neutral-50">
+                    <div className="container-custom py-12">
+                        <div className="max-w-4xl mx-auto space-y-8 animate-pulse">
+                            <div className="h-12 w-48 bg-neutral-200 rounded-lg"></div>
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <div className="h-32 bg-neutral-200 rounded-2xl"></div>
+                                <div className="h-32 bg-neutral-200 rounded-2xl"></div>
+                                <div className="h-32 bg-neutral-200 rounded-2xl"></div>
+                            </div>
+                            <div className="h-64 bg-neutral-200 rounded-2xl"></div>
+                        </div>
+                    </div>
+                </main>
+            </>
+        );
+    }
 
     if (!isAuthenticated || !user) {
         return null; // El middleware redirigirá

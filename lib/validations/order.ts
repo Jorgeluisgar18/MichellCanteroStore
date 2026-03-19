@@ -13,15 +13,40 @@ export const CreateOrderSchema = z.object({
     shipping_name: z.string().min(1, 'Nombre requerido').max(100, 'Nombre muy largo'),
     shipping_email: z.string().email('Email inválido'),
     shipping_phone: z.string().regex(/^\+?[0-9]{10,15}$/, 'Teléfono inválido'),
-    shipping_address: z.string().min(5, 'Dirección muy corta').max(200, 'Dirección muy larga'),
-    shipping_city: z.string().min(2, 'Ciudad requerida').max(100),
-    shipping_state: z.string().min(2, 'Departamento requerido').max(100),
+    shipping_address: z.string().max(200, 'Dirección muy larga').optional().default(''),
+    shipping_city: z.string().max(100).optional().default(''),
+    shipping_state: z.string().max(100).optional().default(''),
     shipping_zip_code: z.string().min(4, 'Código postal inválido').max(10).optional().nullable(),
     payment_method: z.enum(['wompi', 'cash_on_delivery']).default('wompi'),
+    shipping_method: z.enum(['delivery', 'pickup']).default('delivery'),
+    shipping_location: z.string().max(50).optional().nullable(),
     items: z.array(OrderItemSchema).min(1, 'Debe incluir al menos un producto').max(50, 'Máximo 50 productos por orden'),
-    userId: z.string().uuid().optional().nullable(),
     customer_notes: z.string().max(500, 'Notas muy largas').optional(),
     idempotency_key: z.string().uuid('Idempotency key debe ser UUID válido').optional(),
+}).superRefine((data, ctx) => {
+    if (data.shipping_method === 'delivery') {
+        if (!data.shipping_address || data.shipping_address.length < 5) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'La dirección es requerida para envío a domicilio',
+                path: ['shipping_address'],
+            });
+        }
+        if (!data.shipping_city || data.shipping_city.length < 2) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'La ciudad es requerida para envío a domicilio',
+                path: ['shipping_city'],
+            });
+        }
+        if (!data.shipping_state || data.shipping_state.length < 2) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'El departamento es requerido para envío a domicilio',
+                path: ['shipping_state'],
+            });
+        }
+    }
 });
 
 // Update Order Schema (Admin)

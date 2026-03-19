@@ -19,22 +19,27 @@ interface Order {
 function ConfirmacionContent() {
     const searchParams = useSearchParams();
     const orderId = searchParams.get('orderId');
-    const status = searchParams.get('status');
     const [order, setOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
+    const [fetchError, setFetchError] = useState(false);
 
     useEffect(() => {
         if (orderId) {
             fetch(`/api/orders/${orderId}`)
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) throw new Error('Error al obtener la orden');
+                    return res.json();
+                })
                 .then(data => {
                     setOrder(data.data);
                     setLoading(false);
                 })
-                .catch(err => {
-                    console.error(err);
+                .catch(() => {
+                    setFetchError(true);
                     setLoading(false);
                 });
+        } else {
+            setLoading(false);
         }
     }, [orderId]);
 
@@ -47,14 +52,26 @@ function ConfirmacionContent() {
         );
     }
 
-    const isSuccess = status === 'success' || order?.payment_status === 'paid';
-    const isPending = status === 'pending' || order?.payment_status === 'pending';
+    const isSuccess = order?.payment_status === 'paid';
+    const isPending = order?.payment_status === 'pending';
+    const isFailed = !loading && !isSuccess && !isPending;
+
+    if (fetchError || !order) {
+        return (
+            <div className="text-center py-12">
+                <p className="text-neutral-600">
+                    No pudimos cargar los detalles de tu orden.
+                    Por favor revisa tu correo o contacta soporte.
+                </p>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-2xl mx-auto py-12 px-4">
             <Card>
                 <div className="p-8 text-center">
-                    {isSuccess ? (
+                    {isSuccess && (
                         <>
                             <div className="bg-green-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
                                 <CheckCircle className="w-12 h-12 text-green-600" />
@@ -66,7 +83,8 @@ function ConfirmacionContent() {
                                 Gracias por tu compra. Hemos recibido tu pedido y estamos preparando todo para el envío.
                             </p>
                         </>
-                    ) : isPending ? (
+                    )}
+                    {isPending && (
                         <>
                             <div className="bg-yellow-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
                                 <Clock className="w-12 h-12 text-yellow-600" />
@@ -78,7 +96,8 @@ function ConfirmacionContent() {
                                 Tu pago está siendo procesado por la entidad financiera. Te notificaremos por correo electrónico una vez se confirme.
                             </p>
                         </>
-                    ) : (
+                    )}
+                    {isFailed && (
                         <>
                             <div className="bg-red-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
                                 <XCircle className="w-12 h-12 text-red-600" />

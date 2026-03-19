@@ -14,6 +14,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { OrderDetailsModal } from '@/components/admin/OrderDetailsModal';
 import { fetchWithCsrf } from '@/lib/hooks/useCsrfToken';
+import { useToast } from '@/components/ui/Toast';
 
 interface OrderItem {
     id: string;
@@ -52,6 +53,8 @@ export default function AdminOrdersPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const { showToast } = useToast();
 
     useEffect(() => {
         fetchOrders();
@@ -59,12 +62,16 @@ export default function AdminOrdersPage() {
 
     const fetchOrders = async () => {
         try {
+            setError(null);
+            setLoading(true);
             const res = await fetch('/api/orders');
+            if (!res.ok) throw new Error('Error al cargar pedidos');
             const data = await res.json();
             setOrders(data.data || []);
             setLoading(false);
         } catch (error: unknown) {
             console.error('Error fetching orders:', error);
+            setError('No se pudieron cargar los pedidos. Verifica tu conexión.');
             setLoading(false);
         }
     };
@@ -97,11 +104,11 @@ export default function AdminOrdersPage() {
                 fetchOrders();
                 setSelectedOrder(null);
             } else {
-                alert('Error al eliminar la orden');
+                showToast('Error al eliminar la orden', 'error');
             }
         } catch (error) {
             console.error('Error deleting order:', error);
-            alert('Error al eliminar la orden');
+            showToast('Error al eliminar la orden', 'error');
         }
     };
 
@@ -174,6 +181,17 @@ export default function AdminOrdersPage() {
         return (
             <div className="flex items-center justify-center p-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center p-12 bg-red-50 rounded-xl border border-red-100">
+                <span className="text-red-500 mb-4 text-center">{error}</span>
+                <Button onClick={fetchOrders} variant="outline" className="text-red-600 border-red-200">
+                    Reintentar
+                </Button>
             </div>
         );
     }

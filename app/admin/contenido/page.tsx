@@ -115,6 +115,10 @@ const PAGE_FIELDS: Record<PageName, FieldDef[]> = {
 
         { section: 'header', key: 'top_bar', label: 'Header – Texto Barra Superior', type: 'text', placeholder: '✨ ENVÍO GRATIS... ✨', maxLength: 100 },
         { section: 'header', key: 'logo_url', label: 'Branding – Logo Principal', type: 'image' },
+        { section: 'header', key: 'bg_color', label: 'Header – Color de Fondo (Hex)', type: 'text', placeholder: '#ffffff', maxLength: 7 },
+        { section: 'header', key: 'text_color', label: 'Header – Color de Texto (Hex)', type: 'text', placeholder: '#333333', maxLength: 7 },
+        { section: 'header', key: 'top_bar_bg', label: 'Barra Superior – Fondo (Hex)', type: 'text', placeholder: '#F1C3D5', maxLength: 7 },
+        { section: 'header', key: 'top_bar_text', label: 'Barra Superior – Texto (Hex)', type: 'text', placeholder: '#333333', maxLength: 7 },
 
         { section: 'social', key: 'instagram_store', label: 'Instagram (Tienda) - Link', type: 'text', placeholder: 'https://...', maxLength: 200 },
         { section: 'social', key: 'instagram_ceo', label: 'Instagram (CEO) - Link', type: 'text', placeholder: 'https://...', maxLength: 200 },
@@ -311,9 +315,9 @@ export default function ContentAdminPage() {
 
     const fieldKey = (page: string, section: string, key: string) => `${page}::${section}::${key}`;
 
-    const getValue = (section: string, key: string) => {
+    const getValue = (section: string, key: string): string => {
         const fk = fieldKey(activePage, section, key);
-        return fk in edits ? edits[fk] : getContentValue(items, section, key);
+        return (fk in edits ? edits[fk] : getContentValue(items, section, key)) ?? '';
     };
 
     const handleChange = (section: string, key: string, value: string) => {
@@ -338,7 +342,8 @@ export default function ContentAdminPage() {
         for (const fk of dirtyKeys) {
             const [, section, key] = fk.split('::');
             const value = edits[fk];
-            const isImage = key === 'image_url';
+            const field = PAGE_FIELDS[activePage as PageName].find(f => f.section === section && f.key === key);
+            const isImage = field?.type === 'image';
 
             const payload = {
                 page: activePage,

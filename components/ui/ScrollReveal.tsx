@@ -32,7 +32,7 @@ export default function ScrollReveal({
 
         const observer = new IntersectionObserver(
             ([entry]) => {
-                if (entry.isIntersecting) {
+                if (entry && entry.isIntersecting) {
                     el.classList.add('visible');
                     observer.unobserve(el);
                 }

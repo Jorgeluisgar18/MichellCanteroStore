@@ -17,6 +17,7 @@ import {
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { fetchWithCsrf } from '@/lib/hooks/useCsrfToken';
+import { useToast } from '@/components/ui/Toast';
 
 interface UserProfile {
     id: string;
@@ -39,6 +40,7 @@ export default function AdminUsersPage() {
         role: '',
         phone: ''
     });
+    const { showToast } = useToast();
 
     useEffect(() => {
         fetchProfiles();
@@ -82,11 +84,11 @@ export default function AdminUsersPage() {
                 fetchProfiles();
             } else {
                 const data = await res.json().catch(() => ({}));
-                alert(data.error || 'Error al actualizar el usuario');
+                showToast(data.error || 'Error al actualizar el usuario', 'error');
             }
         } catch (error) {
             console.error('Error updating user:', error);
-            alert('Error al actualizar el usuario');
+            showToast('Error al actualizar el usuario', 'error');
         }
     };
 
@@ -100,7 +102,7 @@ export default function AdminUsersPage() {
             if (res.ok) {
                 fetchProfiles();
             } else {
-                alert('Error al eliminar el perfil');
+                showToast('Error al eliminar el perfil', 'error');
             }
         } catch (error) {
             console.error('Error deleting user:', error);

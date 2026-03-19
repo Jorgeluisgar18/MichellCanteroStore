@@ -41,7 +41,7 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { product_id, full_name, rating, comment } = body;
+        const { product_id, rating, comment } = body;
 
         // ── Input validation ────────────────────────────────
         if (!product_id || typeof product_id !== 'string' || !product_id.trim()) {
@@ -66,13 +66,19 @@ export async function POST(request: Request) {
         //     .eq('orders.user_id', user.id)
         //     .limit(1);
 
+        const { data: profile } = await supabaseAdmin
+            .from('profiles')
+            .select('full_name')
+            .eq('id', user.id)
+            .single();
+
         const { data, error } = await supabaseAdmin
             .from('reviews')
             .insert([{
                 product_id,
                 user_id: user.id,
-                full_name: full_name || user.user_metadata.full_name || 'Cliente',
-                rating,
+                full_name: profile?.full_name || user.user_metadata?.full_name || 'Cliente',
+                rating: parsedRating,
                 comment
             }])
             .select()

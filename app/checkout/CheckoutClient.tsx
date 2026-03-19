@@ -12,6 +12,8 @@ import { useCartStore } from '@/store/cartStore';
 import { formatPrice } from '@/lib/utils';
 import { CreditCard, CheckCircle, Truck, MapPin, AlertCircle, X } from 'lucide-react';
 import { fetchWithCsrf } from '@/lib/hooks/useCsrfToken';
+import { useToast } from '@/components/ui/Toast';
+import { STORE_CONFIG } from '@/lib/config';
 
 // Declare Wompi WidgetCheckout global type
 declare global {
@@ -26,6 +28,8 @@ export default function CheckoutClient() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [wompiLoaded, setWompiLoaded] = useState(false);
     const [checkoutError, setCheckoutError] = useState<string | null>(null);
+    const [paymentApproved, setPaymentApproved] = useState(false);
+    const { showToast } = useToast();
 
     // Efecto para verificar si Wompi ya está cargado (por si el script termina antes del onLoad)
     useEffect(() => {
@@ -46,6 +50,8 @@ export default function CheckoutClient() {
         shippingLocation: 'cienaga' as string,
     });
 
+    const [errors, setErrors] = useState<Record<string, string>>({});
+
     const [termsAccepted, setTermsAccepted] = useState({
         terms: false,
         privacy: false,
@@ -57,13 +63,7 @@ export default function CheckoutClient() {
             return 0;
         }
 
-        const shippingCosts: Record<string, number> = {
-            'cienaga': 5000,
-            'santa-marta': 10000,
-            'resto-colombia': 16000,
-        };
-
-        return shippingCosts[formData.shippingLocation] || 0;
+        return STORE_CONFIG.SHIPPING_RATES[formData.shippingLocation] || 0;
     };
 
     const subtotal = getSubtotal();
@@ -157,6 +157,7 @@ export default function CheckoutClient() {
             checkout.open((result: { transaction: { status: string } }) => {
                 const transaction = result.transaction;
                 if (transaction.status === 'APPROVED') {
+                    setPaymentApproved(true);
                     clearCart();
                     router.push(`/checkout/confirmacion?orderId=${order.id}&status=success`);
                 } else {
@@ -175,14 +176,32 @@ export default function CheckoutClient() {
         }
     };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value,
-        });
+    const validateField = (name: string, value: string) => {
+        let error = '';
+        switch (name) {
+            case 'email':
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) error = 'Email inválido';
+                break;
+            case 'phone':
+                if (!/^\d{10,}$/.test(value.replace(/\s/g, ''))) error = 'Mínimo 10 dígitos';
+                break;
+            case 'name':
+                if (value.length < 3) error = 'Nombre demasiado corto';
+                break;
+            case 'street':
+                if (value.length < 5) error = 'Dirección incompleta';
+                break;
+        }
+        setErrors(prev => ({ ...prev, [name]: error }));
     };
 
-    if (items.length === 0) {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+        if (name in formData) validateField(name, value);
+    };
+
+    if (items.length === 0 && !paymentApproved) {
         router.push('/carrito');
         return null;
     }
@@ -195,12 +214,10 @@ export default function CheckoutClient() {
                 src="https://checkout.wompi.co/widget.js"
                 strategy="afterInteractive"
                 onLoad={() => {
-                    console.log('Wompi widget script loaded successfully via onLoad');
                     setWompiLoaded(true);
                 }}
                 onError={() => {
-                    console.error('Failed to load Wompi widget script');
-                    alert('Error al cargar el sistema de pagos. Por favor, recarga la página.');
+                    showToast('Error al cargar el sistema de pagos. Por favor, recarga la página.', 'error');
                 }}
             />
 
@@ -229,6 +246,7 @@ export default function CheckoutClient() {
                                                 onChange={handleChange}
                                                 required
                                                 placeholder="tu@email.com"
+                                                error={errors.email}
                                             />
                                         </div>
                                     </div>
@@ -346,6 +364,7 @@ export default function CheckoutClient() {
                                                 onChange={handleChange}
                                                 required
                                                 placeholder="Juan Pérez"
+                                                error={errors.name}
                                             />
                                             <Input
                                                 label="Teléfono"
@@ -355,6 +374,7 @@ export default function CheckoutClient() {
                                                 onChange={handleChange}
                                                 required
                                                 placeholder="300 123 4567"
+                                                error={errors.phone}
                                             />
                                             <div className="md:col-span-2">
                                                 <Input
@@ -364,6 +384,7 @@ export default function CheckoutClient() {
                                                     onChange={handleChange}
                                                     required={formData.shippingMethod === 'delivery'}
                                                     placeholder="Calle 123 #45-67"
+                                                    error={errors.street}
                                                 />
                                             </div>
                                             <Input

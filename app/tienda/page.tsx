@@ -35,7 +35,7 @@ function TiendaContent() {
             try {
                 const res = await fetch('/api/products');
                 const data = await res.json();
-                const all: Product[] = data.data || [];
+                const all: Product[] = data.data.products || [];
                 setProducts(all);
                 const prices = all.map((p) => p.price).filter(Boolean);
                 if (prices.length) {

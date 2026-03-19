@@ -2,12 +2,14 @@
 
 import Image from 'next/image';
 
-interface Brand {
+export interface Brand {
     name: string;
     logo: string;
 }
 
-const DEFAULT_BRANDS: Brand[] = [
+// Note: Images must exist in public/brands/ if used.
+// If using CMS, pass as prop.
+export const DEFAULT_BRANDS: Brand[] = [
     { name: 'Maybelline', logo: '/brands/maybelline.png' },
     { name: 'L\'Oréal', logo: '/brands/loreal.png' },
     { name: 'MAC', logo: '/brands/mac.png' },
@@ -26,19 +28,21 @@ const DEFAULT_BRANDS: Brand[] = [
     { name: 'Mixsoon', logo: '/brands/mixsoon.png' },
 ];
 
-interface BrandsMarqueeProps {
+export interface BrandsMarqueeProps {
     brands?: Brand[];
     label?: string;
 }
 
-export default function BrandsMarquee({ brands = DEFAULT_BRANDS, label = 'Nuestras Marcas' }: BrandsMarqueeProps) {
+export default function BrandsMarquee({ brands = [], label = 'Nuestras Marcas' }: BrandsMarqueeProps) {
+    if (!brands || brands.length === 0) return null;
+    
     // Duplicate brands to create seamless infinite loop
     const doubled = [...brands, ...brands];
 
     return (
-        <section className="py-8 bg-white border-y border-neutral-100 overflow-hidden">
+        <section className="py-12 bg-white border-y border-neutral-100 overflow-hidden">
             {/* Subtle label */}
-            <p className="text-center text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-400 mb-6">
+            <p className="text-center text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-400 mb-8">
                 {label}
             </p>
 
@@ -47,7 +51,7 @@ export default function BrandsMarquee({ brands = DEFAULT_BRANDS, label = 'Nuestr
                 {/* Left fade */}
                 <div className="absolute left-0 top-0 bottom-0 w-24 z-10 bg-gradient-to-r from-white to-transparent pointer-events-none" />
 
-                <div className="marquee-track gap-12 items-center">
+                <div className="marquee-track gap-16 items-center">
                     {doubled.map((brand, i) => (
                         <BrandLogo key={`${brand.name}-${i}`} brand={brand} />
                     ))}
@@ -62,8 +66,8 @@ export default function BrandsMarquee({ brands = DEFAULT_BRANDS, label = 'Nuestr
 
 function BrandLogo({ brand }: { brand: Brand }) {
     return (
-        <div className="flex-shrink-0 flex items-center justify-center px-8">
-            <div className="relative h-10 w-28 grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all duration-300">
+        <div className="flex-shrink-0 flex items-center justify-center px-10">
+            <div className="relative h-16 w-36 grayscale-[0.5] opacity-80 hover:grayscale-0 hover:opacity-100 transition-all duration-500 hover:scale-110">
                 <Image
                     src={brand.logo}
                     alt={brand.name}

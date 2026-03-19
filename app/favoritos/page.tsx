@@ -33,7 +33,7 @@ export default function FavoritosPage() {
                 // Fetch all products and filter by wishlist IDs
                 const res = await fetch('/api/products');
                 const data = await res.json();
-                const wishlistProducts = data.data?.filter((p: Product) =>
+                const wishlistProducts = data.data.products?.filter((p: Product) =>
                     wishlistItems.includes(p.id)
                 ) || [];
                 setProducts(wishlistProducts);

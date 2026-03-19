@@ -12,7 +12,9 @@ import {
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import { createBrowserClient } from '@supabase/auth-helpers-nextjs';
+import { createBrowserClient } from '@supabase/ssr';
+import { fetchWithCsrf } from '@/lib/hooks/useCsrfToken';
+import { useToast } from '@/components/ui/Toast';
 import Image from 'next/image';
 
 interface Variant {
@@ -25,27 +27,45 @@ interface Variant {
 }
 
 // Utilidad para subir imagen
-const uploadImage = async (file: File) => {
+const uploadImage = async (file: File): Promise<string> => {
     const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
-    const filePath = `${fileName}`;
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+        throw new Error('Tipo de archivo no permitido. Usa JPG, PNG, WEBP o GIF.');
+    }
+
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+        throw new Error('El archivo supera el límite de 5MB.');
+    }
+
+    const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const fileName = `${crypto.randomUUID()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
         .from('products')
-        .upload(filePath, file);
+        .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+        });
 
     if (uploadError) {
+        if (uploadError.message.includes('row-level security')) {
+            throw new Error(
+                'Sin permisos para subir imágenes. Verifica que el bucket "products" ' +
+                'existe en Supabase Storage y tiene políticas de INSERT para usuarios autenticados.'
+            );
+        }
         throw uploadError;
     }
 
     const { data } = supabase.storage
         .from('products')
-        .getPublicUrl(filePath);
+        .getPublicUrl(fileName);
 
     return data.publicUrl;
 };
@@ -91,6 +111,7 @@ export default function ProductFormPage() {
         images: [],
         variants: []
     });
+    const { showToast } = useToast();
 
     useEffect(() => {
         if (isEditing) {
@@ -123,18 +144,18 @@ export default function ProductFormPage() {
         const finalValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked :
             type === 'number' ? parseFloat(value) : value;
 
-        setFormData((prev: ProductFormData) => ({
-            ...prev,
-            [name]: finalValue
-        }));
+        setFormData((prev: ProductFormData) => {
+            const updated = { ...prev, [name]: finalValue };
 
-        // Autogenerar slug si el nombre cambia y no estamos editando (o si el slug estaba vacío)
-        if (name === 'name' && (!formData.slug || !isEditing)) {
-            setFormData((prev: ProductFormData) => ({
-                ...prev,
-                slug: value.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '')
-            }));
-        }
+            // Autogenerar slug si el nombre cambia y no estamos editando (o si el slug estaba vacío)
+            if (name === 'name' && (!prev.slug || !isEditing)) {
+                updated.slug = String(finalValue)
+                    .toLowerCase()
+                    .replace(/ /g, '-')
+                    .replace(/[^\w-]+/g, '');
+            }
+            return updated;
+        });
     };
 
     const handleImageAdd = () => {
@@ -162,7 +183,7 @@ export default function ProductFormPage() {
 
         } catch (error) {
             console.error('Error uploading image:', error);
-            alert('Error al subir imagen');
+            showToast('Error al subir imagen', 'error');
         } finally {
             setLoading(false);
             // Reset input
@@ -244,7 +265,7 @@ export default function ProductFormPage() {
                 });
             }
 
-            const res = await fetch(url, {
+            const res = await fetchWithCsrf(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -254,11 +275,11 @@ export default function ProductFormPage() {
                 router.push('/admin/productos');
             } else {
                 const error = await res.json();
-                alert(error.error || 'Error al guardar el producto. Revisa los datos.');
+                showToast(error.error || 'Error al guardar el producto. Revisa los datos.', 'error');
             }
         } catch (error) {
             console.error('Error saving product:', error);
-            alert('Error de conexión o datos inválidos');
+            showToast('Error de conexión o datos inválidos', 'error');
         } finally {
             setIsSaving(false);
         }

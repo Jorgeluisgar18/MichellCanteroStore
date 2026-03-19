@@ -71,7 +71,7 @@ export function usePageContent(page: PageName): UsePageContentReturn {
     const getImage = useCallback(
         (section: string, key: string, fallback = ''): string => {
             const row = items.find((i) => i.section === section && i.key === key);
-            return row?.image_url?.trim() || fallback;
+            return row?.image_url?.trim() || row?.value?.trim() || fallback;
         },
         [items]
     );

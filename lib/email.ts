@@ -73,7 +73,7 @@ export async function sendOrderNotificationToAdmin(order: EmailOrder, items: Ema
 
     const html = `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #db2777;">¡Nueva Venta Registrada! 🛍️</h1>
+            <h1 style="color: #F1C3D5;">¡Nueva Venta Registrada! 🛍️</h1>
             <p>Se ha recibido un nuevo pedido en la tienda.</p>
             <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb;">
                 <h2 style="font-size: 18px; margin-top: 0;">Resumen del Pedido ${order.order_number}</h2>
@@ -89,7 +89,7 @@ export async function sendOrderNotificationToAdmin(order: EmailOrder, items: Ema
             </div>
             <p style="margin-top: 30px;">
                 <a href="${process.env.NEXT_PUBLIC_SITE_URL}/admin/pedidos/${order.id}" 
-                   style="background-color: #db2777; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+                   style="background-color: #F1C3D5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
                     Ver pedido en el panel
                 </a>
             </p>
@@ -110,7 +110,7 @@ export async function sendOrderConfirmationToCustomer(order: EmailOrder, items: 
 
     const html = `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #db2777;">¡Gracias por tu compra! ✨</h1>
+            <h1 style="color: #F1C3D5;">¡Gracias por tu compra! ✨</h1>
             <p>Hola ${order.shipping_name}, hemos recibido con éxito tu pago para el pedido <strong>${order.order_number}</strong>.</p>
             <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb;">
                 <h2 style="font-size: 18px; margin-top: 0;">Tu Pedido</h2>
@@ -138,7 +138,7 @@ export async function sendOrderConfirmationToCustomer(order: EmailOrder, items: 
 export async function sendWelcomeEmail(email: string) {
     const html = `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #db2777;">¡Bienvenida a nuestra comunidad! ✨</h1>
+            <h1 style="color: #F1C3D5;">¡Bienvenida a nuestra comunidad! ✨</h1>
             <p>Hola, gracias por unirte al newsletter de <strong>Michell Cantero Store</strong>.</p>
             <p>A partir de ahora, serás la primera en enterarte de:</p>
             <ul>
@@ -151,7 +151,7 @@ export async function sendWelcomeEmail(email: string) {
             </div>
             <p style="margin-top: 30px;">
                 <a href="${process.env.NEXT_PUBLIC_SITE_URL}" 
-                   style="background-color: #db2777; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+                   style="background-color: #F1C3D5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
                     Ir a la tienda
                 </a>
             </p>

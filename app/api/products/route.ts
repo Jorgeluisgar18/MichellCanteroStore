@@ -17,6 +17,7 @@ export async function GET(request: Request) {
         const inStock = searchParams.get('inStock');
         const slug = searchParams.get('slug');
         const limit = searchParams.get('limit');
+        const page = searchParams.get('page');
         const counts = searchParams.get('counts');
 
         // Return category counts if requested
@@ -41,24 +42,41 @@ export async function GET(request: Request) {
 
         let query = supabase
             .from('products')
-            .select('*')
+            .select('*', { count: 'exact' })
             .order('created_at', { ascending: false });
 
         if (slug) query = query.eq('slug', slug);
-        if (limit) query = query.limit(parseInt(limit));
         if (category) query = query.eq('category', category);
         if (featured === 'true') query = query.eq('featured', true);
         if (isNew === 'true') query = query.eq('is_new', true);
         if (inStock === 'true') query = query.eq('in_stock', true);
 
-        const { data, error } = await query;
+        // Pagination logic
+        const itemsPerPage = limit ? parseInt(limit) : 20;
+        const currentPage = page ? parseInt(page) : 1;
+        const from = (currentPage - 1) * itemsPerPage;
+        const to = from + itemsPerPage - 1;
+
+        if (!slug) {
+            query = query.range(from, to);
+        }
+
+        const { data, error, count } = await query;
 
         if (error) {
             console.error('Error fetching products:', error);
             return ApiResponse.error('Error al obtener productos', 500);
         }
 
-        return ApiResponse.success(data);
+        return ApiResponse.success({
+            products: data,
+            pagination: {
+                total: count || data.length,
+                page: currentPage,
+                limit: itemsPerPage,
+                totalPages: Math.ceil((count || data.length) / itemsPerPage)
+            }
+        });
     } catch (error) {
         return ApiResponse.error(error);
     }
@@ -142,7 +160,7 @@ export async function POST(request: Request) {
             return ApiResponse.error(`Error al crear producto: ${error.message}`);
         }
 
-        return ApiResponse.success(data, 201);
+        return ApiResponse.success(data);
     } catch (error) {
         return ApiResponse.error(error);
     }

@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/Card';
 import ProductImage from '@/components/product/ProductImage';
 import { useCartStore } from '@/store/cartStore';
 import { formatPrice } from '@/lib/utils';
+import { STORE_CONFIG } from '@/lib/config';
 
 export default function CarritoClient() {
     const [isMounted, setIsMounted] = useState(false);
@@ -89,7 +90,7 @@ export default function CarritoClient() {
                                             {/* Product Image */}
                                             <div className="relative w-24 h-24 md:w-32 md:h-32 flex-shrink-0 bg-neutral-100 rounded-lg overflow-hidden">
                                                 <ProductImage
-                                                    src={item.product.images[0]}
+                                                    src={item.product.images[0] ?? ''}
                                                     alt={item.product.name}
                                                     fill
                                                     className="object-cover"
@@ -132,7 +133,7 @@ export default function CarritoClient() {
                                                                     item.selectedVariant?.id
                                                                 )
                                                             }
-                                                            className="p-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-100"
+                                                            className="p-2.5 border border-neutral-300 rounded-xl hover:bg-neutral-100 active:scale-95 transition-transform touch-manipulation"
                                                             aria-label="Disminuir cantidad"
                                                         >
                                                             <Minus className="w-4 h-4" />
@@ -148,7 +149,7 @@ export default function CarritoClient() {
                                                                     item.selectedVariant?.id
                                                                 )
                                                             }
-                                                            className="p-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-100"
+                                                            className="p-2.5 border border-neutral-300 rounded-xl hover:bg-neutral-100 active:scale-95 transition-transform touch-manipulation"
                                                             disabled={item.quantity >= item.product.stock_quantity}
                                                             aria-label="Aumentar cantidad"
                                                         >
@@ -195,7 +196,7 @@ export default function CarritoClient() {
                                         </div>
                                         {shipping > 0 && (
                                             <p className="text-xs text-primary-600">
-                                                Agrega {formatPrice(200000 - subtotal)} más para envío gratis
+                                                Agrega {formatPrice(STORE_CONFIG.FREE_SHIPPING_THRESHOLD - subtotal)} más para envío gratis
                                             </p>
                                         )}
                                     </div>

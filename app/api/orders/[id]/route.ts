@@ -1,5 +1,19 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { z } from 'zod';
+
+const AdminUpdateOrderSchema = z.object({
+    status: z.enum([
+        'pending', 'processing', 'shipped', 'delivered', 'cancelled'
+    ]).optional(),
+    payment_status: z.enum([
+        'pending', 'paid', 'failed', 'refunded', 'voided'
+    ]).optional(),
+    tracking_number: z.string().max(100).nullable().optional(),
+    shipping_address: z.string().max(500).optional(),
+    customer_notes: z.string().max(1000).nullable().optional(),
+    admin_notes: z.string().max(1000).nullable().optional(),
+}).strict();
 
 export const dynamic = 'force-dynamic';
 
@@ -21,42 +35,36 @@ export async function GET(
             );
         }
 
-        const { data, error } = await supabaseAdmin
-            .from('orders')
-            .select(`
-                *,
-                order_items (*)
-            `)
-            .eq('id', params.id)
-            .single();
-
-        if (error) {
-            if (error.code === 'PGRST116') {
-                return NextResponse.json(
-                    { error: 'Orden no encontrada' },
-                    { status: 404 }
-                );
-            }
-
-            console.error('Error fetching order:', error);
-            return NextResponse.json(
-                { error: 'Error al obtener orden' },
-                { status: 500 }
-            );
-        }
-
-        // Verificar que el usuario tenga acceso a esta orden
-        const { data: profile } = await supabaseAdmin
+        const { data: profile, error: profileError } = await supabaseAdmin
             .from('profiles')
             .select('role')
             .eq('id', user.id)
             .single();
 
-        if (profile?.role !== 'admin' && data.user_id !== user.id) {
-            return NextResponse.json(
-                { error: 'No autorizado' },
-                { status: 403 }
-            );
+        if (profileError) {
+            console.error('[orders/[id] GET] Error al verificar perfil:', profileError.message);
+            return NextResponse.json({ error: 'Error al verificar permisos' }, { status: 500 });
+        }
+
+        const isAdmin = profile?.role === 'admin';
+
+        let query = supabaseAdmin
+            .from('orders')
+            .select(`*, order_items (*)`)
+            .eq('id', params.id);
+
+        if (!isAdmin) {
+            query = query.eq('user_id', user.id);
+        }
+
+        const { data, error } = await query.single();
+
+        if (error) {
+            if (error.code === 'PGRST116') {
+                return NextResponse.json({ error: 'Orden no encontrada' }, { status: 404 });
+            }
+            console.error('[orders/[id] GET] Error en query:', error);
+            return NextResponse.json({ error: 'Error al obtener orden' }, { status: 500 });
         }
 
         return NextResponse.json({ data });
@@ -102,10 +110,19 @@ export async function PUT(
 
         const body = await request.json();
 
+        // Validar con el schema antes de tocar la BD
+        const parsed = AdminUpdateOrderSchema.safeParse(body);
+        if (!parsed.success) {
+            return NextResponse.json(
+                { error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors },
+                { status: 400 }
+            );
+        }
+
         // Actualizar orden
         const { data, error } = await supabaseAdmin
             .from('orders')
-            .update(body)
+            .update(parsed.data)
             .eq('id', params.id)
             .select()
             .single();

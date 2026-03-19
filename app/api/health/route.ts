@@ -12,18 +12,14 @@ export const dynamic = 'force-dynamic';
  * - Database connection is working
  * - Environment variables are set
  */
-export async function GET() {
+export async function GET(request: Request) {
     const startTime = Date.now();
 
     try {
-        // Check environment variables
-        const envCheck = {
-            supabase: !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
-            wompi: !!(process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY && process.env.WOMPI_PRIVATE_KEY),
-            upstash: !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN),
-        };
+        // ✅ Verificar si hay una clave de monitoreo para revelar detalles
+        const monitoringKey = request.headers.get('x-monitoring-key');
+        const isAuthorizedMonitor = monitoringKey === process.env.MONITORING_SECRET;
 
-        // Check database connection
         let dbCheck = false;
         try {
             const supabase = createClient(
@@ -31,32 +27,36 @@ export async function GET() {
                 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
             );
 
-            const { error } = await supabase
-                .from('products')
-                .select('count')
-                .limit(1);
-
+            const { error } = await supabase.from('products').select('count').limit(1);
             dbCheck = !error;
-        } catch (dbError) {
-            console.error('Database health check failed:', dbError);
-        }
+        } catch { /* silencioso */ }
+
+        const isHealthy = dbCheck &&
+            !!(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+            !!(process.env.WOMPI_PRIVATE_KEY);
 
         const responseTime = Date.now() - startTime;
 
-        // Determine overall health status
-        const isHealthy = envCheck.supabase && envCheck.wompi && dbCheck;
-
-        return NextResponse.json({
+        const publicResponse = {
             status: isHealthy ? 'healthy' : 'degraded',
             timestamp: new Date().toISOString(),
             responseTime: `${responseTime}ms`,
-            checks: {
-                api: true,
-                database: dbCheck,
-                environment: envCheck,
-            },
-            version: process.env.VERCEL_GIT_COMMIT_SHA?.substring(0, 7) || 'local',
-        }, {
+        };
+
+        if (isAuthorizedMonitor) {
+            return NextResponse.json({
+                ...publicResponse,
+                checks: {
+                    database: dbCheck,
+                    supabase: !!(process.env.NEXT_PUBLIC_SUPABASE_URL),
+                    wompi: !!(process.env.WOMPI_PRIVATE_KEY),
+                    upstash: !!(process.env.KV_REST_API_URL),
+                },
+                version: process.env.VERCEL_GIT_COMMIT_SHA?.substring(0, 7) || 'local',
+            }, { status: isHealthy ? 200 : 503 });
+        }
+
+        return NextResponse.json(publicResponse, {
             status: isHealthy ? 200 : 503,
             headers: {
                 'Cache-Control': 'no-cache, no-store, must-revalidate',

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getEnvVar } from '@/lib/env';
 
 /**
  * Cron job to cleanup expired stock reservations
@@ -8,50 +7,51 @@ import { getEnvVar } from '@/lib/env';
  */
 export async function GET(request: Request) {
     try {
-        // Verify cron secret to prevent unauthorized access
-        const authHeader = request.headers.get('authorization');
-        let cronSecret = '';
-        try {
-            cronSecret = getEnvVar('CRON_SECRET');
-        } catch {
-            console.warn('CRON_SECRET not configured');
+        const cronSecret = process.env.CRON_SECRET;
+
+        // Fail-Closed.
+        if (!cronSecret) {
+            console.error('[CRON] CRÍTICO: CRON_SECRET no configurado — request bloqueado.');
+            return NextResponse.json(
+                { error: 'Service unavailable' },
+                { status: 503 }
+            );
         }
 
-        if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+        const authHeader = request.headers.get('authorization');
+        if (authHeader !== `Bearer ${cronSecret}`) {
+            console.warn('[CRON] Intento de acceso no autorizado al cron endpoint.');
             return NextResponse.json(
                 { error: 'Unauthorized' },
                 { status: 401 }
             );
         }
 
-        // Create admin client
-        const supabase = createClient(
-            getEnvVar('NEXT_PUBLIC_SUPABASE_URL'),
-            getEnvVar('SUPABASE_SERVICE_ROLE_KEY')
-        );
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-        // Call cleanup function
-        const { data, error } = await supabase
-            .rpc('cleanup_expired_reservations');
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('[CRON] Variables de Supabase no configuradas.');
+            return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
+        }
+
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        const { data, error } = await supabase.rpc('cleanup_expired_reservations');
 
         if (error) {
-            console.error('Error cleaning up reservations:', error);
+            console.error('[CRON] Error en cleanup_expired_reservations:', error);
             return NextResponse.json(
                 { error: 'Failed to cleanup reservations', details: error.message },
                 { status: 500 }
             );
         }
 
-        return NextResponse.json({
-            success: true,
-            ...data
-        });
+        console.info('[CRON] Cleanup ejecutado:', data);
+        return NextResponse.json({ success: true, ...data });
+
     } catch (error) {
-        console.error('Cron job error:', error);
-        return NextResponse.json(
-            { error: 'Internal server error' },
-            { status: 500 }
-        );
+        console.error('[CRON] Error inesperado:', error);
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
 

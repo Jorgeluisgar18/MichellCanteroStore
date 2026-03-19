@@ -1,6 +1,11 @@
 {
     "extends": [
         "next/core-web-vitals",
-        "next/typescript"
-    ]
+        "next/typescript",
+        "plugin:security/recommended-legacy"
+    ],
+    "plugins": ["security"],
+    "rules": {
+        "@typescript-eslint/no-explicit-any": "error"
+    }
 }
