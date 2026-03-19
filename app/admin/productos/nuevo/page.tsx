@@ -15,7 +15,6 @@ import Input from '@/components/ui/Input';
 import { fetchWithCsrf } from '@/lib/hooks/useCsrfToken';
 import { useToast } from '@/components/ui/Toast';
 import Image from 'next/image';
-import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
 
 interface Variant {
     id: string;
@@ -28,8 +27,6 @@ interface Variant {
 
 // Utilidad para subir imagen
 const uploadImage = async (file: File): Promise<string> => {
-    const supabase = getSupabaseBrowserClient();
-
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
     if (!allowedTypes.includes(file.type)) {
         throw new Error('Tipo de archivo no permitido. Usa JPG, PNG, WEBP o GIF.');
@@ -41,9 +38,25 @@ const uploadImage = async (file: File): Promise<string> => {
     }
 
     const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const fileName = `${crypto.randomUUID()}.${fileExt}`;
+    const fileName = `products/${Date.now()}-${crypto.randomUUID()}.${fileExt}`;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('path', fileName);
 
-    const { error: uploadError } = await supabase.storage
+    const response = await fetchWithCsrf('/api/admin/products/upload', {
+        method: 'POST',
+        body: formData,
+    });
+
+    const body = await response.json();
+    if (!response.ok) {
+        throw new Error(body?.error || 'No se pudo subir la imagen.');
+    }
+
+    return body.url as string;
+    /*
+
+    const response = await fetchWithCsrf('/api/admin/products/upload', {
         .from('products')
         .upload(fileName, file, {
             cacheControl: '3600',
@@ -65,6 +78,7 @@ const uploadImage = async (file: File): Promise<string> => {
         .getPublicUrl(fileName);
 
     return data.publicUrl;
+    */
 };
 
 interface ProductFormData {
@@ -180,7 +194,8 @@ export default function ProductFormPage() {
 
         } catch (error) {
             console.error('Error uploading image:', error);
-            showToast('Error al subir imagen', 'error');
+            const message = error instanceof Error ? error.message : 'Error al subir imagen';
+            showToast(message, 'error');
         } finally {
             setLoading(false);
             // Reset input
