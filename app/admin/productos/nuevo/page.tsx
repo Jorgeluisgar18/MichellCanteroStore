@@ -19,10 +19,87 @@ import Image from 'next/image';
 interface Variant {
     id: string;
     name: string;
-    type: string;
+    type: 'color' | 'size' | 'shade' | 'color_size';
     value: string;
     stock_quantity: number;
     inStock: boolean;
+    image?: string;
+    colorName?: string;
+    colorHex?: string;
+    size?: string;
+    sku?: string;
+}
+
+type ProductProfile = 'simple' | 'shade' | 'apparel';
+
+const SHADE_SUBCATEGORIES = new Set([
+    'rubores',
+    'bases',
+    'correctores',
+    'contornos',
+    'polvos',
+    'iluminadores',
+    'labios',
+    'cejas',
+    'pigmentos',
+    'paletas-de-sombras',
+]);
+
+const APPAREL_SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL'];
+
+function getProductProfile(category: string, subcategory: string): ProductProfile {
+    if (category === 'ropa') {
+        return 'apparel';
+    }
+
+    if (category === 'maquillaje' && SHADE_SUBCATEGORIES.has(subcategory)) {
+        return 'shade';
+    }
+
+    return 'simple';
+}
+
+function createVariant(profile: ProductProfile): Variant {
+    const id = crypto.randomUUID();
+
+    if (profile === 'apparel') {
+        return {
+            id,
+            name: 'Nuevo color / talla',
+            type: 'color_size',
+            value: 'S',
+            size: 'S',
+            colorName: 'Nuevo color',
+            colorHex: '#d4a373',
+            stock_quantity: 0,
+            inStock: true,
+            image: '',
+        };
+    }
+
+    if (profile === 'shade') {
+        return {
+            id,
+            name: 'Nuevo tono',
+            type: 'shade',
+            value: '',
+            colorHex: '#d4a373',
+            stock_quantity: 0,
+            inStock: true,
+            image: '',
+        };
+    }
+
+    return {
+        id,
+        name: 'Nueva variante',
+        type: 'color',
+        value: '#000000',
+        colorHex: '#000000',
+        stock_quantity: 0,
+        inStock: true,
+        image: '',
+    };
 }
 
 // Utilidad para subir imagen
@@ -54,31 +131,6 @@ const uploadImage = async (file: File): Promise<string> => {
     }
 
     return body.url as string;
-    /*
-
-    const response = await fetchWithCsrf('/api/admin/products/upload', {
-        .from('products')
-        .upload(fileName, file, {
-            cacheControl: '3600',
-            upsert: false
-        });
-
-    if (uploadError) {
-        if (uploadError.message.includes('row-level security')) {
-            throw new Error(
-                'Sin permisos para subir imágenes. Verifica que el bucket "products" ' +
-                'existe en Supabase Storage y tiene políticas de INSERT para usuarios autenticados.'
-            );
-        }
-        throw uploadError;
-    }
-
-    const { data } = supabase.storage
-        .from('products')
-        .getPublicUrl(fileName);
-
-    return data.publicUrl;
-    */
 };
 
 interface ProductFormData {
@@ -96,6 +148,55 @@ interface ProductFormData {
     is_new: boolean;
     images: string[];
     variants: Variant[];
+}
+
+function getInventoryFromVariants(variants: Variant[]) {
+    const totalStock = variants.reduce((sum, variant) => sum + (Number(variant.stock_quantity) || 0), 0);
+
+    return {
+        stock_quantity: totalStock,
+        in_stock: totalStock > 0,
+    };
+}
+
+function normalizeVariant(variant: Partial<Variant>, profile: ProductProfile): Variant {
+    const base = createVariant(profile);
+    const merged = { ...base, ...variant };
+
+    if (profile === 'apparel') {
+        const colorName = merged.colorName || merged.name || 'Color';
+        const size = merged.size || merged.value || 'S';
+        return {
+            ...merged,
+            type: 'color_size',
+            colorName,
+            size,
+            value: size,
+            name: `${colorName} / ${size}`,
+            inStock: (merged.stock_quantity || 0) > 0,
+        };
+    }
+
+    if (profile === 'shade') {
+        return {
+            ...merged,
+            type: 'shade',
+            value: merged.value || merged.name || '',
+            colorHex: merged.colorHex || merged.value || '#d4a373',
+            inStock: (merged.stock_quantity || 0) > 0,
+        };
+    }
+
+    return merged.type === 'color'
+        ? {
+            ...merged,
+            colorHex: merged.colorHex || merged.value,
+            inStock: (merged.stock_quantity || 0) > 0,
+        }
+        : {
+            ...merged,
+            inStock: (merged.stock_quantity || 0) > 0,
+        };
 }
 
 export default function ProductFormPage() {
@@ -123,6 +224,7 @@ export default function ProductFormPage() {
         variants: []
     });
     const { showToast } = useToast();
+    const productProfile = getProductProfile(formData.category, formData.subcategory);
 
     useEffect(() => {
         if (isEditing) {
@@ -131,16 +233,39 @@ export default function ProductFormPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [productId, isEditing]);
 
+    useEffect(() => {
+        setFormData((prev) => {
+            const nextSubcategory = prev.category === 'maquillaje' ? prev.subcategory : '';
+            const nextVariants = prev.variants.map((variant) => normalizeVariant(variant, productProfile));
+
+            const subcategoryChanged = nextSubcategory !== prev.subcategory;
+            const variantsChanged = JSON.stringify(nextVariants) !== JSON.stringify(prev.variants);
+
+            if (!subcategoryChanged && !variantsChanged) {
+                return prev;
+            }
+
+            return {
+                ...prev,
+                subcategory: nextSubcategory,
+                variants: nextVariants,
+            };
+        });
+    }, [productProfile]);
+
     const fetchProduct = async () => {
         try {
-            const res = await fetch(`/api/products/${productId}`);
+            const res = await fetch(`/api/products/${productId}`, { cache: 'no-store' });
             const data = await res.json();
             if (data.data) {
+                const profile = getProductProfile(data.data.category || '', data.data.subcategory || '');
                 setFormData({
                     ...data.data,
                     // Asegurar que los arrays existan
                     images: data.data.images || [],
-                    variants: data.data.variants || []
+                    variants: Array.isArray(data.data.variants)
+                        ? data.data.variants.map((variant: Partial<Variant>) => normalizeVariant(variant, profile))
+                        : []
                 });
             }
             setLoading(false);
@@ -156,7 +281,48 @@ export default function ProductFormPage() {
             type === 'number' ? parseFloat(value) : value;
 
         setFormData((prev: ProductFormData) => {
-            const updated = { ...prev, [name]: finalValue };
+            const updated = { ...prev };
+
+            switch (name) {
+                case 'name':
+                    updated.name = String(finalValue);
+                    break;
+                case 'slug':
+                    updated.slug = String(finalValue);
+                    break;
+                case 'description':
+                    updated.description = String(finalValue);
+                    break;
+                case 'price':
+                    updated.price = finalValue as string | number;
+                    break;
+                case 'compare_at_price':
+                    updated.compare_at_price = finalValue as string | number;
+                    break;
+                case 'category':
+                    updated.category = String(finalValue);
+                    break;
+                case 'subcategory':
+                    updated.subcategory = String(finalValue);
+                    break;
+                case 'brand':
+                    updated.brand = String(finalValue);
+                    break;
+                case 'stock_quantity':
+                    updated.stock_quantity = Number(finalValue) || 0;
+                    break;
+                case 'in_stock':
+                    updated.in_stock = Boolean(finalValue);
+                    break;
+                case 'featured':
+                    updated.featured = Boolean(finalValue);
+                    break;
+                case 'is_new':
+                    updated.is_new = Boolean(finalValue);
+                    break;
+                default:
+                    return prev;
+            }
 
             // Autogenerar slug si el nombre cambia y no estamos editando (o si el slug estaba vacío)
             if (name === 'name' && (!prev.slug || !isEditing)) {
@@ -211,17 +377,9 @@ export default function ProductFormPage() {
     };
 
     const handleVariantAdd = () => {
-        const newVariant = {
-            id: Math.random().toString(36).substring(2, 9),
-            name: '',
-            type: 'color',
-            value: '#000000',
-            stock_quantity: 0,
-            inStock: true
-        };
         setFormData(prev => ({
             ...prev,
-            variants: [...prev.variants, newVariant]
+            variants: [...prev.variants, createVariant(productProfile)]
         }));
     };
 
@@ -232,11 +390,11 @@ export default function ProductFormPage() {
         }));
     };
 
-    const handleVariantChange = (id: string, field: string, value: string | number | boolean) => {
+    const handleVariantChange = (id: string, field: keyof Variant, value: string | number | boolean) => {
         setFormData(prev => ({
             ...prev,
             variants: prev.variants.map((v: Variant) =>
-                v.id === id ? { ...v, [field]: value } as Variant : v
+                v.id === id ? normalizeVariant({ ...v, [field]: value } as Variant, productProfile) : v
             )
         }));
     };
@@ -264,17 +422,28 @@ export default function ProductFormPage() {
 
             // Limpiar variantes para asegurar que tengan el formato correcto
             if (payload.variants && Array.isArray(payload.variants)) {
-                payload.variants = payload.variants.map((v: unknown) => {
-                    const variant = v as Variant;
+                const normalizedVariants = payload.variants.map((v: unknown) => {
+                    const variant = normalizeVariant(v as Variant, productProfile);
                     return {
-                        id: variant.id || Math.random().toString(36).substring(2, 9),
+                        id: variant.id || crypto.randomUUID(),
                         name: variant.name || 'Sin nombre',
-                        type: variant.type || 'color',
+                        type: variant.type,
                         value: variant.value || '',
                         stock_quantity: parseInt(String(variant.stock_quantity)) || 0,
-                        inStock: (parseInt(String(variant.stock_quantity)) || 0) > 0
+                        inStock: (parseInt(String(variant.stock_quantity)) || 0) > 0,
+                        image: variant.image || '',
+                        colorName: variant.colorName || null,
+                        colorHex: variant.colorHex || null,
+                        size: variant.size || null,
+                        sku: variant.sku || null,
                     };
                 });
+
+                payload.variants = normalizedVariants;
+
+                const inventory = getInventoryFromVariants(normalizedVariants as Variant[]);
+                payload.stock_quantity = inventory.stock_quantity;
+                payload.in_stock = inventory.in_stock;
             }
 
             const res = await fetchWithCsrf(url, {
@@ -483,7 +652,11 @@ export default function ProductFormPage() {
                                 <div className="space-y-4">
                                     {formData.variants.length === 0 ? (
                                         <div className="text-center py-8 border-2 border-dashed border-neutral-100 rounded-2xl text-neutral-400">
-                                            No hay variantes configuradas para este producto.
+                                            {productProfile === 'apparel'
+                                                ? 'Agrega combinaciones de color y talla para esta prenda.'
+                                                : productProfile === 'shade'
+                                                    ? 'Agrega tonos con su imagen y color visual para este producto.'
+                                                    : 'No hay variantes configuradas para este producto.'}
                                         </div>
                                     ) : (
                                         formData.variants.map((variant: Variant) => {
@@ -494,12 +667,20 @@ export default function ProductFormPage() {
                                                             <label className="text-xs font-semibold text-neutral-500 uppercase mb-1 block">Tipo</label>
                                                             <select
                                                                 value={variant.type}
-                                                                onChange={(e) => handleVariantChange(variant.id, 'type', e.target.value)}
+                                                                onChange={(e) => handleVariantChange(variant.id, 'type', e.target.value as Variant['type'])}
                                                                 className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
                                                             >
-                                                                <option value="color">Color</option>
-                                                                <option value="shade">Tono (Maquillaje)</option>
-                                                                <option value="size">Talla</option>
+                                                                {productProfile === 'apparel' ? (
+                                                                    <option value="color_size">Color + talla</option>
+                                                                ) : productProfile === 'shade' ? (
+                                                                    <option value="shade">Tono (Maquillaje)</option>
+                                                                ) : (
+                                                                    <>
+                                                                        <option value="color">Color</option>
+                                                                        <option value="shade">Tono (Maquillaje)</option>
+                                                                        <option value="size">Talla</option>
+                                                                    </>
+                                                                )}
                                                             </select>
                                                         </div>
                                                         <div className="lg:col-span-1">
@@ -508,13 +689,13 @@ export default function ProductFormPage() {
                                                                 type="text"
                                                                 value={variant.name}
                                                                 onChange={(e) => handleVariantChange(variant.id, 'name', e.target.value)}
-                                                                placeholder="Ej. Rojo Pasión"
+                                                                placeholder={productProfile === 'apparel' ? 'Ej. Negro clásico' : productProfile === 'shade' ? 'Ej. Tono 03 / Durazno' : 'Ej. Rojo Pasión'}
                                                                 className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
                                                             />
                                                         </div>
                                                         <div className="lg:col-span-1">
                                                             <label className="text-xs font-semibold text-neutral-500 uppercase mb-1 block">
-                                                                {(variant.type === 'color' || variant.type === 'shade') ? 'Color' : 'Valor'}
+                                                                {(variant.type === 'color' || variant.type === 'shade') ? 'Color / código' : 'Valor'}
                                                             </label>
                                                             <div className="flex gap-2">
                                                                 {(variant.type === 'color' || variant.type === 'shade') ? (
@@ -562,6 +743,112 @@ export default function ProductFormPage() {
                                                             </button>
                                                         </div>
                                                     </div>
+                                                    {productProfile === 'apparel' && (
+                                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-neutral-200">
+                                                            <div>
+                                                                <label className="text-xs font-semibold text-neutral-500 uppercase mb-1 block">Nombre del color</label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={variant.colorName || ''}
+                                                                    onChange={(e) => handleVariantChange(variant.id, 'colorName', e.target.value)}
+                                                                    placeholder="Ej. Negro"
+                                                                    className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-xs font-semibold text-neutral-500 uppercase mb-1 block">Color Hex</label>
+                                                                <div className="flex gap-2">
+                                                                    <input
+                                                                        type="color"
+                                                                        value={variant.colorHex || '#d4a373'}
+                                                                        onChange={(e) => handleVariantChange(variant.id, 'colorHex', e.target.value)}
+                                                                        className="w-10 h-10 p-1 bg-white border border-neutral-200 rounded-lg cursor-pointer"
+                                                                    />
+                                                                    <input
+                                                                        type="text"
+                                                                        value={variant.colorHex || ''}
+                                                                        onChange={(e) => handleVariantChange(variant.id, 'colorHex', e.target.value)}
+                                                                        placeholder="#d4a373"
+                                                                        className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-xs font-mono focus:ring-2 focus:ring-primary-500 outline-none"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-xs font-semibold text-neutral-500 uppercase mb-1 block">Talla</label>
+                                                                <select
+                                                                    value={variant.size || 'S'}
+                                                                    onChange={(e) => handleVariantChange(variant.id, 'size', e.target.value)}
+                                                                    className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                                                                >
+                                                                    {APPAREL_SIZE_OPTIONS.map((sizeOption) => (
+                                                                        <option key={sizeOption} value={sizeOption}>{sizeOption}</option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-xs font-semibold text-neutral-500 uppercase mb-1 block">Imagen del color</label>
+                                                                <select
+                                                                    value={variant.image || ''}
+                                                                    onChange={(e) => handleVariantChange(variant.id, 'image', e.target.value)}
+                                                                    className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                                                                >
+                                                                    <option value="">Usar principal</option>
+                                                                    {formData.images.map((imageUrl, index) => (
+                                                                        <option key={`${variant.id}-apparel-image-${index}`} value={imageUrl}>
+                                                                            Imagen {index + 1}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {productProfile === 'shade' && (
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-neutral-200">
+                                                            <div>
+                                                                <label className="text-xs font-semibold text-neutral-500 uppercase mb-1 block">Color visual</label>
+                                                                <div className="flex gap-2">
+                                                                    <input
+                                                                        type="color"
+                                                                        value={variant.colorHex || '#d4a373'}
+                                                                        onChange={(e) => handleVariantChange(variant.id, 'colorHex', e.target.value)}
+                                                                        className="w-10 h-10 p-1 bg-white border border-neutral-200 rounded-lg cursor-pointer"
+                                                                    />
+                                                                    <input
+                                                                        type="text"
+                                                                        value={variant.colorHex || ''}
+                                                                        onChange={(e) => handleVariantChange(variant.id, 'colorHex', e.target.value)}
+                                                                        placeholder="#d4a373"
+                                                                        className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-xs font-mono focus:ring-2 focus:ring-primary-500 outline-none"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-xs font-semibold text-neutral-500 uppercase mb-1 block">Imagen del tono</label>
+                                                                <select
+                                                                    value={variant.image || ''}
+                                                                    onChange={(e) => handleVariantChange(variant.id, 'image', e.target.value)}
+                                                                    className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                                                                >
+                                                                    <option value="">Usar principal</option>
+                                                                    {formData.images.map((imageUrl, index) => (
+                                                                        <option key={`${variant.id}-shade-image-${index}`} value={imageUrl}>
+                                                                            Imagen {index + 1}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-xs font-semibold text-neutral-500 uppercase mb-1 block">SKU / referencia</label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={variant.sku || ''}
+                                                                    onChange={(e) => handleVariantChange(variant.id, 'sku', e.target.value)}
+                                                                    placeholder="Ej. RUB-03"
+                                                                    className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             );
                                         })

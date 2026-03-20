@@ -6,6 +6,8 @@ import categoriesData from '@/data/categories.json';
 import CategoryClient from './CategoryClient';
 import type { Category, Product } from '@/types';
 
+export const dynamic = 'force-dynamic';
+
 interface PageProps {
     params: Promise<{ category: string }>;
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;

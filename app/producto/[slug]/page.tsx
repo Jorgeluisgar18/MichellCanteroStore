@@ -1,24 +1,28 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { unstable_noStore as noStore } from 'next/cache';
 import { supabaseAdmin } from '@/lib/supabase';
 import ProductClient from './ProductClient';
 import type { Product } from '@/types';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 interface Props {
     params: { slug: string };
 }
 
-import { cache } from 'react';
+const getProduct = async (slug: string) => {
+    noStore();
 
-// ✅ Cache data fetch to prevent double queries (generateMetadata + ProductPage)
-const getProduct = cache(async (slug: string) => {
     const { data } = await supabaseAdmin
         .from('products')
         .select('id, name, slug, description, price, compare_at_price, images, category, subcategory, brand, in_stock, stock_quantity, variants, tags, featured, is_new, rating, review_count')
         .eq('slug', slug)
-        .single();
+        .limit(1)
+        .maybeSingle();
     return data as Product | null;
-});
+};
 
 // Generar Metadatos Dinámicos para SEO
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -57,6 +61,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ProductPage({ params }: Props) {
+    noStore();
+
     const product = await getProduct(params.slug);
 
     if (!product) {

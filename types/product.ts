@@ -1,11 +1,16 @@
 export interface ProductVariant {
     id: string;
     name: string;
-    type: 'color' | 'size' | 'shade';
+    type: 'color' | 'size' | 'shade' | 'color_size';
     value: string; // Puede ser un código Hex (#FFFFFF) o una talla (S, M, L)
     stock_quantity: number;
     inStock: boolean;
     priceModifier?: number;
+    image?: string;
+    colorName?: string;
+    colorHex?: string;
+    size?: string;
+    sku?: string;
 }
 
 export interface Product {

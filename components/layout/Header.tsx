@@ -50,7 +50,8 @@ const Header: React.FC = () => {
 
     useEffect(() => {
         const handleMouseMove = (event: MouseEvent) => {
-            setIsPointerNearTop(event.clientY <= 110);
+            const canExpand = window.innerWidth >= 768;
+            setIsPointerNearTop(canExpand && event.clientY <= 96);
         };
 
         window.addEventListener('mousemove', handleMouseMove, { passive: true });
@@ -132,10 +133,12 @@ const Header: React.FC = () => {
     const isHome = pathname === '/';
     const isCompact = (!isHome || isScrolled) && !isPointerNearTop && !isHeaderHovered && !isSearchOpen && !isMobileMenuOpen;
     const shouldShowTopBar = isHome && !isCompact;
+    const shouldCollapseDesktop = isCompact;
+    const shouldShowDesktopRow = !shouldCollapseDesktop || isSearchOpen;
 
     return (
         <header 
-            className={`sticky top-0 z-40 w-full border-b transition-all duration-500 ${isScrolled || !isHome ? 'header-scrolled border-neutral-100/50' : 'border-neutral-100 shadow-sm'}`}
+            className={`sticky top-0 z-40 w-full border-b transition-all duration-500 ${isScrolled || !isHome ? 'header-scrolled border-neutral-100/50 shadow-sm backdrop-blur-xl' : 'border-neutral-100 shadow-sm'}`}
             style={{ backgroundColor: isScrolled || !isHome ? `${headerBg}F9` : headerBg }}
             onMouseEnter={() => setIsHeaderHovered(true)}
             onMouseLeave={() => setIsHeaderHovered(false)}
@@ -153,13 +156,16 @@ const Header: React.FC = () => {
 
             {/* Main Header */}
             <div className="container-custom">
-                <div className={`flex flex-col items-center transition-all duration-500 ${isCompact ? 'py-3 md:py-4 gap-3' : 'py-6 md:py-8 gap-6'}`}>
+                <div className={`flex flex-col items-center transition-all duration-500 ${isCompact ? 'py-3 md:py-3 gap-2' : 'py-6 md:py-8 gap-6'}`}>
                     {/* Logo Centered */}
                     <div className="flex justify-center w-full">
-                        <Logo className={`transition-transform duration-500 ${isCompact ? 'scale-90 md:scale-100' : 'scale-125 md:scale-150'}`} />
+                        <Logo
+                            size="base"
+                            className={`transition-all duration-500 ${isCompact ? 'scale-100 md:scale-100 md:-translate-y-0.5' : 'scale-125 md:scale-150'}`}
+                        />
                     </div>
 
-                    <div className="flex items-center justify-between w-full">
+                    <div className={`flex items-center justify-between w-full transition-all duration-500 md:overflow-hidden ${shouldShowDesktopRow ? 'md:max-h-24 md:opacity-100 md:translate-y-0' : 'md:max-h-0 md:opacity-0 md:-translate-y-6 md:pointer-events-none'} max-h-none opacity-100 translate-y-0`}>
                         {/* Mobile Menu Button - Left */}
                         <div className="flex items-center md:hidden w-10">
                             <button

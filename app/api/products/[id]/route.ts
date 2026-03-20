@@ -3,6 +3,48 @@ import { supabase, supabaseAdmin } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
+type ProductVariantInput = {
+    id?: string;
+    name?: string;
+    type?: string;
+    value?: string;
+    stock_quantity?: string | number;
+    image?: string;
+    colorName?: string | null;
+    colorHex?: string | null;
+    size?: string | null;
+    sku?: string | null;
+};
+
+function serializeVariants(variants: ProductVariantInput[]) {
+    return variants.map((variant) => {
+        const stockQuantity = parseInt(String(variant.stock_quantity)) || 0;
+
+        return {
+            id: variant.id || crypto.randomUUID(),
+            name: variant.name || 'Sin nombre',
+            type: variant.type || 'color',
+            value: variant.value || '',
+            stock_quantity: stockQuantity,
+            inStock: stockQuantity > 0,
+            image: variant.image || '',
+            colorName: variant.colorName || null,
+            colorHex: variant.colorHex || null,
+            size: variant.size || null,
+            sku: variant.sku || null,
+        };
+    });
+}
+
+function getInventoryFromVariants(variants: ReturnType<typeof serializeVariants>) {
+    const totalStock = variants.reduce((sum, variant) => sum + variant.stock_quantity, 0);
+
+    return {
+        stock_quantity: totalStock,
+        in_stock: totalStock > 0,
+    };
+}
+
 // GET /api/products/[id] - Obtener producto por ID
 export async function GET(
     request: Request,
@@ -89,7 +131,7 @@ export async function PUT(
         } = body;
 
         // Preparar datos para actualización
-        const productData: Record<string, string | number | boolean | string[] | Array<{ id: string; name: string; type: string; value: string; stock_quantity: number; inStock: boolean }> | null> = {};
+        const productData: Record<string, string | number | boolean | string[] | ReturnType<typeof serializeVariants> | null> = {};
 
         if (name !== undefined) productData.name = name;
         if (description !== undefined) productData.description = description;
@@ -113,16 +155,16 @@ export async function PUT(
         // Validar y agregar variantes si existen
         if (variants !== undefined) {
             if (Array.isArray(variants) && variants.length > 0) {
-                productData.variants = variants.map((v: { id?: string; name?: string; type?: string; value?: string; stock_quantity?: string | number }) => ({
-                    id: v.id || Math.random().toString(36).substring(2, 9),
-                    name: v.name || 'Sin nombre',
-                    type: v.type || 'color',
-                    value: v.value || '',
-                    stock_quantity: parseInt(String(v.stock_quantity)) || 0,
-                    inStock: (parseInt(String(v.stock_quantity)) || 0) > 0
-                }));
+                const serializedVariants = serializeVariants(variants as ProductVariantInput[]);
+                const inventory = getInventoryFromVariants(serializedVariants);
+
+                productData.variants = serializedVariants;
+                productData.stock_quantity = inventory.stock_quantity;
+                productData.in_stock = inventory.in_stock;
             } else {
                 productData.variants = [];
+                productData.stock_quantity = 0;
+                productData.in_stock = false;
             }
         }
 
