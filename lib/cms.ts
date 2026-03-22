@@ -12,7 +12,7 @@ export const getPageContent = unstable_cache(
             const { data, error } = await supabase
                 .from('page_content')
                 .select('*')
-                .eq('page_name', page);
+                .eq('page', page);
 
             if (error) throw error;
             return data || [];

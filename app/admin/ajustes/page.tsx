@@ -26,23 +26,34 @@ export default function AjustesPage() {
         setSaveStatus('idle');
 
         try {
-            const response = await fetchWithCsrf('/api/admin/content', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    pageName: 'global',
-                    updates: [
-                        { section: 'store', key: 'name', value: settings.storeName },
-                        { section: 'store', key: 'email', value: settings.storeEmail },
-                        { section: 'social', key: 'instagram', value: settings.instagram },
-                        { section: 'social', key: 'whatsapp', value: settings.whatsapp },
-                        { section: 'shipping', key: 'free_threshold', value: String(settings.freeShippingThreshold) },
-                        { section: 'store', key: 'currency', value: settings.currency },
-                    ]
-                })
-            });
+            const updates = [
+                { section: 'store', key: 'name', value: settings.storeName },
+                { section: 'store', key: 'email', value: settings.storeEmail },
+                { section: 'social', key: 'instagram', value: settings.instagram },
+                { section: 'social', key: 'whatsapp', value: settings.whatsapp },
+                { section: 'shipping', key: 'free_threshold', value: String(settings.freeShippingThreshold) },
+                { section: 'store', key: 'currency', value: settings.currency },
+            ];
 
-            if (!response.ok) throw new Error('Error al guardar');
+            const errors: string[] = [];
+            for (const item of updates) {
+                const res = await fetchWithCsrf('/api/admin/content', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        page: 'global',
+                        section: item.section,
+                        key: item.key,
+                        value: item.value,
+                    }),
+                });
+                if (!res.ok) {
+                    const body = await res.json();
+                    errors.push(`${item.section}/${item.key}: ${body.error || 'Error'}`);
+                }
+            }
+
+            if (errors.length > 0) throw new Error(errors.join('; '));
 
             setSaveStatus('success');
             setTimeout(() => setSaveStatus('idle'), 3000);
