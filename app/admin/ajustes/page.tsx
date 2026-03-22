@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Save, Globe, Mail, Instagram, CreditCard } from 'lucide-react';
 import Button from '@/components/ui/Button';
@@ -19,6 +19,32 @@ export default function AjustesPage() {
         freeShippingThreshold: 200000,
         currency: 'COP'
     });
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const res = await fetch('/api/admin/content?page=global');
+                const json = await res.json();
+                const items = json.data || [];
+                const get = (section: string, key: string, fallback: string) =>
+                    items.find((i: { section: string; key: string; value?: string }) =>
+                        i.section === section && i.key === key
+                    )?.value ?? fallback;
+                setSettings({
+                    storeName: get('store', 'name', 'Michell Cantero Store'),
+                    storeEmail: get('store', 'email', 'mcanterostore@gmail.com'),
+                    instagram: get('social', 'instagram', '@michellcantero.store'),
+                    facebook: get('social', 'facebook', 'Michell Cantero Store'),
+                    whatsapp: get('social', 'whatsapp', '+57 311 363 3618'),
+                    freeShippingThreshold: parseInt(get('shipping', 'free_threshold', '200000')) || 200000,
+                    currency: get('store', 'currency', 'COP'),
+                });
+            } catch (err) {
+                console.error('[ajustes] Error loading settings:', err);
+            }
+        };
+        load();
+    }, []);
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -138,7 +164,7 @@ export default function AjustesPage() {
                                 label="Envío Gratis desde (COP)"
                                 type="number"
                                 value={settings.freeShippingThreshold}
-                                onChange={(e) => setSettings({ ...settings, freeShippingThreshold: parseInt(e.target.value) })}
+                                onChange={(e) => setSettings({ ...settings, freeShippingThreshold: parseInt(e.target.value) || 0 })}
                             />
                             <div className="space-y-1">
                                 <label className="text-sm font-medium text-neutral-700">Moneda Principal</label>

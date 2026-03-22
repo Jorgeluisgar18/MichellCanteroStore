@@ -245,12 +245,16 @@ export function OrderDetailsModal({ order, onClose, onUpdateStatus, onDeleteOrde
                                         <tr key={item.id} className="text-sm">
                                             <td className="px-4 py-3 flex items-center gap-3">
                                                 <div className="w-10 h-10 rounded overflow-hidden bg-neutral-100 flex-shrink-0 no-print relative">
-                                                    <Image
-                                                        src={item.product_image}
-                                                        alt={item.product_name}
-                                                        fill
-                                                        className="object-cover"
-                                                    />
+                                                    {item.product_image ? (
+                                                        <Image
+                                                            src={item.product_image}
+                                                            alt={item.product_name}
+                                                            fill
+                                                            className="object-cover"
+                                                        />
+                                                    ) : (
+                                                        <Package className="w-5 h-5 text-neutral-300 absolute inset-0 m-auto" />
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <p className="font-medium text-neutral-900">{item.product_name}</p>

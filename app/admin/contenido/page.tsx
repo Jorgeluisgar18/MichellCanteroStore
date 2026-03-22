@@ -36,10 +36,6 @@ interface FieldDef {
 
 const PAGE_FIELDS: Record<PageName, FieldDef[]> = {
     home: [
-        // ── Welcome Section ──
-        { section: 'welcome', key: 'title', label: 'Frase de bienvenida – Título', type: 'text', placeholder: 'Todo lo que amas, unido por primera vez.', maxLength: 100 },
-        { section: 'welcome', key: 'subtitle', label: 'Frase de bienvenida – Subtítulo', type: 'textarea', placeholder: 'Una colección exclusiva de tus marcas favoritas...', maxLength: 220 },
-
         // ── Hero Slide 1 ──
         { section: 'hero_slide_1', key: 'image_url', label: 'Hero Slide 1 – Imagen', type: 'image' },
         { section: 'hero_slide_1', key: 'title', label: 'Hero Slide 1 – Título', type: 'text', placeholder: 'Eleva tu\nbelleza única', maxLength: 60 },
