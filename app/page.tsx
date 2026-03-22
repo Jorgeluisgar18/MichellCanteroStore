@@ -23,6 +23,7 @@ export default function HomePage() {
     const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
     const [loading, setLoading] = useState(true);
     const { items, loading: contentLoading, get, getImage } = usePageContent('home');
+    const { getImage: getCategoryImg } = usePageContent('categorias');
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -213,7 +214,7 @@ export default function HomePage() {
                                     >
                                         <Link href={`/tienda/${category.slug}`} className="group relative block h-full w-full overflow-hidden rounded-3xl bg-neutral-100 shadow-sm transition-all duration-500 hover:shadow-xl">
                                             <Image
-                                                src={category.image}
+                                                src={getCategoryImg(`cat_${category.slug}`, 'image_url', category.image)}
                                                 alt={category.name}
                                                 fill
                                                 className="object-cover object-center transition-transform duration-[1200ms] ease-out group-hover:scale-110"
@@ -265,9 +266,13 @@ export default function HomePage() {
                         {/* Store CTA */}
                         <ScrollReveal>
                             <div className="mt-16 text-center">
-                                <Link href="/tienda" className="group inline-flex items-center gap-4 px-10 py-4 bg-neutral-900 text-white rounded-full text-sm font-bold tracking-widest uppercase transition-all duration-300 hover:bg-primary-600 hover:shadow-coral active:scale-95">
-                                    Ver toda la boutique
-                                    <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-2" />
+                                <Link href="/tienda" className="group relative inline-flex items-center gap-4 px-10 py-5 overflow-hidden rounded-full text-sm font-bold tracking-widest uppercase transition-all duration-500 shadow-coral active:scale-95 text-white">
+                                    <div className="absolute inset-0 bg-gradient-to-r from-primary-500 to-secondary-500 transition-transform duration-500 group-hover:scale-105" />
+                                    <div className="absolute inset-0 bg-black/10 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                                    <span className="relative z-10 flex items-center gap-3">
+                                        Quiero verlo todo
+                                        <ArrowRight className="w-5 h-5 transition-transform duration-500 group-hover:translate-x-2" />
+                                    </span>
                                 </Link>
                             </div>
                         </ScrollReveal>
