@@ -1,49 +1,20 @@
 import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { ApiResponse } from '@/lib/api-responses';
 import { getAdminUser } from '@/lib/auth-utils';
+import {
+    getInventoryFromVariants,
+    getProductProfile,
+    serializeVariantsForStorage,
+    type ProductVariantDraft,
+} from '@/lib/product-variants';
 
 export const dynamic = 'force-dynamic';
 
-type ProductVariantInput = {
-    id?: string;
-    name?: string;
-    type?: string;
-    value?: string;
-    stock_quantity?: number | string;
-    image?: string;
-    colorName?: string | null;
-    colorHex?: string | null;
-    size?: string | null;
-    sku?: string | null;
-};
+function parsePositiveInt(value: string | null) {
+    if (!value) return null;
 
-function serializeVariants(variants: ProductVariantInput[]) {
-    return variants.map((variant) => {
-        const stockQuantity = parseInt(String(variant.stock_quantity)) || 0;
-
-        return {
-            id: variant.id || crypto.randomUUID(),
-            name: variant.name || 'Sin nombre',
-            type: variant.type || 'variant',
-            value: variant.value || '',
-            stock_quantity: stockQuantity,
-            inStock: stockQuantity > 0,
-            image: variant.image || '',
-            colorName: variant.colorName || null,
-            colorHex: variant.colorHex || null,
-            size: variant.size || null,
-            sku: variant.sku || null,
-        };
-    });
-}
-
-function getInventoryFromVariants(variants: ReturnType<typeof serializeVariants>) {
-    const totalStock = variants.reduce((sum, variant) => sum + variant.stock_quantity, 0);
-
-    return {
-        stock_quantity: totalStock,
-        in_stock: totalStock > 0,
-    };
+    const parsed = Number.parseInt(value, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
 /**
@@ -93,13 +64,16 @@ export async function GET(request: Request) {
         if (isNew === 'true') query = query.eq('is_new', true);
         if (inStock === 'true') query = query.eq('in_stock', true);
 
-        // Pagination logic
-        const itemsPerPage = limit ? parseInt(limit) : 20;
-        const currentPage = page ? parseInt(page) : 1;
+        // Only paginate when the client explicitly requests it.
+        const requestedLimit = parsePositiveInt(limit);
+        const requestedPage = parsePositiveInt(page);
+        const shouldPaginate = !slug && (requestedLimit !== null || requestedPage !== null);
+        const itemsPerPage = requestedLimit ?? 20;
+        const currentPage = requestedPage ?? 1;
         const from = (currentPage - 1) * itemsPerPage;
         const to = from + itemsPerPage - 1;
 
-        if (!slug) {
+        if (shouldPaginate) {
             query = query.range(from, to);
         }
 
@@ -110,13 +84,18 @@ export async function GET(request: Request) {
             return ApiResponse.error('Error al obtener productos', 500);
         }
 
+        const totalProducts = count || data.length;
+        const effectiveLimit = shouldPaginate ? itemsPerPage : totalProducts || data.length;
+
         return ApiResponse.success({
             products: data,
             pagination: {
-                total: count || data.length,
+                total: totalProducts,
                 page: currentPage,
-                limit: itemsPerPage,
-                totalPages: Math.ceil((count || data.length) / itemsPerPage)
+                limit: effectiveLimit,
+                totalPages: shouldPaginate
+                    ? Math.ceil(totalProducts / itemsPerPage)
+                    : (totalProducts > 0 ? 1 : 0)
             }
         });
     } catch (error) {
@@ -158,7 +137,7 @@ export async function POST(request: Request) {
             return ApiResponse.badRequest('Faltan campos requeridos: name, price, category');
         }
 
-        const productData: Record<string, string | number | boolean | string[] | unknown[] | null> = {
+        const productData: Record<string, string | number | boolean | string[] | ReturnType<typeof serializeVariantsForStorage> | null> = {
             name,
             description: description || '',
             price: parseFloat(String(price)),
@@ -179,7 +158,8 @@ export async function POST(request: Request) {
         }
 
         if (variants && Array.isArray(variants) && variants.length > 0) {
-            const serializedVariants = serializeVariants(variants as ProductVariantInput[]);
+            const profile = getProductProfile(String(category), String(subcategory || ''));
+            const serializedVariants = serializeVariantsForStorage(variants as ProductVariantDraft[], profile);
             const inventory = getInventoryFromVariants(serializedVariants);
 
             productData.variants = serializedVariants;

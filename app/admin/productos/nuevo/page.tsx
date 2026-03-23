@@ -14,6 +14,13 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { fetchWithCsrf } from '@/lib/hooks/useCsrfToken';
 import { useToast } from '@/components/ui/Toast';
+import {
+    APPAREL_SIZE_OPTIONS,
+    createVariant,
+    getInventoryFromVariants,
+    getProductProfile,
+    normalizeVariant,
+} from '@/lib/product-variants';
 import Image from 'next/image';
 
 interface Variant {
@@ -28,78 +35,6 @@ interface Variant {
     colorHex?: string;
     size?: string;
     sku?: string;
-}
-
-type ProductProfile = 'simple' | 'shade' | 'apparel';
-
-const SHADE_SUBCATEGORIES = new Set([
-    'rubores',
-    'bases',
-    'correctores',
-    'contornos',
-    'polvos',
-    'iluminadores',
-    'labios',
-    'cejas',
-    'pigmentos',
-    'paletas-de-sombras',
-]);
-
-const APPAREL_SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL'];
-
-function getProductProfile(category: string, subcategory: string): ProductProfile {
-    if (category === 'ropa') {
-        return 'apparel';
-    }
-
-    if (category === 'maquillaje' && SHADE_SUBCATEGORIES.has(subcategory)) {
-        return 'shade';
-    }
-
-    return 'simple';
-}
-
-function createVariant(profile: ProductProfile): Variant {
-    const id = crypto.randomUUID();
-
-    if (profile === 'apparel') {
-        return {
-            id,
-            name: 'Nuevo color / talla',
-            type: 'color_size',
-            value: 'S',
-            size: 'S',
-            colorName: 'Nuevo color',
-            colorHex: '#d4a373',
-            stock_quantity: 0,
-            inStock: true,
-            image: '',
-        };
-    }
-
-    if (profile === 'shade') {
-        return {
-            id,
-            name: 'Nuevo tono',
-            type: 'shade',
-            value: '',
-            colorHex: '#d4a373',
-            stock_quantity: 0,
-            inStock: true,
-            image: '',
-        };
-    }
-
-    return {
-        id,
-        name: 'Nueva variante',
-        type: 'color',
-        value: '#000000',
-        colorHex: '#000000',
-        stock_quantity: 0,
-        inStock: true,
-        image: '',
-    };
 }
 
 // Utilidad para subir imagen
@@ -148,55 +83,6 @@ interface ProductFormData {
     is_new: boolean;
     images: string[];
     variants: Variant[];
-}
-
-function getInventoryFromVariants(variants: Variant[]) {
-    const totalStock = variants.reduce((sum, variant) => sum + (Number(variant.stock_quantity) || 0), 0);
-
-    return {
-        stock_quantity: totalStock,
-        in_stock: totalStock > 0,
-    };
-}
-
-function normalizeVariant(variant: Partial<Variant>, profile: ProductProfile): Variant {
-    const base = createVariant(profile);
-    const merged = { ...base, ...variant };
-
-    if (profile === 'apparel') {
-        const colorName = merged.colorName || merged.name || 'Color';
-        const size = merged.size || merged.value || 'S';
-        return {
-            ...merged,
-            type: 'color_size',
-            colorName,
-            size,
-            value: size,
-            name: `${colorName} / ${size}`,
-            inStock: (merged.stock_quantity || 0) > 0,
-        };
-    }
-
-    if (profile === 'shade') {
-        return {
-            ...merged,
-            type: 'shade',
-            value: merged.value || merged.name || '',
-            colorHex: merged.colorHex || merged.value || '#d4a373',
-            inStock: (merged.stock_quantity || 0) > 0,
-        };
-    }
-
-    return merged.type === 'color'
-        ? {
-            ...merged,
-            colorHex: merged.colorHex || merged.value,
-            inStock: (merged.stock_quantity || 0) > 0,
-        }
-        : {
-            ...merged,
-            inStock: (merged.stock_quantity || 0) > 0,
-        };
 }
 
 export default function ProductFormPage() {
@@ -393,9 +279,23 @@ export default function ProductFormPage() {
     const handleVariantChange = (id: string, field: keyof Variant, value: string | number | boolean) => {
         setFormData(prev => ({
             ...prev,
-            variants: prev.variants.map((v: Variant) =>
-                v.id === id ? normalizeVariant({ ...v, [field]: value } as Variant, productProfile) : v
-            )
+            variants: prev.variants.map((v: Variant) => {
+                if (v.id !== id) {
+                    return v;
+                }
+
+                const nextVariant = { ...v, [field]: value } as Variant;
+                const nextType = field === 'type' ? value as Variant['type'] : nextVariant.type;
+                const syncUnifiedColor = productProfile === 'shade' || nextType === 'color' || nextType === 'shade';
+
+                if (syncUnifiedColor && (field === 'value' || field === 'colorHex')) {
+                    const colorValue = String(value);
+                    nextVariant.value = colorValue;
+                    nextVariant.colorHex = colorValue;
+                }
+
+                return normalizeVariant(nextVariant, productProfile);
+            })
         }));
     };
 
@@ -655,14 +555,15 @@ export default function ProductFormPage() {
                                             {productProfile === 'apparel'
                                                 ? 'Agrega combinaciones de color y talla para esta prenda.'
                                                 : productProfile === 'shade'
-                                                    ? 'Agrega tonos con su imagen y color visual para este producto.'
+                                                    ? 'Agrega tonos con su imagen y color para este producto.'
                                                     : 'No hay variantes configuradas para este producto.'}
                                         </div>
                                     ) : (
                                         formData.variants.map((variant: Variant) => {
                                             return (
                                                 <div key={variant.id} className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 animate-in fade-in zoom-in-95 duration-200">
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                                                    <div className={`grid grid-cols-1 md:grid-cols-2 ${productProfile === 'simple' ? 'lg:grid-cols-5' : 'lg:grid-cols-3'} gap-4 items-end`}>
+                                                        {productProfile === 'simple' && (
                                                         <div className="lg:col-span-1">
                                                             <label className="text-xs font-semibold text-neutral-500 uppercase mb-1 block">Tipo</label>
                                                             <select
@@ -670,29 +571,25 @@ export default function ProductFormPage() {
                                                                 onChange={(e) => handleVariantChange(variant.id, 'type', e.target.value as Variant['type'])}
                                                                 className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
                                                             >
-                                                                {productProfile === 'apparel' ? (
-                                                                    <option value="color_size">Color + talla</option>
-                                                                ) : productProfile === 'shade' ? (
-                                                                    <option value="shade">Tono (Maquillaje)</option>
-                                                                ) : (
-                                                                    <>
-                                                                        <option value="color">Color</option>
-                                                                        <option value="shade">Tono (Maquillaje)</option>
-                                                                        <option value="size">Talla</option>
-                                                                    </>
-                                                                )}
+                                                                <option value="color">Color</option>
+                                                                <option value="shade">Tono (Maquillaje)</option>
+                                                                <option value="size">Talla</option>
                                                             </select>
                                                         </div>
+                                                        )}
                                                         <div className="lg:col-span-1">
-                                                            <label className="text-xs font-semibold text-neutral-500 uppercase mb-1 block">Nombre</label>
+                                                            <label className="text-xs font-semibold text-neutral-500 uppercase mb-1 block">
+                                                                {productProfile === 'apparel' ? 'Nombre del color' : productProfile === 'shade' ? 'Nombre del tono' : 'Nombre'}
+                                                            </label>
                                                             <input
                                                                 type="text"
-                                                                value={variant.name}
-                                                                onChange={(e) => handleVariantChange(variant.id, 'name', e.target.value)}
+                                                                value={productProfile === 'apparel' ? (variant.colorName || '') : variant.name}
+                                                                onChange={(e) => handleVariantChange(variant.id, productProfile === 'apparel' ? 'colorName' : 'name', e.target.value)}
                                                                 placeholder={productProfile === 'apparel' ? 'Ej. Negro clásico' : productProfile === 'shade' ? 'Ej. Tono 03 / Durazno' : 'Ej. Rojo Pasión'}
                                                                 className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
                                                             />
                                                         </div>
+                                                        {productProfile === 'simple' && (
                                                         <div className="lg:col-span-1">
                                                             <label className="text-xs font-semibold text-neutral-500 uppercase mb-1 block">
                                                                 {(variant.type === 'color' || variant.type === 'shade') ? 'Color / código' : 'Valor'}
@@ -701,7 +598,7 @@ export default function ProductFormPage() {
                                                                 {(variant.type === 'color' || variant.type === 'shade') ? (
                                                                     <input
                                                                         type="color"
-                                                                        value={variant.value}
+                                                                        value={variant.colorHex || variant.value || '#000000'}
                                                                         onChange={(e) => handleVariantChange(variant.id, 'value', e.target.value)}
                                                                         className="w-10 h-10 p-1 bg-white border border-neutral-200 rounded-lg cursor-pointer"
                                                                     />
@@ -717,13 +614,14 @@ export default function ProductFormPage() {
                                                                 {(variant.type === 'color' || variant.type === 'shade') && (
                                                                     <input
                                                                         type="text"
-                                                                        value={variant.value}
+                                                                        value={variant.colorHex || variant.value || ''}
                                                                         onChange={(e) => handleVariantChange(variant.id, 'value', e.target.value)}
                                                                         className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-xs font-mono focus:ring-2 focus:ring-primary-500 outline-none"
                                                                     />
                                                                 )}
                                                             </div>
                                                         </div>
+                                                        )}
                                                         <div className="lg:col-span-1">
                                                             <label className="text-xs font-semibold text-neutral-500 uppercase mb-1 block">Stock</label>
                                                             <input
@@ -746,17 +644,7 @@ export default function ProductFormPage() {
                                                     {productProfile === 'apparel' && (
                                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-neutral-200">
                                                             <div>
-                                                                <label className="text-xs font-semibold text-neutral-500 uppercase mb-1 block">Nombre del color</label>
-                                                                <input
-                                                                    type="text"
-                                                                    value={variant.colorName || ''}
-                                                                    onChange={(e) => handleVariantChange(variant.id, 'colorName', e.target.value)}
-                                                                    placeholder="Ej. Negro"
-                                                                    className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
-                                                                />
-                                                            </div>
-                                                            <div>
-                                                                <label className="text-xs font-semibold text-neutral-500 uppercase mb-1 block">Color Hex</label>
+                                                                <label className="text-xs font-semibold text-neutral-500 uppercase mb-1 block">Color</label>
                                                                 <div className="flex gap-2">
                                                                     <input
                                                                         type="color"
@@ -805,7 +693,7 @@ export default function ProductFormPage() {
                                                     {productProfile === 'shade' && (
                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-neutral-200">
                                                             <div>
-                                                                <label className="text-xs font-semibold text-neutral-500 uppercase mb-1 block">Color visual</label>
+                                                                <label className="text-xs font-semibold text-neutral-500 uppercase mb-1 block">Color</label>
                                                                 <div className="flex gap-2">
                                                                     <input
                                                                         type="color"

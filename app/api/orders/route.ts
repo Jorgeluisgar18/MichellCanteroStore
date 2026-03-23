@@ -130,7 +130,7 @@ export async function POST(request: Request) {
             if (!product) return ApiResponse.badRequest(`Producto ${item.product_id} no encontrado`);
 
             if (!product.in_stock || product.stock_quantity < item.quantity) {
-                return ApiResponse.badRequest(`Stock insuficiente para ${product.name}`);
+                return ApiResponse.badRequest(`La cantidad solicitada de ${product.name} ya no está disponible`);
             }
 
             // Aplicar priceModifier si la variante lo tiene
@@ -246,7 +246,7 @@ export async function POST(request: Request) {
 
         if (reservationErrors.length > 0) {
             await supabaseAdmin.from('orders').delete().eq('id', order.id);
-            return ApiResponse.badRequest('Stock insuficiente para completar la orden', 'STOCK_RESERVE_FAILED');
+            return ApiResponse.badRequest('Algunos productos cambiaron de disponibilidad. Revisa tu carrito e inténtalo de nuevo.', 'STOCK_RESERVE_FAILED');
         }
 
         return ApiResponse.success({ ...order, items: orderItems }, 201);

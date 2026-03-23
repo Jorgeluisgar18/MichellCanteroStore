@@ -140,13 +140,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                             </span>
                         )}
                     </div>
-
-                    {/* Stock Status */}
-                    {product.in_stock && product.stock_quantity < 10 && (
-                        <p className="text-xs text-orange-600 mt-2">
-                            ¡Solo quedan {product.stock_quantity}!
-                        </p>
-                    )}
                 </div>
             </Card>
         </Link>

@@ -1,49 +1,13 @@
 import { NextResponse } from 'next/server';
 import { supabase, supabaseAdmin } from '@/lib/supabase';
+import {
+    getInventoryFromVariants,
+    getProductProfile,
+    serializeVariantsForStorage,
+    type ProductVariantDraft,
+} from '@/lib/product-variants';
 
 export const dynamic = 'force-dynamic';
-
-type ProductVariantInput = {
-    id?: string;
-    name?: string;
-    type?: string;
-    value?: string;
-    stock_quantity?: string | number;
-    image?: string;
-    colorName?: string | null;
-    colorHex?: string | null;
-    size?: string | null;
-    sku?: string | null;
-};
-
-function serializeVariants(variants: ProductVariantInput[]) {
-    return variants.map((variant) => {
-        const stockQuantity = parseInt(String(variant.stock_quantity)) || 0;
-
-        return {
-            id: variant.id || crypto.randomUUID(),
-            name: variant.name || 'Sin nombre',
-            type: variant.type || 'color',
-            value: variant.value || '',
-            stock_quantity: stockQuantity,
-            inStock: stockQuantity > 0,
-            image: variant.image || '',
-            colorName: variant.colorName || null,
-            colorHex: variant.colorHex || null,
-            size: variant.size || null,
-            sku: variant.sku || null,
-        };
-    });
-}
-
-function getInventoryFromVariants(variants: ReturnType<typeof serializeVariants>) {
-    const totalStock = variants.reduce((sum, variant) => sum + variant.stock_quantity, 0);
-
-    return {
-        stock_quantity: totalStock,
-        in_stock: totalStock > 0,
-    };
-}
 
 // GET /api/products/[id] - Obtener producto por ID
 export async function GET(
@@ -90,6 +54,8 @@ export async function PUT(
 ) {
     try {
         const body = await request.json();
+        let existingProductCategory: string | null = null;
+        let existingProductSubcategory: string | null = null;
 
         // Validar autenticación usando el cliente del servidor
         const { createClient } = await import('@/lib/supabase-server');
@@ -131,7 +97,7 @@ export async function PUT(
         } = body;
 
         // Preparar datos para actualización
-        const productData: Record<string, string | number | boolean | string[] | ReturnType<typeof serializeVariants> | null> = {};
+        const productData: Record<string, string | number | boolean | string[] | ReturnType<typeof serializeVariantsForStorage> | null> = {};
 
         if (name !== undefined) productData.name = name;
         if (description !== undefined) productData.description = description;
@@ -155,7 +121,33 @@ export async function PUT(
         // Validar y agregar variantes si existen
         if (variants !== undefined) {
             if (Array.isArray(variants) && variants.length > 0) {
-                const serializedVariants = serializeVariants(variants as ProductVariantInput[]);
+                if (category === undefined || subcategory === undefined) {
+                    const { data: existingProduct, error: existingProductError } = await supabaseAdmin
+                        .from('products')
+                        .select('category, subcategory')
+                        .eq('id', params.id)
+                        .single();
+
+                    if (existingProductError) {
+                        console.error('Error fetching current product profile:', existingProductError);
+                        return NextResponse.json(
+                            { error: 'No se pudo obtener la configuración actual del producto' },
+                            { status: 500 }
+                        );
+                    }
+
+                    existingProductCategory = existingProduct.category;
+                    existingProductSubcategory = existingProduct.subcategory;
+                }
+
+                const resolvedCategory = category !== undefined
+                    ? String(category)
+                    : String(existingProductCategory || '');
+                const resolvedSubcategory = subcategory !== undefined
+                    ? String(subcategory || '')
+                    : String(existingProductSubcategory || '');
+                const profile = getProductProfile(resolvedCategory, resolvedSubcategory);
+                const serializedVariants = serializeVariantsForStorage(variants as ProductVariantDraft[], profile);
                 const inventory = getInventoryFromVariants(serializedVariants);
 
                 productData.variants = serializedVariants;

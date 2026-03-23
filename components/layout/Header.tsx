@@ -91,7 +91,7 @@ const Header: React.FC = () => {
                 const res = await fetch('/api/products');
                 const data = await res.json();
                 const query = searchQuery.toLowerCase();
-                const filtered = data.data?.filter((p: ProductSuggestion) =>
+                const filtered = data.data?.products?.filter((p: ProductSuggestion) =>
                     p.name.toLowerCase().includes(query) ||
                     p.category?.toLowerCase().includes(query) ||
                     p.brand?.toLowerCase().includes(query)

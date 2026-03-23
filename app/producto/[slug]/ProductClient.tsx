@@ -379,7 +379,6 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
                                                             ? 'border-primary-600 bg-primary-50 text-primary-700'
                                                             : 'border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400'
                                                             } ${(!variant.inStock || variant.stock_quantity === 0) ? 'opacity-60 border-dashed' : ''}`}
-                                                        title={`${variant.name} (${variant.stock_quantity} disp.)`}
                                                     >
                                                         <span
                                                             className="h-5 w-5 rounded-full border border-black/10"
@@ -413,7 +412,6 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
                                                                 ? 'scale-110 border-primary-600 ring-2 ring-primary-100 ring-offset-2'
                                                                 : 'border-neutral-200 hover:border-neutral-400'
                                                                 } ${(!variant.inStock || variant.stock_quantity === 0) ? 'opacity-40 grayscale' : ''}`}
-                                                            title={`${variant.name} (${variant.stock_quantity} disp.)`}
                                                         >
                                                             <span
                                                                 className="absolute inset-1 rounded-full shadow-inner"
@@ -440,13 +438,6 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
                                         </div>
                                     )}
 
-                                    {selectedVariant && (
-                                        <p className="animate-in fade-in slide-in-from-top-1 text-sm font-medium text-neutral-500">
-                                            {selectedVariant.stock_quantity > 0
-                                                ? `${selectedVariant.stock_quantity} unidades disponibles de ${selectedVariant.name}`
-                                                : `Agotado: ${selectedVariant.name}`}
-                                        </p>
-                                    )}
                                 </div>
                             )}
 

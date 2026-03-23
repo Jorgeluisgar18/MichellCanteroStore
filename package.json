@@ -8,6 +8,7 @@
     "build:prod": "npm run type-check && next build",
     "start": "next start",
     "lint": "next lint",
+    "normalize:product-variants": "tsx scripts/normalize-product-variants.ts",
     "type-check": "tsc --noEmit",
     "clean:logs": "powershell -Command \"Remove-Item *.txt, *.log, *.js, *.py -Exclude next-env.d.ts, next.config.js, postcss.config.js, tailwind.config.ts -ErrorAction SilentlyContinue\""
   },
