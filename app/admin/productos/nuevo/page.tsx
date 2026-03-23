@@ -37,6 +37,27 @@ interface Variant {
     sku?: string;
 }
 
+const EMPTY_VARIANT_NAME_SENTINEL = 'Sin nombre';
+
+function preserveDraftVariantText(normalizedVariant: Variant, draftVariant: Variant, profile: ReturnType<typeof getProductProfile>): Variant {
+    if (profile === 'apparel') {
+        const rawColorName = draftVariant.colorName ?? '';
+        const rawSize = normalizedVariant.size || draftVariant.size || normalizedVariant.value || draftVariant.value || '';
+        const draftName = [rawColorName, rawSize].filter(Boolean).join(' / ');
+
+        return {
+            ...normalizedVariant,
+            colorName: rawColorName,
+            name: draftName,
+        };
+    }
+
+    return {
+        ...normalizedVariant,
+        name: draftVariant.name ?? '',
+    };
+}
+
 // Utilidad para subir imagen
 const uploadImage = async (file: File): Promise<string> => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -294,8 +315,24 @@ export default function ProductFormPage() {
                     nextVariant.colorHex = colorValue;
                 }
 
-                return normalizeVariant(nextVariant, productProfile);
+                const normalizedVariant = normalizeVariant(nextVariant, productProfile);
+                return preserveDraftVariantText(normalizedVariant, nextVariant, productProfile);
             })
+        }));
+    };
+
+    const handleVariantNameFocus = (id: string) => {
+        if (productProfile === 'apparel') {
+            return;
+        }
+
+        setFormData(prev => ({
+            ...prev,
+            variants: prev.variants.map((variant: Variant) => (
+                variant.id === id && variant.name === EMPTY_VARIANT_NAME_SENTINEL
+                    ? { ...variant, name: '' }
+                    : variant
+            ))
         }));
     };
 
@@ -585,6 +622,7 @@ export default function ProductFormPage() {
                                                                 type="text"
                                                                 value={productProfile === 'apparel' ? (variant.colorName || '') : variant.name}
                                                                 onChange={(e) => handleVariantChange(variant.id, productProfile === 'apparel' ? 'colorName' : 'name', e.target.value)}
+                                                                onFocus={() => handleVariantNameFocus(variant.id)}
                                                                 placeholder={productProfile === 'apparel' ? 'Ej. Negro clásico' : productProfile === 'shade' ? 'Ej. Tono 03 / Durazno' : 'Ej. Rojo Pasión'}
                                                                 className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
                                                             />
