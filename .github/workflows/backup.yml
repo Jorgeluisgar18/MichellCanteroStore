@@ -21,7 +21,7 @@ jobs:
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y postgresql-client
+          sudo apt-get install -y postgresql-client dnsutils
           pg_dump --version
 
       - name: Generate backup filename
@@ -36,12 +36,21 @@ jobs:
       - name: Create PostgreSQL backup
         env:
           PGPASSWORD: ${{ secrets.DB_PASSWORD }}
-          PGPORT: 5432
           PGSSLMODE: require
           PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
+          # Resolver IP IPv4 explícitamente para evitar IPv6
+          DB_HOST="db.${PROJECT_ID}.supabase.co"
+          DB_IP=$(dig +short A ${DB_HOST} | head -1)
+          echo "Resolved ${DB_HOST} → ${DB_IP}"
+
+          if [ -z "${DB_IP}" ]; then
+            echo "❌ No se pudo resolver la IP de ${DB_HOST}"
+            exit 1
+          fi
+
           pg_dump \
-            -h "db.${PROJECT_ID}.supabase.co" \
+            -h "${DB_IP}" \
             -U postgres \
             -p 5432 \
             -d postgres \
