@@ -12,7 +12,7 @@ jobs:
     permissions:
       contents: read
       actions: write
-      issues: write   # ✅ AÑADIDO: necesario para crear issues en caso de fallo
+      issues: write
 
     steps:
       - name: Checkout repository
@@ -36,8 +36,8 @@ jobs:
       - name: Create PostgreSQL backup
         env:
           PGPASSWORD: ${{ secrets.DB_PASSWORD }}
-          PGPORT: 5432                              # ✅ Puerto explícito
-          PGSSLMODE: require                        # ✅ SSL requerido por Supabase
+          PGPORT: 5432
+          PGSSLMODE: require
           PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
           pg_dump \
@@ -52,7 +52,6 @@ jobs:
           echo "✅ Backup created"
           ls -lh "${{ steps.backup-name.outputs.filename }}"
 
-      # ✅ AÑADIDO: verificar que el backup no esté vacío
       - name: Verify backup integrity
         run: |
           FILE="${{ steps.backup-name.outputs.filename }}"
@@ -75,7 +74,7 @@ jobs:
           name: database-backup-${{ steps.backup-name.outputs.date }}
           path: ${{ steps.backup-name.outputs.filename }}.gz
           retention-days: 90
-          if-no-files-found: error   # ✅ Falla explícitamente si no hay archivo
+          if-no-files-found: error
 
       - name: Cleanup old artifacts (keep last 12)
         uses: actions/github-script@v7
