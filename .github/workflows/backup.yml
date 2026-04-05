@@ -2,78 +2,82 @@ name: Weekly Database Backup
 
 on:
   schedule:
-    # Every Sunday at 2 AM UTC
-    - cron: '0 2 * * 0'
-  workflow_dispatch: # Allow manual trigger
+    # Domingo 2:00 AM Colombia (UTC-5) = 07:00 UTC
+    - cron: '0 7 * * 0'
+  workflow_dispatch:
 
 jobs:
   backup:
     runs-on: ubuntu-latest
-    
+    permissions:
+      contents: read
+      actions: write
+      issues: write   # ✅ AÑADIDO: necesario para crear issues en caso de fallo
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Supabase CLI
+      - name: Install PostgreSQL client
         run: |
-          # Download and install Supabase CLI binary directly
-          curl -fsSL https://github.com/supabase/cli/releases/download/v1.142.2/supabase_1.142.2_linux_amd64.tar.gz -o supabase.tar.gz
-          tar -xzf supabase.tar.gz
-          sudo mv supabase /usr/local/bin/
-          supabase --version
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+          pg_dump --version
 
       - name: Generate backup filename
         id: backup-name
         run: |
-          echo "filename=backup_$(date +%Y%m%d_%H%M%S).sql" >> $GITHUB_OUTPUT
-          echo "date=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
+          FILENAME="backup_$(date +%Y%m%d_%H%M%S).dump"
+          DATE="$(date +%Y-%m-%d)"
+          echo "filename=${FILENAME}" >> $GITHUB_OUTPUT
+          echo "date=${DATE}" >> $GITHUB_OUTPUT
+          echo "Generated filename: ${FILENAME}"
 
-      - name: Export database schema
+      - name: Create PostgreSQL backup
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+          PGPASSWORD: ${{ secrets.DB_PASSWORD }}
+          PGPORT: 5432                              # ✅ Puerto explícito
+          PGSSLMODE: require                        # ✅ SSL requerido por Supabase
+          PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
-          # Export schema using Supabase CLI
-          supabase db dump \
-            --project-id $SUPABASE_PROJECT_ID \
-            --schema public \
-            > ${{ steps.backup-name.outputs.filename }}
-          
-          # Compress backup
-          gzip ${{ steps.backup-name.outputs.filename }}
-          
-          echo "Backup created: ${{ steps.backup-name.outputs.filename }}.gz"
-          ls -lh ${{ steps.backup-name.outputs.filename }}.gz
+          pg_dump \
+            -h "db.${PROJECT_ID}.supabase.co" \
+            -U postgres \
+            -p 5432 \
+            -d postgres \
+            -F c \
+            --no-password \
+            -f "${{ steps.backup-name.outputs.filename }}"
+
+          echo "✅ Backup created"
+          ls -lh "${{ steps.backup-name.outputs.filename }}"
+
+      # ✅ AÑADIDO: verificar que el backup no esté vacío
+      - name: Verify backup integrity
+        run: |
+          FILE="${{ steps.backup-name.outputs.filename }}"
+          SIZE=$(stat -c%s "${FILE}")
+          echo "Backup size: ${SIZE} bytes"
+          if [ "${SIZE}" -lt 1024 ]; then
+            echo "❌ Backup file is suspiciously small (${SIZE} bytes)"
+            exit 1
+          fi
+          echo "✅ Backup integrity check passed"
+
+      - name: Compress backup
+        run: |
+          gzip "${{ steps.backup-name.outputs.filename }}"
+          ls -lh "${{ steps.backup-name.outputs.filename }}.gz"
 
       - name: Upload backup to GitHub Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: database-backup-${{ steps.backup-name.outputs.date }}
           path: ${{ steps.backup-name.outputs.filename }}.gz
-          retention-days: 90 # Keep for 3 months
+          retention-days: 90
+          if-no-files-found: error   # ✅ Falla explícitamente si no hay archivo
 
-      # Optional: Upload to Google Drive
-      # Uncomment and add GDRIVE_CREDENTIALS secret to enable
-      # - name: Upload to Google Drive (Optional)
-      #   uses: satackey/action-google-drive@v1
-      #   with:
-      #     skicka-tokencache-json: ${{ secrets.GDRIVE_CREDENTIALS }}
-      #     upload-from: ${{ steps.backup-name.outputs.filename }}.gz
-      #     upload-to: /backups/michell-cantero-store/
-
-      # Optional: Upload to AWS S3
-      # Uncomment and add AWS secrets to enable
-      # - name: Upload to AWS S3 (Optional)
-      #   env:
-      #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      #     AWS_REGION: ${{ secrets.AWS_REGION }}
-      #   run: |
-      #     aws s3 cp \
-      #       ${{ steps.backup-name.outputs.filename }}.gz \
-      #       s3://${{ secrets.AWS_S3_BUCKET }}/backups/michell-cantero-store/
-
-      - name: Cleanup old artifacts
+      - name: Cleanup old artifacts (keep last 12)
         uses: actions/github-script@v7
         with:
           script: |
@@ -82,32 +86,50 @@ jobs:
               repo: context.repo.repo,
               per_page: 100
             });
-            
-            // Keep only last 12 backups (3 months of weekly backups)
+
             const backupArtifacts = artifacts.data.artifacts
               .filter(a => a.name.startsWith('database-backup-'))
               .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            
+
+            console.log(`Found ${backupArtifacts.length} backup artifact(s) total`);
+
             const toDelete = backupArtifacts.slice(12);
-            
+
+            if (toDelete.length === 0) {
+              console.log('No old backups to delete');
+              return;
+            }
+
             for (const artifact of toDelete) {
-              console.log(`Deleting old backup: ${artifact.name}`);
+              console.log(`Deleting: ${artifact.name} (created: ${artifact.created_at})`);
               await github.rest.actions.deleteArtifact({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 artifact_id: artifact.id
               });
             }
+            console.log(`✅ Deleted ${toDelete.length} old backup(s)`);
 
       - name: Notify on failure
         if: failure()
         uses: actions/github-script@v7
         with:
           script: |
-            github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: '⚠️ Database Backup Failed',
-              body: `Automated database backup failed on ${new Date().toISOString()}\n\nCheck the [workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) for details.`,
-              labels: ['backup', 'urgent']
-            });
+            try {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `⚠️ Database Backup Failed - ${new Date().toISOString().split('T')[0]}`,
+                body: [
+                  '## Automated backup failed',
+                  '',
+                  `**Date:** ${new Date().toISOString()}`,
+                  `**Run:** ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                  '',
+                  'Please investigate and restore manually if needed.'
+                ].join('\n'),
+                labels: ['backup', 'urgent']
+              });
+            } catch (err) {
+              console.error('Failed to create issue:', err.message);
+            }
