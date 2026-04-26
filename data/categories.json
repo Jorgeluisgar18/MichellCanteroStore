@@ -220,5 +220,14 @@
                 "slug": "vestidos"
             }
         ]
+    },
+    {
+        "id": "corporal",
+        "name": "Corporal",
+        "slug": "corporal",
+        "description": "Cremas, aceites, exfoliantes y tratamientos corporales para nutrir y embellecer tu piel de pies a cabeza.",
+        "image": "https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=800",
+        "productCount": 0,
+        "subcategories": []
     }
 ]

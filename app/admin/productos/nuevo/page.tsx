@@ -462,6 +462,7 @@ export default function ProductFormPage() {
                                             <option value="maquillaje">Maquillaje</option>
                                             <option value="ropa">Ropa</option>
                                             <option value="accesorios">Accesorios</option>
+                                            <option value="corporal">Corporal</option>
                                             <option value="skincare">Skincare</option>
                                         </select>
                                     </div>

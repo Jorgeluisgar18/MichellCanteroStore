@@ -103,6 +103,10 @@ const PAGE_FIELDS: Record<PageName, FieldDef[]> = {
         { section: 'cat_ropa', key: 'title', label: 'Ropa – Título banner', type: 'text', placeholder: 'Ropa', maxLength: 80 },
         { section: 'cat_ropa', key: 'description', label: 'Ropa – Descripción', type: 'textarea', placeholder: 'Ropa femenina elegante...', maxLength: 300 },
         { section: 'cat_ropa', key: 'image_url', label: 'Ropa – Imagen banner', type: 'image' },
+
+        { section: 'cat_corporal', key: 'title', label: 'Corporal – Título banner', type: 'text', placeholder: 'Corporal', maxLength: 80 },
+        { section: 'cat_corporal', key: 'description', label: 'Corporal – Descripción', type: 'textarea', placeholder: 'Cremas, aceites y tratamientos...', maxLength: 300 },
+        { section: 'cat_corporal', key: 'image_url', label: 'Corporal – Imagen banner', type: 'image' },
     ],
     global: [
         { section: 'info', key: 'address', label: 'Dirección física', type: 'text', placeholder: 'Calle 9 #22-51, Ciénaga', maxLength: 100 },

@@ -25,12 +25,12 @@ interface UsePageContentReturn {
  * const title = get('hero', 'title', 'Eleva tu belleza única');
  * const heroUrl = getImage('hero', 'image_url', '/hero-michell.jpg');
  */
-export function usePageContent(page: PageName): UsePageContentReturn {
-    const [items, setItems] = useState<PageContent[]>([]);
-    const [loading, setLoading] = useState(true);
+export function usePageContent(page: PageName, initialItems?: PageContent[]): UsePageContentReturn {
+    const [items, setItems] = useState<PageContent[]>(initialItems || []);
+    const [loading, setLoading] = useState(!initialItems || initialItems.length === 0);
 
     const fetchContent = useCallback(async () => {
-        setLoading(true);
+        if (!initialItems) setLoading(true);
         try {
             const res = await fetch(`/api/admin/content?page=${page}`, {
                 // Short cache so fresh admin changes appear within ~60s
@@ -46,7 +46,7 @@ export function usePageContent(page: PageName): UsePageContentReturn {
         } finally {
             setLoading(false);
         }
-    }, [page]);
+    }, [page, initialItems]);
 
     useEffect(() => {
         fetchContent();
@@ -67,11 +67,27 @@ export function usePageContent(page: PageName): UsePageContentReturn {
     /**
      * Look up an image URL by section + key.
      * Returns `fallback` when no DB entry or empty image_url.
+     *
+     * Cache busting: when the row has an `updated_at`, we append
+     * `?v={timestamp}` so that any change in the CMS produces a new URL
+     * that bypasses browser cache and CDN stale-while-revalidate.
      */
     const getImage = useCallback(
         (section: string, key: string, fallback = ''): string => {
             const row = items.find((i) => i.section === section && i.key === key);
-            return row?.image_url?.trim() || row?.value?.trim() || fallback;
+            const rawUrl = row?.image_url?.trim() || row?.value?.trim() || fallback;
+
+            // Only bust cache for CMS-stored URLs that have an updated_at timestamp
+            if (rawUrl && row?.updated_at) {
+                const ts = new Date(row.updated_at).getTime();
+                // Avoid appending if URL already has query params that include 'v='
+                if (!rawUrl.includes('v=')) {
+                    const separator = rawUrl.includes('?') ? '&' : '?';
+                    return `${rawUrl}${separator}v=${ts}`;
+                }
+            }
+
+            return rawUrl;
         },
         [items]
     );

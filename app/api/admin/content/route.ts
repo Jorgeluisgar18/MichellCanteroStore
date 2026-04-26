@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { revalidatePath, revalidateTag } from 'next/cache';
 
 /**
  * GET /api/admin/content?page=home
@@ -31,7 +32,9 @@ export async function GET(request: Request) {
 
         return NextResponse.json(
             { data: data ?? [] },
-            { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' } }
+            // Reduced TTLs: s-maxage=10s so CDN serves stale content at most 10s.
+            // stale-while-revalidate=30s gives a short background refresh window.
+            { headers: { 'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=30' } }
         );
     } catch (err) {
         console.error('[content GET] unexpected error:', err);
@@ -127,6 +130,13 @@ export async function PUT(request: Request) {
         console.error('[content PUT]', error);
         return NextResponse.json({ error: 'Error al guardar el contenido' }, { status: 500 });
     }
+
+    // Invalidate Next.js Data Cache so changes appear immediately for visitors
+    revalidateTag('cms-content');
+    revalidatePath('/');
+    revalidatePath('/tienda');
+    revalidatePath('/nosotros');
+    revalidatePath('/contacto');
 
     return NextResponse.json({ data });
 }

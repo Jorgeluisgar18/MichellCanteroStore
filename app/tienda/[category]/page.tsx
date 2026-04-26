@@ -34,8 +34,9 @@ async function getProducts(category: string) {
     const { data, error } = await supabase
         .from('products')
         .select('*')
-        .eq('category', category)
-        .order('created_at', { ascending: false });
+        .ilike('category', category)
+        .order('created_at', { ascending: false })
+        .limit(2000);
 
     if (error) {
         console.error('Error fetching products:', error);

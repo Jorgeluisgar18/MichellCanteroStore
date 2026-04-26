@@ -37,6 +37,9 @@ const nextConfig = {
             },
         ],
         formats: ['image/webp', 'image/avif'],
+        // Reduce Image Optimizer CDN cache from the default 60s to 30s.
+        // This limits how long a stale/old image can be served after an admin update.
+        minimumCacheTTL: 30,
     },
     reactStrictMode: true,
     // Enable instrumentation for Sentry

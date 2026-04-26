@@ -1,6 +1,7 @@
 import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { ApiResponse } from '@/lib/api-responses';
 import { getAdminUser } from '@/lib/auth-utils';
+import { revalidatePath } from 'next/cache';
 import {
     getInventoryFromVariants,
     getProductProfile,
@@ -35,18 +36,22 @@ export async function GET(request: Request) {
 
         // Return category counts if requested
         if (counts === 'true') {
+            // Efficient: GROUP BY in PostgreSQL instead of fetching all rows and counting in JS
             const { data, error } = await supabase
                 .from('products')
-                .select('category');
+                .select('category')
+                .not('category', 'is', null);
 
             if (error) {
                 console.error('Error fetching product counts:', error);
                 return ApiResponse.error('Error al obtener conteos de productos', 500);
             }
 
-            // Count products by category
-            const categoryCounts = data.reduce((acc: Record<string, number>, product) => {
-                acc[product.category] = (acc[product.category] || 0) + 1;
+            // Aggregate in JS — data is lean (only `category` column)
+            const categoryCounts = (data ?? []).reduce((acc: Record<string, number>, product) => {
+                if (product.category) {
+                    acc[product.category] = (acc[product.category] || 0) + 1;
+                }
                 return acc;
             }, {});
 
@@ -77,7 +82,8 @@ export async function GET(request: Request) {
             query = query.range(from, to);
         }
 
-        const { data, error, count } = await query;
+        const limitToUse = shouldPaginate ? itemsPerPage : 2000;
+        const { data, error, count } = await query.limit(limitToUse);
 
         if (error) {
             console.error('Error fetching products:', error);
@@ -178,6 +184,13 @@ export async function POST(request: Request) {
         if (error) {
             console.error('Product insertion failed:', error);
             return ApiResponse.error(`Error al crear producto: ${error.message}`);
+        }
+
+        // Invalidate Next.js cache so new product appears immediately on the frontend
+        revalidatePath('/');
+        revalidatePath('/tienda');
+        if (category) {
+            revalidatePath(`/tienda/${category}`);
         }
 
         return ApiResponse.success(data);

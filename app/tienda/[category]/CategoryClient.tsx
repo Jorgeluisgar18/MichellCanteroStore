@@ -31,6 +31,12 @@ const CATEGORY_THEMES: Record<string, { from: string; to: string; badge: string;
         badge: 'bg-violet-900/40 text-violet-200 border-violet-700/40',
         dot: 'bg-violet-400',
     },
+    corporal: {
+        from: 'from-[#1a2e1a]',
+        to: 'to-[#2c5e3d]',
+        badge: 'bg-emerald-900/40 text-emerald-200 border-emerald-700/40',
+        dot: 'bg-emerald-400',
+    },
 };
 
 const DEFAULT_THEME: { from: string; to: string; badge: string; dot: string } = {
@@ -48,6 +54,8 @@ function getCategoryTheme(categorySlug: string): { from: string; to: string; bad
             return CATEGORY_THEMES.ropa!;
         case 'maquillaje':
             return CATEGORY_THEMES.maquillaje!;
+        case 'corporal':
+            return CATEGORY_THEMES.corporal!;
         default:
             return DEFAULT_THEME;
     }

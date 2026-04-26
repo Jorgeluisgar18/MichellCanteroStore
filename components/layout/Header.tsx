@@ -128,6 +128,7 @@ const Header: React.FC = () => {
         { name: 'Maquillaje', href: '/tienda/maquillaje' },
         { name: 'Accesorios', href: '/tienda/accesorios' },
         { name: 'Ropa', href: '/tienda/ropa' },
+        { name: 'Corporal', href: '/tienda/corporal' },
     ];
 
     const isHome = pathname === '/';

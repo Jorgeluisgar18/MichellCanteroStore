@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase, supabaseAdmin } from '@/lib/supabase';
+import { revalidatePath } from 'next/cache';
 import {
     getInventoryFromVariants,
     getProductProfile,
@@ -176,6 +177,16 @@ export async function PUT(
             );
         }
 
+        // Invalidate Next.js cache so the updated product appears immediately
+        revalidatePath('/');
+        revalidatePath('/tienda');
+        if (data?.category) {
+            revalidatePath(`/tienda/${data.category}`);
+        }
+        if (data?.slug) {
+            revalidatePath(`/producto/${data.slug}`);
+        }
+
         return NextResponse.json({ data });
     } catch (error: unknown) {
         console.error('API Error:', error);
@@ -226,6 +237,10 @@ export async function DELETE(
                 { status: 500 }
             );
         }
+
+        // Invalidate Next.js cache after deletion
+        revalidatePath('/');
+        revalidatePath('/tienda');
 
         return NextResponse.json({ success: true });
     } catch (error: unknown) {
