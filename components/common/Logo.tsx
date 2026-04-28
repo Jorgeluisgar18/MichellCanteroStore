@@ -3,13 +3,16 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePageContent } from '@/lib/hooks/usePageContent';
 
+import type { PageContent } from '@/types';
+
 interface LogoProps {
     className?: string;
     size?: 'small' | 'base';
+    initialGlobalContent?: PageContent[] | undefined;
 }
 
-const Logo: React.FC<LogoProps> = ({ className = "", size = 'base' }) => {
-    const { getImage } = usePageContent('global');
+const Logo: React.FC<LogoProps> = ({ className = "", size = 'base', initialGlobalContent }) => {
+    const { getImage } = usePageContent('global', initialGlobalContent);
     const dimensions = size === 'small'
         ? "w-32 h-8 md:w-40 md:h-10"
         : "w-48 h-12 md:w-64 md:h-16";

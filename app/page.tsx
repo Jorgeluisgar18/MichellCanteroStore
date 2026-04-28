@@ -5,9 +5,10 @@ import HomeClient from './HomeClient';
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-    const [homeContent, categoriesContent] = await Promise.all([
+    const [homeContent, categoriesContent, globalContent] = await Promise.all([
         getPageContent('home'),
-        getPageContent('categorias')
+        getPageContent('categorias'),
+        getPageContent('global')
     ]);
 
     // Opcionalmente podemos precargar los productos aquí,
@@ -35,6 +36,7 @@ export default async function HomePage() {
         <HomeClient 
             initialHomeContent={homeContent} 
             initialCategoriesContent={categoriesContent}
+            initialGlobalContent={globalContent}
             initialProducts={productsData || []}
             initialCounts={categoryCounts}
         />

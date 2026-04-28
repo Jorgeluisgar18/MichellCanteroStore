@@ -11,6 +11,8 @@ import Logo from '@/components/common/Logo';
 import ProductImage from '@/components/product/ProductImage';
 import { usePageContent } from '@/lib/hooks/usePageContent';
 
+import type { PageContent } from '@/types';
+
 interface ProductSuggestion {
     id: string;
     name: string;
@@ -21,8 +23,12 @@ interface ProductSuggestion {
     images: string[];
 }
 
-const Header: React.FC = () => {
-    const { get } = usePageContent('global');
+interface HeaderProps {
+    initialGlobalContent?: PageContent[];
+}
+
+const Header: React.FC<HeaderProps> = ({ initialGlobalContent }) => {
+    const { get } = usePageContent('global', initialGlobalContent);
     const headerBg = get('header', 'bg_color', '#ffffff');
     const headerText = get('header', 'text_color', '#000000'); // Negro por defecto
     const topBarBg = get('header', 'top_bar_bg', '#F1C3D5'); // primary-600 (Header pink)
@@ -163,6 +169,7 @@ const Header: React.FC = () => {
                         <Logo
                             size="base"
                             className={`transition-all duration-500 ${isCompact ? 'scale-100 md:scale-100 md:-translate-y-0.5' : 'scale-125 md:scale-150'}`}
+                            initialGlobalContent={initialGlobalContent}
                         />
                     </div>
 
