@@ -21,7 +21,6 @@ const categories = categoriesData as Category[];
 interface HomeClientProps {
     initialHomeContent: PageContent[];
     initialCategoriesContent: PageContent[];
-    initialGlobalContent: PageContent[];
     initialProducts: Product[];
     initialCounts: Record<string, number>;
 }
@@ -29,7 +28,6 @@ interface HomeClientProps {
 export default function HomeClient({ 
     initialHomeContent, 
     initialCategoriesContent, 
-    initialGlobalContent, 
     initialProducts, 
     initialCounts 
 }: HomeClientProps) {
@@ -94,7 +92,7 @@ export default function HomeClient({
 
     return (
         <>
-            <Header initialGlobalContent={initialGlobalContent} />
+            <Header />
             <main>
                 {/* ─── Hero Carousel ─── */}
                 <HeroCarousel slides={heroSlides} />

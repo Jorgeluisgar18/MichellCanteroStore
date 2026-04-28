@@ -5,21 +5,20 @@ import HomeClient from './HomeClient';
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-    const [homeContent, categoriesContent, globalContent] = await Promise.all([
+    const [homeContent, categoriesContent] = await Promise.all([
         getPageContent('home'),
-        getPageContent('categorias'),
-        getPageContent('global')
+        getPageContent('categorias')
     ]);
 
     // Opcionalmente podemos precargar los productos aquí,
     // o dejar que el cliente los cargue asincronamente.
     // Para simplificar y mejorar el LCP, obtenemos algunos productos destacados aquí.
-    // Obtenemos los productos más recientes (aumentamos el límite para asegurar destacados y nuevos)
+    // Obtenemos los productos más recientes (aumentamos el límite para asegurar destacados y nuevos a largo plazo)
     const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(200);
+        .limit(500);
 
     if (productsError) {
         console.error('[HomePage] Error fetching products:', productsError);
@@ -45,7 +44,6 @@ export default async function HomePage() {
         <HomeClient 
             initialHomeContent={homeContent} 
             initialCategoriesContent={categoriesContent}
-            initialGlobalContent={globalContent}
             initialProducts={productsData || []}
             initialCounts={categoryCounts}
         />

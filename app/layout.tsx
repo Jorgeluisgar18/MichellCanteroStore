@@ -66,20 +66,28 @@ export const metadata: Metadata = {
 
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import { ToastProvider } from '@/components/ui/Toast';
+import { ContentProvider } from '@/lib/contexts/ContentContext';
+import { getPageContent } from '@/lib/cms';
 
-export default function RootLayout({
+export default async function RootLayout({
     children,
 }: Readonly<{
     children: React.ReactNode;
 }>) {
+    // Obtenemos el contenido global (logo, redes, etc.) una sola vez para toda la web
+    // Esto evita el parpadeo (flickering) en el Header en todas las pantallas
+    const globalContent = await getPageContent('global');
+
     return (
         <html lang="es" className={`${jost.variable} ${cabin.variable} ${greatVibes.variable}`}>
             <body className="font-sans">
-                <ToastProvider>
-                    <ErrorBoundary>
-                        {children}
-                    </ErrorBoundary>
-                </ToastProvider>
+                <ContentProvider initialGlobalContent={globalContent}>
+                    <ToastProvider>
+                        <ErrorBoundary>
+                            {children}
+                        </ErrorBoundary>
+                    </ToastProvider>
+                </ContentProvider>
             </body>
         </html>
     );

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { PageContent, PageName } from '@/types';
+import { useGlobalContent } from '@/lib/contexts/ContentContext';
 
 interface UsePageContentReturn {
     /** Raw list of content rows for this page */
@@ -26,8 +27,13 @@ interface UsePageContentReturn {
  * const heroUrl = getImage('hero', 'image_url', '/hero-michell.jpg');
  */
 export function usePageContent(page: PageName, initialItems?: PageContent[]): UsePageContentReturn {
-    const [items, setItems] = useState<PageContent[]>(initialItems || []);
-    const [loading, setLoading] = useState(!initialItems || initialItems.length === 0);
+    const globalContextItems = useGlobalContent();
+    
+    // Si pedimos 'global' y no nos pasaron nada, usamos lo del Context (pre-hidratado en RootLayout)
+    const effectiveInitialItems = initialItems || (page === 'global' ? globalContextItems : []);
+    
+    const [items, setItems] = useState<PageContent[]>(effectiveInitialItems);
+    const [loading, setLoading] = useState(effectiveInitialItems.length === 0);
 
     const fetchContent = useCallback(async () => {
         if (!initialItems) setLoading(true);
