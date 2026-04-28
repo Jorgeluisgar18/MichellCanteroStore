@@ -38,8 +38,14 @@ export default function HomeClient({
     const { items, loading: contentLoading, get, getImage } = usePageContent('home', initialHomeContent);
     const { getImage: getCategoryImg } = usePageContent('categorias', initialCategoriesContent);
 
-    const featuredProducts = products.filter((p) => p.featured).slice(0, 4);
-    const newProducts = products.filter((p) => p.is_new).slice(0, 4);
+    // Priorizar productos marcados, pero tener fallbacks si no hay ninguno marcado.
+    const featuredProducts = products.filter((p) => p.featured).length > 0
+        ? products.filter((p) => p.featured).slice(0, 4)
+        : products.slice(0, 4); // Fallback: primeros 4 si no hay destacados marcados
+        
+    const newProducts = products.filter((p) => p.is_new).length > 0
+        ? products.filter((p) => p.is_new).slice(0, 4)
+        : products.slice(0, 4); // Fallback: últimos 4 creados (ya vienen ordenados por DESC)
  
     // Extract dynamic brands from CMS
     const brandItems = items.filter((i) => i.section.startsWith('brand_'));
@@ -50,9 +56,6 @@ export default function HomeClient({
             return { name, logo };
         })
         .filter((b) => b.logo);
-
-    // CMS values - consolidated
-    // Categories section (moved assignments below for clarity)
 
     // Hero slides from CMS (with fallbacks)
     const heroSlides = [
@@ -192,10 +195,6 @@ export default function HomeClient({
                         {/* Asymmetric Category Grid */}
                         <div className="grid md:grid-cols-12 md:grid-rows-2 gap-4 md:gap-6 h-auto md:h-[700px]">
                             {categories.slice(0, 4).map((category, i) => {
-                                // i=0: Maquillaje (Large, left)
-                                // i=1: Accesorios (Top right)
-                                // i=2: Ropa (Bottom middle)
-                                // i=3: Corporal (Bottom right)
                                 const gridClass = i === 0
                                     ? "md:col-span-8 md:row-span-2 h-[450px] md:h-full"
                                     : i === 1

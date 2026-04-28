@@ -14,16 +14,25 @@ export default async function HomePage() {
     // Opcionalmente podemos precargar los productos aquí,
     // o dejar que el cliente los cargue asincronamente.
     // Para simplificar y mejorar el LCP, obtenemos algunos productos destacados aquí.
-    const { data: productsData } = await supabase
+    // Obtenemos los productos más recientes (aumentamos el límite para asegurar destacados y nuevos)
+    const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(200);
 
-    const { data: countsData } = await supabase
+    if (productsError) {
+        console.error('[HomePage] Error fetching products:', productsError);
+    }
+
+    const { data: countsData, error: countsError } = await supabase
         .from('products')
         .select('category')
         .not('category', 'is', null);
+
+    if (countsError) {
+        console.error('[HomePage] Error fetching category counts:', countsError);
+    }
 
     const categoryCounts = (countsData ?? []).reduce((acc: Record<string, number>, product) => {
         if (product.category) {
