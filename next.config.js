@@ -3,6 +3,7 @@ const { withSentryConfig } = require("@sentry/nextjs");
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     images: {
+        unoptimized: true,
         remotePatterns: [
             {
                 // Supabase Storage — core project bucket (CMS images)
