@@ -36,10 +36,10 @@ const nextConfig = {
                 hostname: 'img.ltwebstatic.com',
             },
         ],
-        formats: ['image/webp', 'image/avif'],
-        // Reduce Image Optimizer CDN cache from the default 60s to 30s.
-        // This limits how long a stale/old image can be served after an admin update.
-        minimumCacheTTL: 30,
+        formats: ['image/webp'],
+        // Reduce Image Optimizer CDN cache hits by increasing TTL from 30s to 31 days (2678400s)
+        // This limits how many transformations are processed.
+        minimumCacheTTL: 2678400,
     },
     reactStrictMode: true,
     // Enable instrumentation for Sentry

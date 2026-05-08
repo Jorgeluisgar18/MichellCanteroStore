@@ -73,7 +73,7 @@ function BrandLogo({ brand }: { brand: Brand }) {
                     alt={brand.name}
                     fill
                     className="object-contain"
-                    unoptimized={brand.logo.startsWith('https://')}
+                    unoptimized={true}
                     onError={(e) => {
                         // Fallback to brand name text if image fails
                         const target = e.currentTarget as HTMLImageElement;
