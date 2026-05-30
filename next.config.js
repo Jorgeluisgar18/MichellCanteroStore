@@ -4,7 +4,7 @@ const { withSentryConfig } = require("@sentry/nextjs");
 const nextConfig = {
     images: {
         // TODO: Cuando se reinicie el ciclo de facturación de Vercel, cambia unoptimized a false
-        unoptimized: true,
+        unoptimized: false,
         // Limitar severamente los tamaños generados para no agotar las 5000 transformaciones gratuitas
         imageSizes: [64, 128, 256, 384],
         deviceSizes: [640, 1024, 1920],
