@@ -58,12 +58,13 @@ export default function CheckoutClient() {
     });
 
     // Calculate shipping cost based on method and location
+    // Rates are read from STORE_CONFIG — single source of truth
     const getShippingCost = (): number => {
         if (formData.shippingMethod === 'pickup') {
             return 0;
         }
 
-        return STORE_CONFIG.SHIPPING_RATES[formData.shippingLocation] || 0;
+        return STORE_CONFIG.SHIPPING_RATES[formData.shippingLocation] ?? STORE_CONFIG.SHIPPING_RATES['resto-colombia'] ?? 0;
     };
 
     const subtotal = getSubtotal();
@@ -292,22 +293,24 @@ export default function CheckoutClient() {
                                             {formData.shippingMethod === 'delivery' && (
                                                 <div className="space-y-3 pt-2">
                                                     <p className="text-sm font-semibold text-neutral-700 mb-3">Selecciona tu ubicación:</p>
-                                                    {[
-                                                        { id: 'cienaga', name: 'Ciénaga', price: 5000, note: 'Precio puede variar según distancia' },
-                                                        { id: 'santa-marta', name: 'Santa Marta', price: 10000, note: 'Entrega en el casco urbano' },
-                                                        { id: 'resto-colombia', name: 'Resto de Colombia', price: 16000, note: 'Envíos nacionales' }
-                                                    ].map((loc) => (
+                                                    {/* Locations and prices read from STORE_CONFIG — no hardcoded values */}
+                                                    {STORE_CONFIG.SHIPPING_LOCATIONS.map((loc) => (
                                                         <button
                                                             key={loc.id}
                                                             type="button"
                                                             onClick={() => setFormData({ ...formData, shippingLocation: loc.id })}
-                                                            className={`w-full p-4 border-2 rounded-xl flex items-center justify-between transition-all ${formData.shippingLocation === loc.id
-                                                                ? 'border-primary-500 bg-white ring-2 ring-primary-500/20'
-                                                                : 'border-neutral-100 bg-neutral-50/50 hover:border-neutral-200'
-                                                                }`}
+                                                            className={`w-full p-4 border-2 rounded-xl flex items-center justify-between transition-all ${
+                                                                formData.shippingLocation === loc.id
+                                                                    ? 'border-primary-500 bg-white ring-2 ring-primary-500/20'
+                                                                    : 'border-neutral-100 bg-neutral-50/50 hover:border-neutral-200'
+                                                            }`}
                                                         >
                                                             <div className="flex items-center">
-                                                                <div className={`w-5 h-5 rounded-full border-2 mr-4 flex items-center justify-center ${formData.shippingLocation === loc.id ? 'border-primary-500 bg-primary-500' : 'border-neutral-300'}`}>
+                                                                <div className={`w-5 h-5 rounded-full border-2 mr-4 flex items-center justify-center ${
+                                                                    formData.shippingLocation === loc.id
+                                                                        ? 'border-primary-500 bg-primary-500'
+                                                                        : 'border-neutral-300'
+                                                                }`}>
                                                                     {formData.shippingLocation === loc.id && <div className="w-2 h-2 bg-white rounded-full" />}
                                                                 </div>
                                                                 <div className="text-left">
@@ -316,7 +319,7 @@ export default function CheckoutClient() {
                                                                 </div>
                                                             </div>
                                                             <div className="font-bold text-primary-600">
-                                                                {formatPrice(loc.price)}
+                                                                {formatPrice(STORE_CONFIG.SHIPPING_RATES[loc.id] ?? 0)}
                                                             </div>
                                                         </button>
                                                     ))}

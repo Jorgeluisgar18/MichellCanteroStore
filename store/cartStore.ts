@@ -11,6 +11,11 @@ interface CartStore {
     getItemCount: () => number;
     getSubtotal: () => number;
     getTax: () => number;
+    /**
+     * @deprecated El costo de envío se determina en el checkout según
+     * el método y ubicación elegidos por el usuario. Siempre retorna 0.
+     * Usa getSubtotal() como total del carrito.
+     */
     getShipping: () => number;
     getTotal: () => number;
 }
@@ -91,13 +96,14 @@ export const useCartStore = create<CartStore>()(
                 return 0; // Tax included in price
             },
 
-            getShipping: () => {
-                const subtotal = get().getSubtotal();
-                return subtotal >= 200000 ? 0 : 15000; // Free shipping over 200k COP
-            },
+            // El envío se selecciona en el checkout, no en el carrito.
+            // Retorna 0 siempre para mantener compatibilidad de la interfaz.
+            getShipping: () => 0,
 
+            // Total del carrito = solo subtotal (sin envío).
+            // El total final con envío se calcula en CheckoutClient.
             getTotal: () => {
-                return get().getSubtotal() + get().getTax() + get().getShipping();
+                return get().getSubtotal() + get().getTax();
             },
         }),
         {

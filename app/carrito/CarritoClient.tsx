@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, Truck } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Button from '@/components/ui/Button';
@@ -10,7 +10,6 @@ import { Card } from '@/components/ui/Card';
 import ProductImage from '@/components/product/ProductImage';
 import { useCartStore } from '@/store/cartStore';
 import { formatPrice } from '@/lib/utils';
-import { STORE_CONFIG } from '@/lib/config';
 
 export default function CarritoClient() {
     const [isMounted, setIsMounted] = useState(false);
@@ -20,8 +19,6 @@ export default function CarritoClient() {
         updateQuantity,
         removeItem,
         getSubtotal,
-        getShipping,
-        getTotal,
     } = useCartStore();
 
     useEffect(() => {
@@ -40,9 +37,8 @@ export default function CarritoClient() {
         );
     }
 
+    // El subtotal es el único total del carrito. El envío se elige en el checkout.
     const subtotal = getSubtotal();
-    const shipping = getShipping();
-    const total = getTotal();
 
     if (items.length === 0) {
         return (
@@ -187,25 +183,24 @@ export default function CarritoClient() {
 
                                     <div className="space-y-3 mb-6">
                                         <div className="flex justify-between text-neutral-600">
-                                            <span>Subtotal</span>
-                                            <span>{formatPrice(subtotal)}</span>
+                                            <span>Subtotal ({items.reduce((acc, i) => acc + i.quantity, 0)} producto{items.reduce((acc, i) => acc + i.quantity, 0) !== 1 ? 's' : ''})</span>
+                                            <span className="font-semibold text-neutral-900">{formatPrice(subtotal)}</span>
                                         </div>
-                                        <div className="flex justify-between text-neutral-600">
-                                            <span>Envío</span>
-                                            <span>{shipping === 0 ? 'Gratis' : formatPrice(shipping)}</span>
-                                        </div>
-                                        {shipping > 0 && (
-                                            <p className="text-xs text-primary-600">
-                                                Agrega {formatPrice(STORE_CONFIG.FREE_SHIPPING_THRESHOLD - subtotal)} más para envío gratis
-                                            </p>
-                                        )}
+                                    </div>
+
+                                    {/* Shipping info banner */}
+                                    <div className="flex items-start gap-3 p-3 bg-primary-50 border border-primary-100 rounded-xl mb-6">
+                                        <Truck className="w-4 h-4 text-primary-600 mt-0.5 flex-shrink-0" />
+                                        <p className="text-xs text-primary-700 leading-relaxed">
+                                            El costo de envío se calculará en el siguiente paso según tu ubicación y método de entrega elegido.
+                                        </p>
                                     </div>
 
                                     <div className="border-t border-neutral-200 pt-4 mb-6">
                                         <div className="flex justify-between items-center">
-                                            <span className="text-lg font-bold text-neutral-900">Total</span>
+                                            <span className="text-lg font-bold text-neutral-900">Subtotal</span>
                                             <span className="text-2xl font-bold text-neutral-900">
-                                                {formatPrice(total)}
+                                                {formatPrice(subtotal)}
                                             </span>
                                         </div>
                                     </div>
