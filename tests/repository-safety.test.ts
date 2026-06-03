@@ -55,4 +55,11 @@ describe('repository safety rules', () => {
 
         assert.equal('headers' in vercelConfig, false);
     });
+
+    it('keeps middleware on the server-only Supabase SSR entrypoint', () => {
+        const middleware = readFileSync(join(process.cwd(), 'middleware.ts'), 'utf8');
+
+        assert.equal(middleware.includes("from '@supabase/ssr'"), false);
+        assert.match(middleware, /@supabase\/ssr\/dist\/module\/createServerClient/);
+    });
 });
