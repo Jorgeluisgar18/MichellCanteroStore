@@ -22,6 +22,12 @@ export default function CuentaPage() {
         verify();
     }, [checkSession]);
 
+    useEffect(() => {
+        if (!isVerifying && (!isAuthenticated || !user)) {
+            router.replace('/cuenta/login?redirect=/cuenta');
+        }
+    }, [isVerifying, isAuthenticated, user, router]);
+
     const handleLogout = async () => {
         await logout();
         router.push('/');
@@ -49,7 +55,7 @@ export default function CuentaPage() {
     }
 
     if (!isAuthenticated || !user) {
-        return null; // El middleware redirigirá
+        return null;
     }
 
     return (

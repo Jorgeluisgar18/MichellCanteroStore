@@ -1,9 +1,30 @@
-import { createServerClient } from '@supabase/ssr/dist/module/createServerClient';
 import { NextResponse, type NextRequest } from 'next/server';
 import { applyCsrfProtection, setCsrfCookie } from '@/lib/security/csrf';
 
-export async function middleware(req: NextRequest) {
-    const res = NextResponse.next();
+const PUBLIC_ACCOUNT_PATHS = ['/cuenta/login', '/cuenta/registro', '/cuenta/recuperar'];
+
+function hasSupabaseAuthCookie(req: NextRequest): boolean {
+    return req.cookies
+        .getAll()
+        .some(({ name }) => name.startsWith('sb-') && name.includes('-auth-token'));
+}
+
+function redirectToLogin(req: NextRequest): NextResponse {
+    const requestedPath = `${req.nextUrl.pathname}${req.nextUrl.search}`;
+    return NextResponse.redirect(
+        new URL(`/cuenta/login?redirect=${encodeURIComponent(requestedPath)}`, req.url)
+    );
+}
+
+export function middleware(req: NextRequest) {
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set('x-pathname', `${req.nextUrl.pathname}${req.nextUrl.search}`);
+
+    const res = NextResponse.next({
+        request: {
+            headers: requestHeaders,
+        },
+    });
     const { pathname, searchParams } = req.nextUrl;
 
     // Rescue: auth code redirect
@@ -22,61 +43,18 @@ export async function middleware(req: NextRequest) {
     const csrfError = applyCsrfProtection(req);
     if (csrfError) return csrfError;
 
-    const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-            cookies: {
-                getAll() {
-                    return req.cookies.getAll();
-                },
-                setAll(cookiesToSet) {
-                    cookiesToSet.forEach(({ name, value, options }) => {
-                        req.cookies.set(name, value);
-                        res.cookies.set(name, value, options);
-                    });
-                },
-            },
-        }
-    );
+    const requiresAccountAuth = pathname.startsWith('/cuenta')
+        && !PUBLIC_ACCOUNT_PATHS.some((path) => pathname.startsWith(path));
+    const requiresAdminAuth = pathname.startsWith('/admin');
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    // Protección rutas admin
-    if (pathname.startsWith('/admin')) {
-        if (authError || !user) {
-            return NextResponse.redirect(
-                new URL(`/cuenta/login?redirect=${encodeURIComponent(pathname)}`, req.url)
-            );
-        }
-
-        const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single();
-
-        if (profileError) {
-            console.error('[MIDDLEWARE] Error verificando rol admin:', profileError.message);
-            return NextResponse.redirect(new URL('/', req.url));
-        }
-
-        if (profile?.role !== 'admin') {
-            return NextResponse.redirect(new URL('/', req.url));
-        }
-    }
-
-    if (pathname.startsWith('/cuenta') && !['/cuenta/login', '/cuenta/registro', '/cuenta/recuperar'].some(p => pathname.startsWith(p))) {
-        if (authError || !user) {
-            return NextResponse.redirect(
-                new URL(`/cuenta/login?redirect=${encodeURIComponent(pathname)}`, req.url)
-            );
-        }
+    if ((requiresAdminAuth || requiresAccountAuth) && !hasSupabaseAuthCookie(req)) {
+        return redirectToLogin(req);
     }
 
     if (pathname !== '/api/csrf-token') {
         setCsrfCookie(req, res);
     }
+
     return res;
 }
 

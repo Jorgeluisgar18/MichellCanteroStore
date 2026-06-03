@@ -72,11 +72,20 @@ describe('repository safety rules', () => {
         assert.equal('headers' in vercelConfig, false);
     });
 
-    it('keeps middleware on the server-only Supabase SSR entrypoint', () => {
+    it('keeps Supabase out of the Edge middleware bundle', () => {
         const middleware = readFileSync(join(process.cwd(), 'middleware.ts'), 'utf8');
 
-        assert.equal(middleware.includes("from '@supabase/ssr'"), false);
-        assert.match(middleware, /@supabase\/ssr\/dist\/module\/createServerClient/);
+        assert.equal(middleware.includes('@supabase/'), false);
+        assert.equal(middleware.includes('createServerClient'), false);
+    });
+
+    it('protects admin pages from a server layout instead of client-only UI', () => {
+        const adminLayout = readFileSync(join(process.cwd(), 'app', 'admin', 'layout.tsx'), 'utf8');
+
+        assert.equal(adminLayout.includes("'use client'"), false);
+        assert.match(adminLayout, /assertAdminPageAccess/);
+        assert.match(adminLayout, /AdminShell/);
+        assert.equal(existsSync(join(process.cwd(), 'components', 'admin', 'AdminShell.tsx')), true);
     });
 
     it('declares sizes for optimized fill images', () => {
