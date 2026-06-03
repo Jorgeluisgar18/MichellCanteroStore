@@ -314,6 +314,7 @@ const Header: React.FC = () => {
                                                         alt={product.name}
                                                         fill
                                                         className="object-cover"
+                                                        sizes="64px"
                                                     />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center text-neutral-400 text-xs">

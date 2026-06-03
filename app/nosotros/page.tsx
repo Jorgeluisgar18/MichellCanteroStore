@@ -82,6 +82,7 @@ export default function NosotrosPage() {
                                             fill
                                             className="object-cover group-hover:scale-105 transition-transform duration-700"
                                             unoptimized={storyImage.startsWith('https://')}
+                                            sizes="(max-width: 768px) 100vw, 50vw"
                                         />
                                         {/* Decorative corner badge */}
                                         <div className="absolute bottom-6 left-6 bg-white/90 backdrop-blur-sm px-5 py-3 rounded-2xl shadow-lg">
@@ -168,6 +169,7 @@ export default function NosotrosPage() {
                                             fill
                                             className="object-cover group-hover:scale-105 transition-transform duration-700"
                                             unoptimized={founderImage.startsWith('https://')}
+                                            sizes="(max-width: 768px) 100vw, 50vw"
                                         />
                                     </div>
                                 </div>

@@ -212,6 +212,13 @@ export default function HomeClient({
                                                 fill
                                                 className="object-cover object-center transition-transform duration-[1200ms] ease-out group-hover:scale-110"
                                                 priority={i === 0}
+                                                sizes={
+                                                    i === 0
+                                                        ? '(max-width: 768px) 100vw, 66vw'
+                                                        : i === 1
+                                                            ? '(max-width: 768px) 100vw, 33vw'
+                                                            : '(max-width: 768px) 100vw, 17vw'
+                                                }
                                             />
 
                                             {/* Overlays */}

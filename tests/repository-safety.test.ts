@@ -3,6 +3,22 @@ import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+function readSourceFiles(dir: string): string[] {
+    return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        if (['.git', '.next', 'node_modules'].includes(entry.name)) {
+            return [];
+        }
+
+        const fullPath = join(dir, entry.name);
+
+        if (entry.isDirectory()) {
+            return readSourceFiles(fullPath);
+        }
+
+        return /\.(tsx|jsx)$/.test(entry.name) ? [fullPath] : [];
+    });
+}
+
 describe('repository safety rules', () => {
     it('does not ignore Supabase migration SQL files', () => {
         const gitignore = readFileSync(join(process.cwd(), '.gitignore'), 'utf8');
@@ -61,5 +77,26 @@ describe('repository safety rules', () => {
 
         assert.equal(middleware.includes("from '@supabase/ssr'"), false);
         assert.match(middleware, /@supabase\/ssr\/dist\/module\/createServerClient/);
+    });
+
+    it('declares sizes for optimized fill images', () => {
+        const sourceFiles = readSourceFiles(process.cwd());
+        const missingSizes = sourceFiles.flatMap((file) => {
+            const source = readFileSync(file, 'utf8');
+            const matches = source.matchAll(/<(Image|ProductImage)\b[\s\S]*?\/>/g);
+
+            return Array.from(matches).flatMap((match) => {
+                const tag = match[0];
+
+                if (!/\bfill\b/.test(tag) || /\bsizes=/.test(tag) || /\bunoptimized(?:=|\s|\/>)/.test(tag)) {
+                    return [];
+                }
+
+                const line = source.slice(0, match.index).split(/\r?\n/).length;
+                return [`${file.replace(process.cwd(), '').replace(/^[/\\]/, '')}:${line}`];
+            });
+        });
+
+        assert.deepEqual(missingSizes, []);
     });
 });

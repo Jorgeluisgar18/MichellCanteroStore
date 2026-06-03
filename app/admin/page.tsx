@@ -306,6 +306,7 @@ export default function AdminDashboardPage() {
                                                     alt={product.name}
                                                     fill
                                                     className="object-cover group-hover:scale-110 transition-transform duration-500"
+                                                    sizes="56px"
                                                 />
                                             ) : (
                                                 <ShoppingBag className="w-6 h-6 text-neutral-300 absolute inset-0 m-auto" />

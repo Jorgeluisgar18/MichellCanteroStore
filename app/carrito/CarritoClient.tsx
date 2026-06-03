@@ -90,6 +90,7 @@ export default function CarritoClient() {
                                                     alt={item.product.name}
                                                     fill
                                                     className="object-cover"
+                                                    sizes="(max-width: 768px) 96px, 128px"
                                                 />
                                             </div>
 

@@ -171,6 +171,7 @@ export default function OrderDetailPage() {
                                                     alt={item.product_name}
                                                     fill
                                                     className="object-cover group-hover:scale-110 transition-transform duration-500"
+                                                    sizes="(max-width: 768px) 80px, 96px"
                                                 />
                                             </div>
                                             <div className="flex-1 flex flex-col justify-between py-1">

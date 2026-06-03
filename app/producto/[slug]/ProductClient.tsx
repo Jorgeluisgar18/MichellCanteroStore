@@ -223,6 +223,7 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
                                         fill
                                         className="object-cover"
                                         priority
+                                        sizes="(max-width: 768px) 100vw, 512px"
                                     />
                                 ) : (
                                     <div className="flex h-full w-full items-center justify-center bg-neutral-100 text-neutral-300">
@@ -251,6 +252,7 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
                                                 alt={`${product.name} ${index + 1}`}
                                                 fill
                                                 className="object-cover"
+                                                sizes="(max-width: 768px) 25vw, 128px"
                                             />
                                         </button>
                                     ))}

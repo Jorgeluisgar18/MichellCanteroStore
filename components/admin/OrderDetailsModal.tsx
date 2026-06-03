@@ -251,6 +251,7 @@ export function OrderDetailsModal({ order, onClose, onUpdateStatus, onDeleteOrde
                                                             alt={item.product_name}
                                                             fill
                                                             className="object-cover"
+                                                            sizes="40px"
                                                         />
                                                     ) : (
                                                         <Package className="w-5 h-5 text-neutral-300 absolute inset-0 m-auto" />

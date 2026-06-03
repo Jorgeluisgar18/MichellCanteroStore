@@ -31,6 +31,7 @@ const Logo: React.FC<LogoProps> = ({ className = "", size = 'base' }) => {
                     className="object-contain"
                     priority
                     unoptimized={logoUrl.startsWith('https://')}
+                    sizes={size === 'small' ? '(max-width: 768px) 128px, 160px' : '(max-width: 768px) 192px, 256px'}
                 />
             </div>
         </Link>
