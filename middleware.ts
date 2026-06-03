@@ -74,7 +74,9 @@ export async function middleware(req: NextRequest) {
         }
     }
 
-    setCsrfCookie(req, res);
+    if (pathname !== '/api/csrf-token') {
+        setCsrfCookie(req, res);
+    }
     return res;
 }
 

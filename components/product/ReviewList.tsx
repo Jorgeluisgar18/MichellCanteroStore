@@ -8,8 +8,8 @@ export interface Review {
     id: string;
     full_name: string;
     rating: number;
-    comment: string;
-    created_at: string;
+    comment: string | null;
+    created_at: string | null;
 }
 
 interface ReviewListProps {
@@ -48,7 +48,7 @@ const ReviewList: React.FC<ReviewListProps> = ({ reviews }) => {
                                     ))}
                                 </div>
                                 <span className="text-xs text-neutral-400 font-medium">
-                                    {formatDate(review.created_at)}
+                                    {review.created_at ? formatDate(review.created_at) : ''}
                                 </span>
                             </div>
                         </div>

@@ -40,6 +40,9 @@ mcp-config.json
 /backups
 *.sql
 *.sql.gz
+!supabase/*.sql
+!supabase/migrations/*.sql
+supabase/legacy_migrations/
 
 # Sentry
 .sentryclirc

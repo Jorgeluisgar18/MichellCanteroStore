@@ -1,0 +1,1 @@
+ALTER TABLE orders ALTER COLUMN shipping_zip_code DROP NOT NULL;

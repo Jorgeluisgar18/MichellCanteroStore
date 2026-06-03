@@ -19,7 +19,7 @@ export interface User {
     id: string;
     email: string;
     name: string;
-    phone?: string;
+    phone?: string | undefined;
     role: 'customer' | 'admin';
     addresses: Address[];
     orders: Order[];
@@ -49,7 +49,7 @@ export interface CheckoutFormData {
 export interface ContactFormData {
     name: string;
     email: string;
-    phone?: string;
+    phone?: string | undefined;
     subject: string;
     message: string;
 }

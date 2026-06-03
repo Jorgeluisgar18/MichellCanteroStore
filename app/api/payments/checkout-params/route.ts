@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/lib/supabase';
 import { createClient } from '@/lib/supabase-server';
+import { canAccessCheckoutParams } from '@/lib/checkout/safety';
 
 const WOMPI_PUBLIC_KEY = process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY;
 const WOMPI_INTEGRITY_SECRET = process.env.WOMPI_INTEGRITY_SECRET;
@@ -10,20 +11,16 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://michellcanterostor
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-
-        // ✅ CORRECCIÓN 1: Solo recibimos orderId y email del cliente.
         const { orderId, email } = body;
 
         if (!orderId || !email) {
-            return NextResponse.json({ error: 'Faltan parámetros: orderId y email son requeridos' }, { status: 400 });
+            return NextResponse.json({ error: 'Faltan parametros: orderId y email son requeridos' }, { status: 400 });
         }
 
-        // ✅ CORRECCIÓN 2: Obtener usuario autenticado si existe.
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
         const authenticatedUserId = user?.id ?? null;
 
-        // ✅ CORRECCIÓN 3: Leer el monto REAL directamente desde la base de datos.
         const { data: order, error: orderError } = await supabaseAdmin
             .from('orders')
             .select('id, total, order_number, user_id, payment_status, shipping_email')
@@ -34,20 +31,15 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Orden no encontrada' }, { status: 404 });
         }
 
-        // ✅ CORRECCIÓN 4: Verificar pertenencia de la orden de forma segura (soporta invitados).
-        if (order.user_id !== null) {
-            // Orden de usuario registrado: requiere autenticación y coincidencia de ID.
-            if (!authenticatedUserId || order.user_id !== authenticatedUserId) {
-                return NextResponse.json({ error: 'No tienes permiso para pagar esta orden' }, { status: 403 });
-            }
-        } else {
-            // Orden de invitado: requiere coincidencia del correo proporcionado con el de la orden.
-            if (!email || order.shipping_email.toLowerCase() !== email.toLowerCase()) {
-                return NextResponse.json({ error: 'No tienes permiso para pagar esta orden' }, { status: 403 });
-            }
+        if (!canAccessCheckoutParams({
+            orderUserId: order.user_id,
+            authenticatedUserId,
+            orderEmail: order.shipping_email,
+            requestEmail: email,
+        })) {
+            return NextResponse.json({ error: 'No tienes permiso para pagar esta orden' }, { status: 403 });
         }
 
-        // ✅ CORRECCIÓN 5: Verificar que la orden aún está pendiente de pago.
         if (order.payment_status !== 'pending') {
             return NextResponse.json(
                 { error: `Esta orden ya fue procesada (estado: ${order.payment_status})` },
@@ -57,10 +49,9 @@ export async function POST(request: Request) {
 
         if (!WOMPI_PUBLIC_KEY || !WOMPI_INTEGRITY_SECRET) {
             console.error('[checkout-params] Variables de Wompi no configuradas');
-            return NextResponse.json({ error: 'Configuración de pago incompleta' }, { status: 500 });
+            return NextResponse.json({ error: 'Configuracion de pago incompleta' }, { status: 500 });
         }
 
-        // ✅ CORRECCIÓN 6: La firma se calcula con el total real de la BD.
         const amountInCents = Math.round(order.total * 100);
         const concatenation = `${order.order_number}${amountInCents}COP${WOMPI_INTEGRITY_SECRET}`;
         const signature = crypto.createHash('sha256').update(concatenation).digest('hex');

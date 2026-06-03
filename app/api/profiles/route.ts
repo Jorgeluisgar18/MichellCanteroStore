@@ -1,5 +1,7 @@
 import { ApiResponse } from '@/lib/api-responses';
+import { buildProfileUpdatePayload } from '@/lib/profiles/safety';
 import { createClient } from '@/lib/supabase-server';
+import { UpdateProfileSchema } from '@/lib/validations/order';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,16 +49,17 @@ export async function PUT(request: Request) {
         }
 
         const body = await request.json();
-        const { first_name, last_name, phone } = body;
+        const validation = UpdateProfileSchema.safeParse(body);
+
+        if (!validation.success) {
+            return ApiResponse.badRequest('Datos de perfil invalidos', 'VALIDATION_ERROR');
+        }
+
+        const updatePayload = buildProfileUpdatePayload(validation.data);
 
         const { data, error } = await supabase
             .from('profiles')
-            .update({
-                first_name,
-                last_name,
-                phone,
-                updated_at: new Date().toISOString(),
-            })
+            .update(updatePayload)
             .eq('id', user.id)
             .select()
             .single();

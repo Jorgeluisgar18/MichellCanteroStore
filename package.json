@@ -7,6 +7,7 @@
     "build": "next build",
     "build:prod": "npm run type-check && next build",
     "start": "next start",
+    "test": "tsx --test tests/**/*.test.ts",
     "lint": "next lint",
     "normalize:product-variants": "tsx scripts/normalize-product-variants.ts",
     "type-check": "tsc --noEmit",

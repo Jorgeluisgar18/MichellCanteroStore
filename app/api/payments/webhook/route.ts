@@ -1,4 +1,9 @@
 import { NextResponse } from 'next/server';
+import {
+    getStockConfirmationFailure,
+    isValidWompiSignatureShape,
+    isDuplicateTransactionWebhook,
+} from '@/lib/payments/webhook-safety';
 import { supabaseAdmin } from '@/lib/supabase';
 
 function getNestedValue(source: unknown, path: string): unknown {
@@ -33,7 +38,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Configuración incompleta' }, { status: 500 });
         }
 
-        if (!signature || !signature.checksum || !signature.properties) {
+        if (!isValidWompiSignatureShape(signature)) {
             logger.error('[webhook] RECHAZADO: Firma ausente o incompleta.', {
                 event,
                 hasSignature: !!signature,
@@ -109,6 +114,16 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Orden no encontrada' }, { status: 404 });
         }
 
+        if (isDuplicateTransactionWebhook(status, order.payment_status)) {
+            logger.info('Duplicate terminal webhook ignored', {
+                orderId: order.id,
+                reference,
+                status,
+                paymentStatus: order.payment_status
+            });
+            return NextResponse.json({ success: true, duplicate: true });
+        }
+
         // Mapear estados de Wompi a nuestros estados
         let orderStatus = order.status;
         let paymentStatus = order.payment_status;
@@ -124,10 +139,18 @@ export async function POST(request: Request) {
                         order_id_param: order.id
                     });
 
-                if (confirmError) {
-                    logger.error('Error confirming stock reservation', confirmError, {
-                        orderId: order.id
+                const stockFailure = getStockConfirmationFailure(confirmResult, confirmError);
+
+                if (stockFailure) {
+                    logger.error('Stock confirmation blocked paid order update', confirmError, {
+                        orderId: order.id,
+                        stockFailure,
+                        confirmResult
                     });
+                    return NextResponse.json(
+                        { error: 'No se pudo confirmar el inventario de la orden' },
+                        { status: 409 }
+                    );
                 } else {
                     logger.info('Stock reservation confirmed', {
                         orderId: order.id,
@@ -136,6 +159,10 @@ export async function POST(request: Request) {
                 }
             } catch (stockCatchError) {
                 logger.error('Error in stock reservation confirmation', stockCatchError as Error);
+                return NextResponse.json(
+                    { error: 'No se pudo confirmar el inventario de la orden' },
+                    { status: 500 }
+                );
             }
 
             // ENVIAR NOTIFICACIONES POR EMAIL

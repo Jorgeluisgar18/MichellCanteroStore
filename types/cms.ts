@@ -6,7 +6,7 @@ export type PageName = 'home' | 'nosotros' | 'tienda' | 'categorias' | 'global' 
 
 export interface PageContent {
     id: string;
-    page: PageName;
+    page: PageName | string;
     section: string;
     key: string;
     value: string | null;

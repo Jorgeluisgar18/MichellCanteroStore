@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const CSRF_COOKIE_NAME = 'csrf_token';
+export const CSRF_COOKIE_NAME = 'csrf_token';
 const CSRF_HEADER_NAME = 'x-csrf-token';
 
 /**
@@ -11,6 +11,14 @@ function generateToken(): string {
     const array = new Uint8Array(32);
     globalThis.crypto.getRandomValues(array);
     return Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+export function getOrCreateCsrfToken(existingToken?: string | null): { token: string; created: boolean } {
+    if (existingToken) {
+        return { token: existingToken, created: false };
+    }
+
+    return { token: generateToken(), created: true };
 }
 
 /**
@@ -109,9 +117,8 @@ export function applyCsrfProtection(request: NextRequest): NextResponse | null {
  */
 export function setCsrfCookie(request: NextRequest, response: NextResponse): void {
     // Only generate a new token if one doesn't already exist in the request
-    const existingToken = request.cookies.get(CSRF_COOKIE_NAME)?.value;
-    if (!existingToken) {
-        const token = generateToken();
+    const { token, created } = getOrCreateCsrfToken(request.cookies.get(CSRF_COOKIE_NAME)?.value);
+    if (created) {
 
         response.cookies.set(CSRF_COOKIE_NAME, token, {
             httpOnly: true,

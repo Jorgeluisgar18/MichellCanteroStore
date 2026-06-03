@@ -17,21 +17,21 @@ export interface Product {
     id: string;
     name: string;
     slug: string;
-    description: string;
+    description: string | null;
     price: number;
-    compare_at_price?: number;
+    compare_at_price?: number | null;
     images: string[];
     category: string;
-    subcategory?: string;
-    brand?: string;
+    subcategory?: string | null;
+    brand?: string | null;
     in_stock: boolean;
     stock_quantity: number;
-    variants?: ProductVariant[];
-    tags: string[];
+    variants?: ProductVariant[] | null;
+    tags: string[] | null;
     featured?: boolean;
     is_new?: boolean;
-    rating?: number;
-    review_count?: number;
+    rating?: number | null;
+    review_count?: number | null;
 }
 
 export interface Category {
