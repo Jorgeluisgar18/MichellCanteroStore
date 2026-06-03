@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 describe('repository safety rules', () => {
@@ -44,5 +44,15 @@ describe('repository safety rules', () => {
 
         assert.deepEqual(actual, expected);
         assert.ok(actual.every((file) => /^\d{14}_[a-zA-Z0-9_]+\.sql$/.test(file)));
+    });
+
+    it('does not publish diagnostic test routes', () => {
+        assert.equal(existsSync(join(process.cwd(), 'app', 'test-sentry')), false);
+    });
+
+    it('keeps security headers in one source of truth', () => {
+        const vercelConfig = JSON.parse(readFileSync(join(process.cwd(), 'vercel.json'), 'utf8'));
+
+        assert.equal('headers' in vercelConfig, false);
     });
 });
