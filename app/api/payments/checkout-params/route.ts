@@ -18,18 +18,15 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Faltan parámetros: orderId y email son requeridos' }, { status: 400 });
         }
 
-        // ✅ CORRECCIÓN 2: Autenticación obligatoria.
+        // ✅ CORRECCIÓN 2: Obtener usuario autenticado si existe.
         const supabase = createClient();
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Debes iniciar sesión para proceder al pago' }, { status: 401 });
-        }
+        const { data: { user } } = await supabase.auth.getUser();
+        const authenticatedUserId = user?.id ?? null;
 
         // ✅ CORRECCIÓN 3: Leer el monto REAL directamente desde la base de datos.
         const { data: order, error: orderError } = await supabaseAdmin
             .from('orders')
-            .select('id, total, order_number, user_id, payment_status')
+            .select('id, total, order_number, user_id, payment_status, shipping_email')
             .eq('id', orderId)
             .single();
 
@@ -37,9 +34,17 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Orden no encontrada' }, { status: 404 });
         }
 
-        // ✅ CORRECCIÓN 4: Verificar que la orden pertenece al usuario autenticado.
-        if (order.user_id !== user.id) {
-            return NextResponse.json({ error: 'No tienes permiso para pagar esta orden' }, { status: 403 });
+        // ✅ CORRECCIÓN 4: Verificar pertenencia de la orden de forma segura (soporta invitados).
+        if (order.user_id !== null) {
+            // Orden de usuario registrado: requiere autenticación y coincidencia de ID.
+            if (!authenticatedUserId || order.user_id !== authenticatedUserId) {
+                return NextResponse.json({ error: 'No tienes permiso para pagar esta orden' }, { status: 403 });
+            }
+        } else {
+            // Orden de invitado: requiere coincidencia del correo proporcionado con el de la orden.
+            if (!email || order.shipping_email.toLowerCase() !== email.toLowerCase()) {
+                return NextResponse.json({ error: 'No tienes permiso para pagar esta orden' }, { status: 403 });
+            }
         }
 
         // ✅ CORRECCIÓN 5: Verificar que la orden aún está pendiente de pago.
