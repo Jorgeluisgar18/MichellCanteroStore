@@ -1,8 +1,8 @@
 import { supabaseAdmin } from '@/lib/supabase';
 import { ApiResponse } from '@/lib/api-responses';
 import { createClient } from '@/lib/supabase-server';
-import { STORE_CONFIG } from '@/lib/config';
 import {
+    calculateCheckoutShippingCost,
     getReservationFailureMessage,
     normalizeOrderShippingFields,
     type ReservationAttemptResult,
@@ -162,23 +162,12 @@ export async function POST(request: Request) {
             });
         }
 
-        const calculateShippingCost = (
-            subtotal: number,
-            shippingMethod: string,
-            shippingLocation?: string | null
-        ): number => {
-            if (shippingMethod === 'pickup') return 0;
-            if (subtotal >= STORE_CONFIG.FREE_SHIPPING_THRESHOLD) return 0;
-
-            return (
-                STORE_CONFIG.SHIPPING_RATES[shippingLocation ?? ''] ??
-                STORE_CONFIG.SHIPPING_RATES['resto-colombia'] ??
-                0
-            );
-        };
-
         const subtotal = validatedItems.reduce((acc, item) => acc + (item.product_price * item.quantity), 0);
-        const shipping = calculateShippingCost(subtotal, shipping_method, shipping_location);
+        const shipping = calculateCheckoutShippingCost({
+            subtotal,
+            shippingMethod: shipping_method,
+            shippingLocation: shipping_location,
+        });
         const total = subtotal + shipping;
 
         const { randomBytes } = await import('crypto');

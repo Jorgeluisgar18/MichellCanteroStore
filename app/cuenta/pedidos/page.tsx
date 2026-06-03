@@ -10,6 +10,7 @@ import Button from '@/components/ui/Button';
 import { ShoppingBag, ArrowLeft, Loader2, ChevronRight, Clock, CheckCircle2, Truck, XCircle, Package } from 'lucide-react';
 import { formatPrice, formatDate } from '@/lib/utils';
 import Image from 'next/image';
+import { useProtectedAccountPage } from '@/lib/hooks/useProtectedAccountPage';
 
 interface OrderItem {
     id: string;
@@ -31,14 +32,22 @@ interface Order {
 
 export default function PedidosPage() {
     const router = useRouter();
+    const { user, isCheckingAuth } = useProtectedAccountPage('/cuenta/pedidos');
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        if (isCheckingAuth || !user) return;
+
         const fetchOrders = async () => {
             try {
                 const res = await fetch('/api/orders');
+                if (res.status === 401) {
+                    router.replace('/cuenta/login?redirect=/cuenta/pedidos');
+                    return;
+                }
+
                 const { data, error: ordersError } = await res.json();
 
                 if (ordersError) throw new Error(ordersError);
@@ -53,7 +62,7 @@ export default function PedidosPage() {
         };
 
         fetchOrders();
-    }, []);
+    }, [isCheckingAuth, router, user]);
 
     const getStatusIcon = (status: Order['status']) => {
         switch (status) {
@@ -88,7 +97,7 @@ export default function PedidosPage() {
         }
     };
 
-    if (loading) {
+    if (isCheckingAuth || loading) {
         return (
             <>
                 <Header />

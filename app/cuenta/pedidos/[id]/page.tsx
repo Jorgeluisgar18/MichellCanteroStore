@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { formatPrice, formatDate } from '@/lib/utils';
 import Image from 'next/image';
+import { useProtectedAccountPage } from '@/lib/hooks/useProtectedAccountPage';
 
 interface OrderItem {
     id: string;
@@ -49,16 +50,25 @@ interface Order {
 export default function OrderDetailPage() {
     const router = useRouter();
     const params = useParams();
+    const orderId = typeof params.id === 'string' ? params.id : '';
+    const { user, isCheckingAuth } = useProtectedAccountPage(
+        orderId ? `/cuenta/pedidos/${orderId}` : '/cuenta/pedidos'
+    );
     const [order, setOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchOrderDetails = async () => {
-            if (!params.id) return;
+            if (isCheckingAuth || !user || !orderId) return;
 
             try {
-                const res = await fetch(`/api/orders/${params.id}`);
+                const res = await fetch(`/api/orders/${orderId}`);
+                if (res.status === 401) {
+                    router.replace(`/cuenta/login?redirect=${encodeURIComponent(`/cuenta/pedidos/${orderId}`)}`);
+                    return;
+                }
+
                 const { data, error: apiError } = await res.json();
 
                 if (apiError) throw new Error(apiError);
@@ -73,7 +83,7 @@ export default function OrderDetailPage() {
         };
 
         fetchOrderDetails();
-    }, [params.id]);
+    }, [isCheckingAuth, orderId, router, user]);
 
     const getStatusInfo = (status: Order['status']) => {
         switch (status) {
@@ -86,7 +96,7 @@ export default function OrderDetailPage() {
         }
     };
 
-    if (loading) {
+    if (isCheckingAuth || loading) {
         return (
             <>
                 <Header />

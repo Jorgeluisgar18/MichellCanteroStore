@@ -88,6 +88,36 @@ describe('repository safety rules', () => {
         assert.equal(existsSync(join(process.cwd(), 'components', 'admin', 'AdminShell.tsx')), true);
     });
 
+    it('keeps private account pages behind a shared client auth guard', () => {
+        const protectedAccountPages = [
+            join('app', 'cuenta', 'page.tsx'),
+            join('app', 'cuenta', 'perfil', 'page.tsx'),
+            join('app', 'cuenta', 'pedidos', 'page.tsx'),
+            join('app', 'cuenta', 'pedidos', '[id]', 'page.tsx'),
+        ];
+
+        assert.equal(existsSync(join(process.cwd(), 'lib', 'hooks', 'useProtectedAccountPage.ts')), true);
+
+        for (const file of protectedAccountPages) {
+            const source = readFileSync(join(process.cwd(), file), 'utf8');
+            assert.match(source, /useProtectedAccountPage\(/, `${file} must use useProtectedAccountPage`);
+        }
+    });
+
+    it('uses hydration-safe ids for shared inputs', () => {
+        const input = readFileSync(join(process.cwd(), 'components', 'ui', 'Input.tsx'), 'utf8');
+
+        assert.equal(input.includes('Math.random'), false);
+        assert.match(input, /useId\(/);
+    });
+
+    it('redirects empty checkout carts from an effect instead of render', () => {
+        const checkout = readFileSync(join(process.cwd(), 'app', 'checkout', 'CheckoutClient.tsx'), 'utf8');
+
+        assert.equal(checkout.includes("router.push('/carrito')"), false);
+        assert.match(checkout, /useEffect\(\(\) => \{[\s\S]*router\.replace\('\/carrito'\)/);
+    });
+
     it('declares sizes for optimized fill images', () => {
         const sourceFiles = readSourceFiles(process.cwd());
         const missingSizes = sourceFiles.flatMap((file) => {

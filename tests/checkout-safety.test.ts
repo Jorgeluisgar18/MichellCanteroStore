@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+    calculateCheckoutShippingCost,
     canAccessCheckoutParams,
     getReservationFailureMessage,
     normalizeOrderShippingFields,
@@ -84,6 +85,35 @@ describe('checkout safety rules', () => {
                 { productName: 'Labial', success: false, error: 'Insufficient stock' },
             ]),
             'No pudimos reservar stock para: Labial. Actualiza tu carrito e intentalo de nuevo.'
+        );
+    });
+
+    it('uses the same free-shipping threshold for checkout display and order totals', () => {
+        assert.equal(
+            calculateCheckoutShippingCost({
+                subtotal: 200_000,
+                shippingMethod: 'delivery',
+                shippingLocation: 'resto-colombia',
+            }),
+            0
+        );
+
+        assert.equal(
+            calculateCheckoutShippingCost({
+                subtotal: 199_999,
+                shippingMethod: 'delivery',
+                shippingLocation: 'resto-colombia',
+            }),
+            16_000
+        );
+
+        assert.equal(
+            calculateCheckoutShippingCost({
+                subtotal: 10_000,
+                shippingMethod: 'pickup',
+                shippingLocation: null,
+            }),
+            0
         );
     });
 });

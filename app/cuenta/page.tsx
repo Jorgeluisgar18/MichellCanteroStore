@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import Header from '@/components/layout/Header';
@@ -8,32 +7,19 @@ import Footer from '@/components/layout/Footer';
 import { Card } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { User, Package, Heart, LogOut } from 'lucide-react';
+import { useProtectedAccountPage } from '@/lib/hooks/useProtectedAccountPage';
 
 export default function CuentaPage() {
     const router = useRouter();
-    const { user, isAuthenticated, logout, checkSession } = useAuthStore();
-    const [isVerifying, setIsVerifying] = useState(true);
-
-    useEffect(() => {
-        const verify = async () => {
-            await checkSession();
-            setIsVerifying(false);
-        };
-        verify();
-    }, [checkSession]);
-
-    useEffect(() => {
-        if (!isVerifying && (!isAuthenticated || !user)) {
-            router.replace('/cuenta/login?redirect=/cuenta');
-        }
-    }, [isVerifying, isAuthenticated, user, router]);
+    const { logout } = useAuthStore();
+    const { user, isAuthenticated, isCheckingAuth } = useProtectedAccountPage('/cuenta');
 
     const handleLogout = async () => {
         await logout();
         router.push('/');
     };
 
-    if (isVerifying) {
+    if (isCheckingAuth) {
         return (
             <>
                 <Header />

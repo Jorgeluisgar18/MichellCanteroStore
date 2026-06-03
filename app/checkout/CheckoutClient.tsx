@@ -14,6 +14,7 @@ import { CreditCard, CheckCircle, Truck, MapPin, AlertCircle, X } from 'lucide-r
 import { fetchWithCsrf } from '@/lib/hooks/useCsrfToken';
 import { useToast } from '@/components/ui/Toast';
 import { STORE_CONFIG } from '@/lib/config';
+import { calculateCheckoutShippingCost } from '@/lib/checkout/safety';
 
 // Declare Wompi WidgetCheckout global type
 declare global {
@@ -60,16 +61,22 @@ export default function CheckoutClient() {
     // Calculate shipping cost based on method and location
     // Rates are read from STORE_CONFIG — single source of truth
     const getShippingCost = (): number => {
-        if (formData.shippingMethod === 'pickup') {
-            return 0;
-        }
-
-        return STORE_CONFIG.SHIPPING_RATES[formData.shippingLocation] ?? STORE_CONFIG.SHIPPING_RATES['resto-colombia'] ?? 0;
+        return calculateCheckoutShippingCost({
+            subtotal,
+            shippingMethod: formData.shippingMethod,
+            shippingLocation: formData.shippingLocation,
+        });
     };
 
     const subtotal = getSubtotal();
     const shipping = getShippingCost();
     const total = subtotal + shipping;
+
+    useEffect(() => {
+        if (items.length === 0 && !paymentApproved) {
+            router.replace('/carrito');
+        }
+    }, [items.length, paymentApproved, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -203,7 +210,6 @@ export default function CheckoutClient() {
     };
 
     if (items.length === 0 && !paymentApproved) {
-        router.push('/carrito');
         return null;
     }
 

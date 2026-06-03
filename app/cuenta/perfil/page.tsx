@@ -15,13 +15,15 @@ import {
 import { Address } from '@/types';
 import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
 import { fetchWithCsrf } from '@/lib/hooks/useCsrfToken';
+import { useProtectedAccountPage } from '@/lib/hooks/useProtectedAccountPage';
 
 type TabType = 'personal' | 'addresses' | 'security';
 
 export default function PerfilPage() {
     const supabase = getSupabaseBrowserClient();
     const router = useRouter();
-    const { user, checkSession } = useAuthStore();
+    const { checkSession } = useAuthStore();
+    const { user, isCheckingAuth } = useProtectedAccountPage('/cuenta/perfil');
     const [activeTab, setActiveTab] = useState<TabType>('personal');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -57,9 +59,11 @@ export default function PerfilPage() {
     });
 
     useEffect(() => {
+        if (isCheckingAuth || !user) return;
+
         fetchProfile();
         fetchAddresses();
-    }, []);
+    }, [isCheckingAuth, user]);
 
     const fetchProfile = async () => {
         try {
@@ -267,7 +271,7 @@ export default function PerfilPage() {
         }
     };
 
-    if (loading) {
+    if (isCheckingAuth || loading) {
         return (
             <>
                 <Header />
