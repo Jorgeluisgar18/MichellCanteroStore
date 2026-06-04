@@ -87,4 +87,16 @@ describe('stock confirmation SQL contract', () => {
         assert.match(sql, /GET\s+DIAGNOSTICS\s+product_rows_updated\s*=\s*ROW_COUNT/i);
         assert.match(sql, /'success',\s*false/i);
     });
+
+    it('refuses to confirm expired stock reservations', () => {
+        const sql = readFileSync(
+            join(process.cwd(), 'supabase', 'migrations', '20260604055222_harden_expired_stock_confirmation.sql'),
+            'utf8'
+        );
+
+        assert.match(sql, /expires_at\s*<=\s*NOW\(\)/i);
+        assert.match(sql, /'Stock reservation expired'/i);
+        assert.match(sql, /expires_at\s*>\s*NOW\(\)/i);
+        assert.match(sql, /SET\s+status\s*=\s*'released'/i);
+    });
 });

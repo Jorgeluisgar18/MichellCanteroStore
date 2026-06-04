@@ -52,6 +52,7 @@ describe('repository safety rules', () => {
             '20260603014012_20260603_fix_stock_reservation_schema.sql',
             '20260603032514_fix_profile_trigger_email.sql',
             '20260603032533_harden_stock_confirmation.sql',
+            '20260604055222_harden_expired_stock_confirmation.sql',
         ];
 
         const actual = readdirSync(join(process.cwd(), 'supabase', 'migrations'))
