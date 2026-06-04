@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server';
 import {
+    formatWebhookTimestampForLog,
+    getOrderStatusForWompiStatus,
+    getPaymentStatusForWompiStatus,
     getStockConfirmationFailure,
+    getTerminalTransactionConflict,
     isValidWompiSignatureShape,
     isDuplicateTransactionWebhook,
+    validateWompiTransactionAgainstOrder,
 } from '@/lib/payments/webhook-safety';
 import { supabaseAdmin } from '@/lib/supabase';
 
@@ -18,6 +23,12 @@ function getNestedValue(source: unknown, path: string): unknown {
     }
 
     return current;
+}
+
+function getTransactionAmountInCents(transaction: Record<string, unknown>): number | null {
+    const amount = transaction.amount_in_cents ?? transaction.amountInCents;
+
+    return typeof amount === 'number' ? amount : null;
 }
 
 // POST /api/payments/webhook - Manejar notificaciones de Wompi
@@ -83,7 +94,7 @@ export async function POST(request: Request) {
         // ✅ SECURITY: Sanitized logging (no sensitive data)
         logger.info('Wompi webhook received', {
             event,
-            timestamp: new Date(timestamp).toISOString()
+            timestamp: formatWebhookTimestampForLog(timestamp)
         });
 
         // Validar que sea un evento de transacción
@@ -92,8 +103,23 @@ export async function POST(request: Request) {
             return NextResponse.json({ received: true });
         }
 
-        const { transaction } = data;
-        const { reference, status, id: wompiTransactionId } = transaction;
+        const transaction = data?.transaction;
+
+        if (
+            !transaction ||
+            typeof transaction !== 'object' ||
+            typeof Reflect.get(transaction, 'reference') !== 'string' ||
+            typeof Reflect.get(transaction, 'status') !== 'string' ||
+            typeof Reflect.get(transaction, 'id') !== 'string'
+        ) {
+            logger.error('[webhook] Payload de transaccion incompleto', { event });
+            return NextResponse.json({ error: 'Payload de transaccion invalido' }, { status: 400 });
+        }
+
+        const transactionRecord = transaction as Record<string, unknown>;
+        const reference = transactionRecord.reference as string;
+        const status = transactionRecord.status as string;
+        const wompiTransactionId = transactionRecord.id as string;
 
         // ✅ SECURITY: Log only non-sensitive transaction data
         logger.info('Processing transaction', {
@@ -114,7 +140,60 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Orden no encontrada' }, { status: 404 });
         }
 
-        if (isDuplicateTransactionWebhook(status, order.payment_status)) {
+        const transactionValidationFailure = validateWompiTransactionAgainstOrder({
+            orderNumber: order.order_number,
+            orderTotal: Number(order.total),
+            transactionReference: reference,
+            transactionAmountInCents: getTransactionAmountInCents(transactionRecord),
+            transactionCurrency: typeof transactionRecord.currency === 'string' ? transactionRecord.currency : null,
+        });
+
+        if (transactionValidationFailure) {
+            logger.error('[webhook] Transaccion no coincide con la orden', {
+                orderId: order.id,
+                reference,
+                transactionId: wompiTransactionId,
+                reason: transactionValidationFailure,
+            });
+            return NextResponse.json({ error: 'La transaccion no coincide con la orden' }, { status: 400 });
+        }
+
+        const nextPaymentStatus = getPaymentStatusForWompiStatus(status);
+
+        if (!nextPaymentStatus) {
+            logger.info('Ignoring non-terminal transaction status', {
+                orderId: order.id,
+                reference,
+                status,
+                transactionId: wompiTransactionId
+            });
+            return NextResponse.json({ received: true, ignored: true });
+        }
+
+        const terminalConflict = getTerminalTransactionConflict({
+            wompiStatus: status,
+            currentPaymentStatus: order.payment_status,
+            currentTransactionId: order.wompi_transaction_id,
+            incomingTransactionId: wompiTransactionId,
+        });
+
+        if (terminalConflict) {
+            logger.error('[webhook] Conflicto de transaccion terminal', {
+                orderId: order.id,
+                reference,
+                status,
+                transactionId: wompiTransactionId,
+                reason: terminalConflict,
+            });
+            return NextResponse.json({ error: 'Conflicto de transaccion terminal' }, { status: 409 });
+        }
+
+        if (isDuplicateTransactionWebhook(
+            status,
+            order.payment_status,
+            order.wompi_transaction_id,
+            wompiTransactionId
+        )) {
             logger.info('Duplicate terminal webhook ignored', {
                 orderId: order.id,
                 reference,
@@ -125,13 +204,11 @@ export async function POST(request: Request) {
         }
 
         // Mapear estados de Wompi a nuestros estados
-        let orderStatus = order.status;
-        let paymentStatus = order.payment_status;
+        const mappedOrderStatus = getOrderStatusForWompiStatus(status);
+        const orderStatus = mappedOrderStatus ?? order.status;
+        const paymentStatus = nextPaymentStatus;
 
         if (status === 'APPROVED') {
-            orderStatus = 'paid';
-            paymentStatus = 'paid';
-
             // ✅ SECURITY: Confirm stock reservation and decrement stock
             try {
                 const { data: confirmResult, error: confirmError } = await supabaseAdmin
@@ -180,9 +257,7 @@ export async function POST(request: Request) {
             } catch (emailError) {
                 logger.error('Error sending email notifications', emailError as Error);
             }
-        } else if (status === 'DECLINED' || status === 'ERROR') {
-            paymentStatus = 'failed';
-
+        } else {
             // ✅ SECURITY: Release stock reservation on payment failure
             try {
                 const { data: releaseResult, error: releaseError } = await supabaseAdmin

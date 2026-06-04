@@ -4,9 +4,13 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import {
+    formatWebhookTimestampForLog,
+    getPaymentStatusForWompiStatus,
     getStockConfirmationFailure,
+    getTerminalTransactionConflict,
     isValidWompiSignatureShape,
     isDuplicateTransactionWebhook,
+    validateWompiTransactionAgainstOrder,
 } from '../lib/payments/webhook-safety';
 
 describe('payment webhook safety helpers', () => {
@@ -37,10 +41,85 @@ describe('payment webhook safety helpers', () => {
         assert.equal(failure, null);
     });
 
+    it('formats webhook timestamps without throwing on malformed values', () => {
+        assert.equal(
+            formatWebhookTimestampForLog('2026-06-04T10:00:00.000Z'),
+            '2026-06-04T10:00:00.000Z'
+        );
+
+        assert.match(formatWebhookTimestampForLog('not-a-date'), /^\d{4}-\d{2}-\d{2}T/);
+        assert.match(formatWebhookTimestampForLog(null), /^\d{4}-\d{2}-\d{2}T/);
+    });
+
     it('treats repeated terminal Wompi events as duplicates', () => {
-        assert.equal(isDuplicateTransactionWebhook('APPROVED', 'paid'), true);
-        assert.equal(isDuplicateTransactionWebhook('DECLINED', 'failed'), true);
+        assert.equal(isDuplicateTransactionWebhook('APPROVED', 'paid', 'txn-1', 'txn-1'), true);
+        assert.equal(isDuplicateTransactionWebhook('DECLINED', 'failed', 'txn-1', 'txn-1'), true);
         assert.equal(isDuplicateTransactionWebhook('APPROVED', 'pending'), false);
+    });
+
+    it('maps all supported terminal Wompi statuses', () => {
+        assert.equal(getPaymentStatusForWompiStatus('APPROVED'), 'paid');
+        assert.equal(getPaymentStatusForWompiStatus('DECLINED'), 'failed');
+        assert.equal(getPaymentStatusForWompiStatus('ERROR'), 'failed');
+        assert.equal(getPaymentStatusForWompiStatus('VOIDED'), 'failed');
+        assert.equal(getPaymentStatusForWompiStatus('PENDING'), null);
+    });
+
+    it('blocks terminal webhooks that conflict with an existing transaction', () => {
+        assert.equal(
+            getTerminalTransactionConflict({
+                wompiStatus: 'APPROVED',
+                currentPaymentStatus: 'paid',
+                currentTransactionId: 'txn-1',
+                incomingTransactionId: 'txn-2',
+            }),
+            'Order already has a terminal payment transaction'
+        );
+
+        assert.equal(
+            getTerminalTransactionConflict({
+                wompiStatus: 'APPROVED',
+                currentPaymentStatus: 'paid',
+                currentTransactionId: 'txn-1',
+                incomingTransactionId: 'txn-1',
+            }),
+            null
+        );
+    });
+
+    it('validates Wompi transaction money fields against the order', () => {
+        assert.equal(
+            validateWompiTransactionAgainstOrder({
+                orderNumber: 'MC-1',
+                orderTotal: 100_000,
+                transactionReference: 'MC-1',
+                transactionAmountInCents: 10_000_000,
+                transactionCurrency: 'COP',
+            }),
+            null
+        );
+
+        assert.match(
+            validateWompiTransactionAgainstOrder({
+                orderNumber: 'MC-1',
+                orderTotal: 100_000,
+                transactionReference: 'MC-1',
+                transactionAmountInCents: 9_999_999,
+                transactionCurrency: 'COP',
+            }) ?? '',
+            /amount/i
+        );
+
+        assert.match(
+            validateWompiTransactionAgainstOrder({
+                orderNumber: 'MC-1',
+                orderTotal: 100_000,
+                transactionReference: 'MC-1',
+                transactionAmountInCents: 10_000_000,
+                transactionCurrency: 'USD',
+            }) ?? '',
+            /currency/i
+        );
     });
 
     it('rejects malformed Wompi signatures before timing-safe comparison', () => {
