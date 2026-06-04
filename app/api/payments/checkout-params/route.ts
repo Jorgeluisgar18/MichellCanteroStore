@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/lib/supabase';
 import { createClient } from '@/lib/supabase-server';
-import { canAccessCheckoutParams } from '@/lib/checkout/safety';
+import {
+    canAccessCheckoutParams,
+    canRequestCheckoutParamsForReservation,
+} from '@/lib/checkout/safety';
 
 const WOMPI_PUBLIC_KEY = process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY;
 const WOMPI_INTEGRITY_SECRET = process.env.WOMPI_INTEGRITY_SECRET;
@@ -44,6 +47,28 @@ export async function POST(request: Request) {
             return NextResponse.json(
                 { error: `Esta orden ya fue procesada (estado: ${order.payment_status})` },
                 { status: 400 }
+            );
+        }
+
+        const { count: activeReservationCount, error: reservationError } = await supabaseAdmin
+            .from('stock_reservations')
+            .select('id', { count: 'exact', head: true })
+            .eq('order_id', orderId)
+            .eq('status', 'reserved')
+            .gt('expires_at', new Date().toISOString());
+
+        if (reservationError) {
+            console.error('[checkout-params] Error verificando reserva de stock:', reservationError);
+            return NextResponse.json(
+                { error: 'No pudimos verificar la reserva de inventario' },
+                { status: 500 }
+            );
+        }
+
+        if (!canRequestCheckoutParamsForReservation({ activeReservationCount })) {
+            return NextResponse.json(
+                { error: 'La reserva de stock expiro. Por favor actualiza tu carrito y crea una nueva orden.' },
+                { status: 409 }
             );
         }
 

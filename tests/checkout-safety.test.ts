@@ -3,7 +3,9 @@ import { describe, it } from 'node:test';
 
 import {
     calculateCheckoutShippingCost,
+    canRequestCheckoutParamsForReservation,
     canAccessCheckoutParams,
+    canReuseExistingOrderForIdempotency,
     getReservationFailureMessage,
     normalizeOrderShippingFields,
 } from '../lib/checkout/safety';
@@ -69,6 +71,54 @@ describe('checkout safety rules', () => {
             }),
             false
         );
+    });
+
+    it('reuses idempotent orders only for the same buyer boundary', () => {
+        assert.equal(
+            canReuseExistingOrderForIdempotency({
+                existingOrderUserId: 'user-1',
+                authenticatedUserId: 'user-1',
+                existingOrderEmail: 'cliente@example.com',
+                requestEmail: 'cliente@example.com',
+            }),
+            true
+        );
+
+        assert.equal(
+            canReuseExistingOrderForIdempotency({
+                existingOrderUserId: 'user-1',
+                authenticatedUserId: null,
+                existingOrderEmail: 'cliente@example.com',
+                requestEmail: 'cliente@example.com',
+            }),
+            false
+        );
+
+        assert.equal(
+            canReuseExistingOrderForIdempotency({
+                existingOrderUserId: null,
+                authenticatedUserId: null,
+                existingOrderEmail: 'cliente@example.com',
+                requestEmail: ' CLIENTE@example.com ',
+            }),
+            true
+        );
+
+        assert.equal(
+            canReuseExistingOrderForIdempotency({
+                existingOrderUserId: null,
+                authenticatedUserId: null,
+                existingOrderEmail: 'cliente@example.com',
+                requestEmail: 'otra@example.com',
+            }),
+            false
+        );
+    });
+
+    it('requires an active stock reservation before issuing checkout params', () => {
+        assert.equal(canRequestCheckoutParamsForReservation({ activeReservationCount: 1 }), true);
+        assert.equal(canRequestCheckoutParamsForReservation({ activeReservationCount: 0 }), false);
+        assert.equal(canRequestCheckoutParamsForReservation({ activeReservationCount: null }), false);
     });
 
     it('creates a usable CSRF token when the request has no existing cookie', () => {

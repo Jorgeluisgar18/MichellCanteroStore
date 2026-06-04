@@ -3,6 +3,7 @@ import { ApiResponse } from '@/lib/api-responses';
 import { createClient } from '@/lib/supabase-server';
 import {
     calculateCheckoutShippingCost,
+    canReuseExistingOrderForIdempotency,
     getReservationFailureMessage,
     normalizeOrderShippingFields,
     type ReservationAttemptResult,
@@ -112,6 +113,19 @@ export async function POST(request: Request) {
                 .single();
 
             if (existingOrder) {
+                if (!canReuseExistingOrderForIdempotency({
+                    existingOrderUserId: existingOrder.user_id,
+                    authenticatedUserId,
+                    existingOrderEmail: existingOrder.shipping_email,
+                    requestEmail: shipping_email,
+                })) {
+                    logger.warn('Blocked idempotency key reuse across buyer boundary', {
+                        authenticatedUserId,
+                        existingOrderId: existingOrder.id,
+                    });
+                    return ApiResponse.forbidden('No tienes permiso para reutilizar esta orden');
+                }
+
                 logger.info('Returning existing order (idempotency)');
                 return ApiResponse.success(existingOrder);
             }

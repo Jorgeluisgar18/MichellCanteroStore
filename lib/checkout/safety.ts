@@ -14,10 +14,21 @@ export interface CheckoutAccessInput {
     requestEmail: string | null;
 }
 
+export interface IdempotencyReuseInput {
+    existingOrderUserId: string | null;
+    authenticatedUserId: string | null;
+    existingOrderEmail: string | null;
+    requestEmail: string | null;
+}
+
 export interface ReservationAttemptResult {
     productName: string;
     success: boolean;
     error?: string;
+}
+
+export interface CheckoutReservationInput {
+    activeReservationCount: number | null | undefined;
 }
 
 export interface CheckoutShippingInput {
@@ -52,6 +63,21 @@ export function canAccessCheckoutParams(input: CheckoutAccessInput): boolean {
     const requestEmail = normalizeEmail(input.requestEmail);
 
     return orderEmail.length > 0 && orderEmail === requestEmail;
+}
+
+export function canReuseExistingOrderForIdempotency(input: IdempotencyReuseInput): boolean {
+    if (input.existingOrderUserId) {
+        return input.authenticatedUserId === input.existingOrderUserId;
+    }
+
+    const existingOrderEmail = normalizeEmail(input.existingOrderEmail);
+    const requestEmail = normalizeEmail(input.requestEmail);
+
+    return existingOrderEmail.length > 0 && existingOrderEmail === requestEmail;
+}
+
+export function canRequestCheckoutParamsForReservation(input: CheckoutReservationInput): boolean {
+    return (input.activeReservationCount ?? 0) > 0;
 }
 
 export function calculateCheckoutShippingCost(input: CheckoutShippingInput): number {

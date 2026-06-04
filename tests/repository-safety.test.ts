@@ -118,6 +118,19 @@ describe('repository safety rules', () => {
         assert.match(checkout, /useEffect\(\(\) => \{[\s\S]*router\.replace\('\/carrito'\)/);
     });
 
+    it('checks active stock reservations before issuing Wompi checkout params', () => {
+        const checkoutParams = readFileSync(
+            join(process.cwd(), 'app', 'api', 'payments', 'checkout-params', 'route.ts'),
+            'utf8'
+        );
+
+        assert.match(checkoutParams, /stock_reservations/);
+        assert.match(checkoutParams, /\.eq\('status', 'reserved'\)/);
+        assert.match(checkoutParams, /\.gt\('expires_at', new Date\(\)\.toISOString\(\)\)/);
+        assert.match(checkoutParams, /canRequestCheckoutParamsForReservation/);
+        assert.match(checkoutParams, /status:\s*409/);
+    });
+
     it('declares sizes for optimized fill images', () => {
         const sourceFiles = readSourceFiles(process.cwd());
         const missingSizes = sourceFiles.flatMap((file) => {
