@@ -53,6 +53,7 @@ describe('repository safety rules', () => {
             '20260603032514_fix_profile_trigger_email.sql',
             '20260603032533_harden_stock_confirmation.sql',
             '20260604055222_harden_expired_stock_confirmation.sql',
+            '20260604061830_consolidate_orders_rls_policies.sql',
         ];
 
         const actual = readdirSync(join(process.cwd(), 'supabase', 'migrations'))
@@ -130,6 +131,28 @@ describe('repository safety rules', () => {
         assert.match(checkoutParams, /\.gt\('expires_at', new Date\(\)\.toISOString\(\)\)/);
         assert.match(checkoutParams, /canRequestCheckoutParamsForReservation/);
         assert.match(checkoutParams, /status:\s*409/);
+    });
+
+    it('keeps order writes behind the backend API instead of public Data API grants', () => {
+        const migrationsDir = join(process.cwd(), 'supabase', 'migrations');
+        const migration = readdirSync(migrationsDir)
+            .filter((file) => file.endsWith('_consolidate_orders_rls_policies.sql'))
+            .sort()
+            .at(-1);
+
+        assert.ok(migration, 'Expected a consolidate_orders_rls_policies migration');
+
+        const sql = readFileSync(join(migrationsDir, migration), 'utf8');
+
+        assert.match(sql, /REVOKE\s+ALL\s+ON\s+TABLE\s+public\.orders\s+FROM\s+anon/i);
+        assert.match(sql, /REVOKE\s+ALL\s+ON\s+TABLE\s+public\.orders\s+FROM\s+authenticated/i);
+        assert.match(sql, /REVOKE\s+ALL\s+ON\s+TABLE\s+public\.order_items\s+FROM\s+anon/i);
+        assert.match(sql, /REVOKE\s+ALL\s+ON\s+TABLE\s+public\.order_items\s+FROM\s+authenticated/i);
+        assert.match(sql, /GRANT\s+SELECT\s+ON\s+TABLE\s+public\.orders\s+TO\s+authenticated/i);
+        assert.match(sql, /GRANT\s+SELECT\s+ON\s+TABLE\s+public\.order_items\s+TO\s+authenticated/i);
+        assert.doesNotMatch(sql, /CREATE\s+POLICY[\s\S]+FOR\s+INSERT/i);
+        assert.match(sql, /orders_select_own_or_admin/);
+        assert.match(sql, /order_items_select_own_or_admin/);
     });
 
     it('declares sizes for optimized fill images', () => {
