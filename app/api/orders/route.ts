@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase';
 import { ApiResponse } from '@/lib/api-responses';
 import { createClient } from '@/lib/supabase-server';
+import { captureCheckoutIssue } from '@/lib/observability/checkout';
 import {
     calculateCheckoutShippingCost,
     canReuseExistingOrderForIdempotency,
@@ -221,6 +222,12 @@ export async function POST(request: Request) {
 
         if (orderError) {
             logApiError('POST', '/api/orders', orderError);
+            captureCheckoutIssue({
+                area: 'checkout',
+                name: 'order_insert_failed',
+                route: '/api/orders',
+                metadata: { orderError },
+            }, orderError);
             return ApiResponse.error('Error al crear la orden');
         }
 
@@ -246,6 +253,15 @@ export async function POST(request: Request) {
                         orderId: order.id,
                         error: warnMsg,
                     });
+                    captureCheckoutIssue({
+                        area: 'stock',
+                        name: 'stock_reservation_failed',
+                        level: 'warning',
+                        route: '/api/orders',
+                        orderId: order.id,
+                        productId: item.product_id,
+                        reason: warnMsg,
+                    }, resError);
                 } else {
                     reservationResults.push({
                         productName: item.product_name,
@@ -264,6 +280,15 @@ export async function POST(request: Request) {
                     orderId: order.id,
                     error: warnMsg,
                 });
+                captureCheckoutIssue({
+                    area: 'stock',
+                    name: 'stock_reservation_rpc_exception',
+                    level: 'error',
+                    route: '/api/orders',
+                    orderId: order.id,
+                    productId: item.product_id,
+                    reason: warnMsg,
+                }, rpcException);
             }
         }
 
@@ -277,6 +302,17 @@ export async function POST(request: Request) {
             logger.warn('Stock reservation failed; order rolled back before payment', {
                 orderId: order.id,
                 failedReservations: reservationResults.filter((result) => !result.success),
+            });
+            captureCheckoutIssue({
+                area: 'checkout',
+                name: 'order_rolled_back_after_stock_failure',
+                level: 'warning',
+                route: '/api/orders',
+                orderId: order.id,
+                reason: reservationFailureMessage,
+                metadata: {
+                    failedReservations: reservationResults.filter((result) => !result.success),
+                },
             });
 
             return ApiResponse.badRequest(reservationFailureMessage, 'STOCK_RESERVATION_FAILED');
@@ -301,11 +337,23 @@ export async function POST(request: Request) {
                 order_id_param: order.id,
             });
             await supabaseAdmin.from('orders').delete().eq('id', order.id);
+            captureCheckoutIssue({
+                area: 'checkout',
+                name: 'order_items_insert_failed',
+                route: '/api/orders',
+                orderId: order.id,
+                metadata: { itemsError },
+            }, itemsError);
             return ApiResponse.error('Error al crear items de la orden');
         }
 
         return ApiResponse.success({ ...order, items: orderItems }, 201);
     } catch (error) {
+        captureCheckoutIssue({
+            area: 'checkout',
+            name: 'order_create_unhandled_exception',
+            route: '/api/orders',
+        }, error);
         return ApiResponse.error(error);
     }
 }

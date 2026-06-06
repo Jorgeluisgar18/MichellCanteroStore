@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/lib/supabase';
 import { createClient } from '@/lib/supabase-server';
+import { captureCheckoutIssue } from '@/lib/observability/checkout';
+import { logger } from '@/lib/utils/logger';
 import {
     canAccessCheckoutParams,
     canRequestCheckoutParamsForReservation,
@@ -58,7 +60,16 @@ export async function POST(request: Request) {
             .gt('expires_at', new Date().toISOString());
 
         if (reservationError) {
-            console.error('[checkout-params] Error verificando reserva de stock:', reservationError);
+            logger.error('[checkout-params] Error verificando reserva de stock', reservationError, {
+                orderId,
+            });
+            captureCheckoutIssue({
+                area: 'checkout_params',
+                name: 'reservation_lookup_failed',
+                route: '/api/payments/checkout-params',
+                orderId,
+                metadata: { reservationError },
+            }, reservationError);
             return NextResponse.json(
                 { error: 'No pudimos verificar la reserva de inventario' },
                 { status: 500 }
@@ -73,7 +84,21 @@ export async function POST(request: Request) {
         }
 
         if (!WOMPI_PUBLIC_KEY || !WOMPI_INTEGRITY_SECRET) {
-            console.error('[checkout-params] Variables de Wompi no configuradas');
+            logger.error('[checkout-params] Variables de Wompi no configuradas', {
+                hasPublicKey: !!WOMPI_PUBLIC_KEY,
+                hasIntegritySecret: !!WOMPI_INTEGRITY_SECRET,
+            });
+            captureCheckoutIssue({
+                area: 'checkout_params',
+                name: 'wompi_checkout_config_missing',
+                level: 'fatal',
+                route: '/api/payments/checkout-params',
+                orderId,
+                metadata: {
+                    hasPublicKey: !!WOMPI_PUBLIC_KEY,
+                    hasIntegritySecret: !!WOMPI_INTEGRITY_SECRET,
+                },
+            });
             return NextResponse.json({ error: 'Configuracion de pago incompleta' }, { status: 500 });
         }
 
@@ -94,7 +119,12 @@ export async function POST(request: Request) {
         });
 
     } catch (error) {
-        console.error('[checkout-params] Error inesperado:', error);
+        logger.error('[checkout-params] Error inesperado', error);
+        captureCheckoutIssue({
+            area: 'checkout_params',
+            name: 'checkout_params_unhandled_exception',
+            route: '/api/payments/checkout-params',
+        }, error);
         return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
     }
 }

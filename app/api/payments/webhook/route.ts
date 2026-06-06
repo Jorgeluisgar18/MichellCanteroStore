@@ -10,6 +10,7 @@ import {
     validateWompiTransactionAgainstOrder,
 } from '@/lib/payments/webhook-safety';
 import { supabaseAdmin } from '@/lib/supabase';
+import { captureCheckoutIssue } from '@/lib/observability/checkout';
 
 function getNestedValue(source: unknown, path: string): unknown {
     let current: unknown = source;
@@ -137,6 +138,16 @@ export async function POST(request: Request) {
 
         if (orderError || !order) {
             logger.error('Order not found for webhook', orderError, { reference });
+            captureCheckoutIssue({
+                area: 'wompi_webhook',
+                name: 'webhook_order_not_found',
+                level: 'warning',
+                route: '/api/payments/webhook',
+                orderNumber: reference,
+                transactionId: wompiTransactionId,
+                status,
+                metadata: { orderError },
+            }, orderError);
             return NextResponse.json({ error: 'Orden no encontrada' }, { status: 404 });
         }
 
@@ -153,6 +164,17 @@ export async function POST(request: Request) {
                 orderId: order.id,
                 reference,
                 transactionId: wompiTransactionId,
+                reason: transactionValidationFailure,
+            });
+            captureCheckoutIssue({
+                area: 'wompi_webhook',
+                name: 'webhook_transaction_order_mismatch',
+                level: 'warning',
+                route: '/api/payments/webhook',
+                orderId: order.id,
+                orderNumber: order.order_number,
+                transactionId: wompiTransactionId,
+                status,
                 reason: transactionValidationFailure,
             });
             return NextResponse.json({ error: 'La transaccion no coincide con la orden' }, { status: 400 });
@@ -184,6 +206,20 @@ export async function POST(request: Request) {
                 status,
                 transactionId: wompiTransactionId,
                 reason: terminalConflict,
+            });
+            captureCheckoutIssue({
+                area: 'wompi_webhook',
+                name: 'webhook_terminal_transaction_conflict',
+                route: '/api/payments/webhook',
+                orderId: order.id,
+                orderNumber: order.order_number,
+                transactionId: wompiTransactionId,
+                status,
+                paymentStatus: order.payment_status,
+                reason: terminalConflict,
+                metadata: {
+                    currentTransactionId: order.wompi_transaction_id,
+                },
             });
             return NextResponse.json({ error: 'Conflicto de transaccion terminal' }, { status: 409 });
         }
@@ -224,6 +260,17 @@ export async function POST(request: Request) {
                         stockFailure,
                         confirmResult
                     });
+                    captureCheckoutIssue({
+                        area: 'stock',
+                        name: 'stock_confirmation_blocked_paid_order',
+                        route: '/api/payments/webhook',
+                        orderId: order.id,
+                        orderNumber: order.order_number,
+                        transactionId: wompiTransactionId,
+                        status,
+                        reason: stockFailure,
+                        metadata: { confirmResult, confirmError },
+                    }, confirmError);
                     return NextResponse.json(
                         { error: 'No se pudo confirmar el inventario de la orden' },
                         { status: 409 }
@@ -236,6 +283,15 @@ export async function POST(request: Request) {
                 }
             } catch (stockCatchError) {
                 logger.error('Error in stock reservation confirmation', stockCatchError as Error);
+                captureCheckoutIssue({
+                    area: 'stock',
+                    name: 'stock_confirmation_exception',
+                    route: '/api/payments/webhook',
+                    orderId: order.id,
+                    orderNumber: order.order_number,
+                    transactionId: wompiTransactionId,
+                    status,
+                }, stockCatchError);
                 return NextResponse.json(
                     { error: 'No se pudo confirmar el inventario de la orden' },
                     { status: 500 }
@@ -256,6 +312,16 @@ export async function POST(request: Request) {
                 }
             } catch (emailError) {
                 logger.error('Error sending email notifications', emailError as Error);
+                captureCheckoutIssue({
+                    area: 'checkout',
+                    name: 'order_email_notification_failed',
+                    level: 'warning',
+                    route: '/api/payments/webhook',
+                    orderId: order.id,
+                    orderNumber: order.order_number,
+                    transactionId: wompiTransactionId,
+                    status,
+                }, emailError);
             }
         } else {
             // ✅ SECURITY: Release stock reservation on payment failure
@@ -269,6 +335,16 @@ export async function POST(request: Request) {
                     logger.error('Error releasing stock reservation', releaseError, {
                         orderId: order.id
                     });
+                    captureCheckoutIssue({
+                        area: 'stock',
+                        name: 'stock_release_failed_after_payment_failure',
+                        route: '/api/payments/webhook',
+                        orderId: order.id,
+                        orderNumber: order.order_number,
+                        transactionId: wompiTransactionId,
+                        status,
+                        metadata: { releaseError },
+                    }, releaseError);
                 } else {
                     logger.info('Stock reservation released', {
                         orderId: order.id,
@@ -277,6 +353,15 @@ export async function POST(request: Request) {
                 }
             } catch (releaseError) {
                 logger.error('Error in stock reservation release', releaseError as Error);
+                captureCheckoutIssue({
+                    area: 'stock',
+                    name: 'stock_release_exception_after_payment_failure',
+                    route: '/api/payments/webhook',
+                    orderId: order.id,
+                    orderNumber: order.order_number,
+                    transactionId: wompiTransactionId,
+                    status,
+                }, releaseError);
             }
         }
 
@@ -294,6 +379,17 @@ export async function POST(request: Request) {
 
         if (updateError) {
             logger.error('Error updating order', updateError);
+            captureCheckoutIssue({
+                area: 'wompi_webhook',
+                name: 'webhook_order_update_failed',
+                route: '/api/payments/webhook',
+                orderId: order.id,
+                orderNumber: order.order_number,
+                transactionId: wompiTransactionId,
+                status,
+                paymentStatus,
+                metadata: { updateError },
+            }, updateError);
             return NextResponse.json({ error: 'Error al actualizar orden' }, { status: 500 });
         }
 
@@ -306,6 +402,11 @@ export async function POST(request: Request) {
     } catch (error) {
         const { logger } = await import('@/lib/utils/logger');
         logger.error('Webhook processing error', error as Error);
+        captureCheckoutIssue({
+            area: 'wompi_webhook',
+            name: 'webhook_unhandled_exception',
+            route: '/api/payments/webhook',
+        }, error);
         return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
     }
 }

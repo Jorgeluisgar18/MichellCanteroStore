@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { captureCheckoutIssue } from '@/lib/observability/checkout';
+import { logger } from '@/lib/utils/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,7 +65,12 @@ export async function GET(request: Request) {
             },
         });
     } catch (error) {
-        console.error('Health check error:', error);
+        logger.error('Health check error', error);
+        captureCheckoutIssue({
+            area: 'health',
+            name: 'health_check_unhandled_exception',
+            route: '/api/health',
+        }, error);
 
         return NextResponse.json({
             status: 'unhealthy',
