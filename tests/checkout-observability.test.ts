@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 
 import {
     getCheckoutIssueFingerprint,
-    sanitizeObservabilityContext,
 } from '../lib/observability/checkout';
+import { sanitizeObservabilityContext } from '../lib/observability/sanitize';
 
 describe('checkout observability helpers', () => {
     it('redacts sensitive customer and credential fields recursively', () => {

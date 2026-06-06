@@ -2,20 +2,28 @@
 // https://nextjs.org/docs/app/api-reference/file-conventions/instrumentation-client
 
 import * as Sentry from '@sentry/nextjs';
+import {
+    getSentryEnvironment,
+    getSentryRelease,
+    getSentryReplayOnErrorSampleRate,
+    getSentryReplaySessionSampleRate,
+    getSentryTracesSampleRate,
+    scrubSentryEvent,
+} from '@/lib/observability/sentry';
 
 export async function register() {
     // Client-side Sentry initialization (moved from sentry.client.config.ts)
     Sentry.init({
         dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+        environment: getSentryEnvironment(),
+        release: getSentryRelease(),
         integrations: [
             Sentry.replayIntegration(),
         ],
-        // Session Replay
-        replaysSessionSampleRate: 0.1,
-        replaysOnErrorSampleRate: 1.0,
-        // Performance Monitoring
-        tracesSampleRate: 1.0,
-        // Debug mode
+        replaysSessionSampleRate: getSentryReplaySessionSampleRate(),
+        replaysOnErrorSampleRate: getSentryReplayOnErrorSampleRate(),
+        tracesSampleRate: getSentryTracesSampleRate(),
+        beforeSend: scrubSentryEvent,
         debug: false,
     });
 }

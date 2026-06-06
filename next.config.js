@@ -114,8 +114,8 @@ const sentryWebpackPluginOptions = {
 
     // Suppresses source map uploading logs during bundling
     silent: true,
-    org: "michell-cantero-store",
-    project: "javascript-nextjs",
+    org: process.env.SENTRY_ORG || "michell-cantero-store",
+    project: process.env.SENTRY_PROJECT || "javascript-nextjs",
 };
 
 const sentryOptions = {
