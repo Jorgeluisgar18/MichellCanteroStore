@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
 import { supabaseAdmin } from '@/lib/supabase';
 import { createClient } from '@/lib/supabase-server';
 import { captureCheckoutIssue } from '@/lib/observability/checkout';
@@ -8,6 +7,7 @@ import {
     canAccessCheckoutParams,
     canRequestCheckoutParamsForReservation,
 } from '@/lib/checkout/safety';
+import { buildWompiCheckoutParams } from '@/lib/payments/checkout-params';
 
 const WOMPI_PUBLIC_KEY = process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY;
 const WOMPI_INTEGRITY_SECRET = process.env.WOMPI_INTEGRITY_SECRET;
@@ -102,20 +102,18 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Configuracion de pago incompleta' }, { status: 500 });
         }
 
-        const amountInCents = Math.round(order.total * 100);
-        const concatenation = `${order.order_number}${amountInCents}COP${WOMPI_INTEGRITY_SECRET}`;
-        const signature = crypto.createHash('sha256').update(concatenation).digest('hex');
+        const checkoutParams = buildWompiCheckoutParams({
+            publicKey: WOMPI_PUBLIC_KEY,
+            integritySecret: WOMPI_INTEGRITY_SECRET,
+            siteUrl: SITE_URL,
+            orderId,
+            orderNumber: order.order_number,
+            orderTotal: Number(order.total),
+            customerEmail: email,
+        });
 
         return NextResponse.json({
-            data: {
-                publicKey: WOMPI_PUBLIC_KEY,
-                currency: 'COP',
-                amountInCents,
-                reference: order.order_number,
-                signature,
-                redirectUrl: `${SITE_URL}/checkout/confirmacion?orderId=${orderId}`,
-                customerEmail: email,
-            }
+            data: checkoutParams
         });
 
     } catch (error) {
