@@ -21,6 +21,7 @@ import {
     getProductProfile,
     normalizeVariant,
 } from '@/lib/product-variants';
+import { getCatalogCategories, getCatalogSubcategories, validateProductTaxonomy } from '@/lib/catalog/taxonomy';
 import Image from 'next/image';
 
 interface Variant {
@@ -38,6 +39,7 @@ interface Variant {
 }
 
 const EMPTY_VARIANT_NAME_SENTINEL = 'Sin nombre';
+const CATALOG_CATEGORIES = getCatalogCategories();
 
 function preserveDraftVariantText(normalizedVariant: Variant, draftVariant: Variant, profile: ReturnType<typeof getProductProfile>): Variant {
     if (profile === 'apparel') {
@@ -132,6 +134,7 @@ export default function ProductFormPage() {
     });
     const { showToast } = useToast();
     const productProfile = getProductProfile(formData.category, formData.subcategory);
+    const subcategoryOptions = getCatalogSubcategories(formData.category);
 
     useEffect(() => {
         if (isEditing) {
@@ -142,7 +145,10 @@ export default function ProductFormPage() {
 
     useEffect(() => {
         setFormData((prev) => {
-            const nextSubcategory = prev.category === 'maquillaje' ? prev.subcategory : '';
+            const validSubcategories = getCatalogSubcategories(prev.category);
+            const nextSubcategory = validSubcategories.some((item) => item.slug === prev.subcategory)
+                ? prev.subcategory
+                : '';
             const nextVariants = prev.variants.map((variant) => normalizeVariant(variant, productProfile));
 
             const subcategoryChanged = nextSubcategory !== prev.subcategory;
@@ -357,6 +363,20 @@ export default function ProductFormPage() {
             payload.compare_at_price = payload.compare_at_price ? parseFloat(String(payload.compare_at_price)) : null;
             payload.stock_quantity = parseInt(String(payload.stock_quantity)) || 0;
 
+            const taxonomy = validateProductTaxonomy({
+                category: payload.category,
+                subcategory: payload.subcategory,
+            });
+
+            if (!taxonomy.valid) {
+                showToast(taxonomy.error || 'Categoria o subcategoria invalida.', 'error');
+                setIsSaving(false);
+                return;
+            }
+
+            payload.category = taxonomy.category;
+            payload.subcategory = taxonomy.subcategory;
+
             // Limpiar variantes para asegurar que tengan el formato correcto
             if (payload.variants && Array.isArray(payload.variants)) {
                 const normalizedVariants = payload.variants.map((v: unknown) => {
@@ -459,51 +479,32 @@ export default function ProductFormPage() {
                                             className="w-full px-4 py-2 bg-white border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all"
                                         >
                                             <option value="">Seleccionar...</option>
-                                            <option value="maquillaje">Maquillaje</option>
-                                            <option value="ropa">Ropa</option>
-                                            <option value="accesorios">Accesorios</option>
-                                            <option value="corporal">Corporal</option>
-                                            <option value="skincare">Skincare</option>
+                                            {CATALOG_CATEGORIES.map((category) => (
+                                                <option key={category.slug} value={category.slug}>
+                                                    {category.name}
+                                                </option>
+                                            ))}
                                         </select>
                                     </div>
                                 </div>
 
-                                {/* Subcategory dropdown - only show for makeup */}
-                                {formData.category === 'maquillaje' && (
+                                {subcategoryOptions.length > 0 && (
                                     <div className="space-y-1">
                                         <label className="text-sm font-medium text-neutral-700">
-                                            Subcategoría de Maquillaje <span className="text-red-500">*</span>
+                                            Subcategoría
                                         </label>
                                         <select
                                             name="subcategory"
                                             value={formData.subcategory}
                                             onChange={handleChange}
-                                            required
                                             className="w-full px-4 py-2 bg-white border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all"
                                         >
-                                            <option value="">Seleccionar tipo de maquillaje...</option>
-                                            <optgroup label="Rostro">
-                                                <option value="rubores">Rubores</option>
-                                                <option value="brochas">Brochas</option>
-                                                <option value="piel">Piel</option>
-                                                <option value="polvos">Polvos</option>
-                                                <option value="contornos">Contornos</option>
-                                                <option value="bases">Bases</option>
-                                                <option value="correctores">Correctores</option>
-                                                <option value="fijadores">Fijadores</option>
-                                                <option value="iluminadores">Iluminadores</option>
-                                            </optgroup>
-                                            <optgroup label="Ojos">
-                                                <option value="lapiz-de-ojos">Lápiz de Ojos</option>
-                                                <option value="delineadores">Delineadores</option>
-                                                <option value="paletas-de-sombras">Paletas de Sombras</option>
-                                                <option value="pestanas-y-pestaninas">Pestañas y Pestañinas</option>
-                                                <option value="pigmentos">Pigmentos</option>
-                                            </optgroup>
-                                            <optgroup label="Labios y Cejas">
-                                                <option value="labios">Labios</option>
-                                                <option value="cejas">Cejas</option>
-                                            </optgroup>
+                                            <option value="">Sin subcategoría</option>
+                                            {subcategoryOptions.map((subcategory) => (
+                                                <option key={subcategory.slug} value={subcategory.slug}>
+                                                    {subcategory.name}
+                                                </option>
+                                            ))}
                                         </select>
                                     </div>
                                 )}

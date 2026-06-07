@@ -54,6 +54,7 @@ describe('repository safety rules', () => {
             '20260603032533_harden_stock_confirmation.sql',
             '20260604055222_harden_expired_stock_confirmation.sql',
             '20260604061830_consolidate_orders_rls_policies.sql',
+            '20260607003644_enforce_product_taxonomy.sql',
         ];
 
         const actual = readdirSync(join(process.cwd(), 'supabase', 'migrations'))
@@ -153,6 +154,26 @@ describe('repository safety rules', () => {
         assert.doesNotMatch(sql, /CREATE\s+POLICY[\s\S]+FOR\s+INSERT/i);
         assert.match(sql, /orders_select_own_or_admin/);
         assert.match(sql, /order_items_select_own_or_admin/);
+    });
+
+    it('keeps product category storage aligned with storefront taxonomy', () => {
+        const migration = readFileSync(
+            join(process.cwd(), 'supabase', 'migrations', '20260607003644_enforce_product_taxonomy.sql'),
+            'utf8'
+        );
+        const header = readFileSync(join(process.cwd(), 'components', 'layout', 'Header.tsx'), 'utf8');
+        const adminForm = readFileSync(join(process.cwd(), 'app', 'admin', 'productos', 'nuevo', 'page.tsx'), 'utf8');
+        const productsRoute = readFileSync(join(process.cwd(), 'app', 'api', 'products', 'route.ts'), 'utf8');
+        const productRoute = readFileSync(join(process.cwd(), 'app', 'api', 'products', '[id]', 'route.ts'), 'utf8');
+
+        assert.match(migration, /products_category_public_taxonomy_check/);
+        assert.match(migration, /'skincare'/);
+        assert.match(migration, /category\s+in\s+\('maquillaje',\s+'accesorios',\s+'ropa',\s+'corporal',\s+'skincare'\)/i);
+        assert.match(header, /getCatalogCategories/);
+        assert.match(adminForm, /getCatalogCategories/);
+        assert.match(adminForm, /validateProductTaxonomy/);
+        assert.match(productsRoute, /validateProductTaxonomy/);
+        assert.match(productRoute, /validateProductTaxonomy/);
     });
 
     it('declares sizes for optimized fill images', () => {

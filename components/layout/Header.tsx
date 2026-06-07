@@ -10,6 +10,7 @@ import { useWishlistStore } from '@/store/wishlistStore';
 import Logo from '@/components/common/Logo';
 import ProductImage from '@/components/product/ProductImage';
 import { usePageContent } from '@/lib/hooks/usePageContent';
+import { getCatalogCategories } from '@/lib/catalog/taxonomy';
 
 
 
@@ -126,12 +127,10 @@ const Header: React.FC = () => {
         setShowSuggestions(false);
     };
 
-    const categories = [
-        { name: 'Maquillaje', href: '/tienda/maquillaje' },
-        { name: 'Accesorios', href: '/tienda/accesorios' },
-        { name: 'Ropa', href: '/tienda/ropa' },
-        { name: 'Corporal', href: '/tienda/corporal' },
-    ];
+    const categories = getCatalogCategories().map((category) => ({
+        name: category.name,
+        href: `/tienda/${category.slug}`,
+    }));
 
     const isHome = pathname === '/';
     const isCompact = (!isHome || isScrolled) && !isPointerNearTop && !isHeaderHovered && !isSearchOpen && !isMobileMenuOpen;

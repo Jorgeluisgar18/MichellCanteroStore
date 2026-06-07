@@ -37,6 +37,12 @@ const CATEGORY_THEMES: Record<string, { from: string; to: string; badge: string;
         badge: 'bg-emerald-900/40 text-emerald-200 border-emerald-700/40',
         dot: 'bg-emerald-400',
     },
+    skincare: {
+        from: 'from-[#1f2a24]',
+        to: 'to-[#5a6652]',
+        badge: 'bg-lime-900/40 text-lime-100 border-lime-700/40',
+        dot: 'bg-lime-300',
+    },
 };
 
 const DEFAULT_THEME: { from: string; to: string; badge: string; dot: string } = {
@@ -56,6 +62,8 @@ function getCategoryTheme(categorySlug: string): { from: string; to: string; bad
             return CATEGORY_THEMES.maquillaje!;
         case 'corporal':
             return CATEGORY_THEMES.corporal!;
+        case 'skincare':
+            return CATEGORY_THEMES.skincare!;
         default:
             return DEFAULT_THEME;
     }

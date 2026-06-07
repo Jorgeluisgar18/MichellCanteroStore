@@ -198,6 +198,11 @@
                 "id": "brochas",
                 "name": "Brochas",
                 "slug": "brochas"
+            },
+            {
+                "id": "pestanas-y-pestaninas",
+                "name": "PestaÃ±as y PestaÃ±inas",
+                "slug": "pestanas-y-pestaninas"
             }
         ]
     },
@@ -229,5 +234,32 @@
         "image": "https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=800",
         "productCount": 0,
         "subcategories": []
+    },
+    {
+        "id": "skincare",
+        "name": "Skin Care",
+        "slug": "skincare",
+        "description": "Rutinas de cuidado facial, hidratantes, limpiadores y tratamientos para una piel sana, luminosa y equilibrada.",
+        "image": "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=800",
+        "productCount": 0,
+        "subcategories": [
+            {
+                "id": "piel",
+                "name": "Piel",
+                "slug": "piel",
+                "keywords": [
+                    "piel",
+                    "skin",
+                    "serum",
+                    "suero",
+                    "crema",
+                    "hidratante",
+                    "limpiador",
+                    "tonico",
+                    "tÃ³nico",
+                    "protector solar"
+                ]
+            }
+        ]
     }
 ]

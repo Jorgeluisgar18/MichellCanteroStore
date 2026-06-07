@@ -12,11 +12,11 @@ import Footer from '@/components/layout/Footer';
 import HeroCarousel from '@/components/ui/HeroCarousel';
 import BrandsMarquee, { Brand, DEFAULT_BRANDS } from '@/components/ui/BrandsMarquee';
 import ScrollReveal from '@/components/ui/ScrollReveal';
-import categoriesData from '@/data/categories.json';
 import type { Product, Category, PageContent } from '@/types';
 import { usePageContent } from '@/lib/hooks/usePageContent';
+import { getCatalogCategories } from '@/lib/catalog/taxonomy';
 
-const categories = categoriesData as Category[];
+const categories = getCatalogCategories() as Category[];
 
 interface HomeClientProps {
     initialHomeContent: PageContent[];
@@ -191,13 +191,15 @@ export default function HomeClient({
                         </ScrollReveal>
 
                         {/* Asymmetric Category Grid */}
-                        <div className="grid md:grid-cols-12 md:grid-rows-2 gap-4 md:gap-6 h-auto md:h-[700px]">
-                            {categories.slice(0, 4).map((category, i) => {
+                        <div className="grid md:grid-cols-12 md:auto-rows-[340px] gap-4 md:gap-6 h-auto">
+                            {categories.map((category, i) => {
                                 const gridClass = i === 0
-                                    ? "md:col-span-8 md:row-span-2 h-[450px] md:h-full"
+                                    ? "md:col-span-7 md:row-span-2 h-[450px] md:h-full"
                                     : i === 1
-                                        ? "md:col-span-4 md:row-span-1 h-[250px] md:h-full"
-                                        : "md:col-span-2 md:row-span-1 h-[250px] md:h-full";
+                                        ? "md:col-span-5 md:row-span-1 h-[250px] md:h-full"
+                                        : i === 2
+                                            ? "md:col-span-5 md:row-span-1 h-[250px] md:h-full"
+                                            : "md:col-span-6 md:row-span-1 h-[250px] md:h-full";
 
                                 return (
                                     <ScrollReveal
@@ -214,10 +216,10 @@ export default function HomeClient({
                                                 priority={i === 0}
                                                 sizes={
                                                     i === 0
-                                                        ? '(max-width: 768px) 100vw, 66vw'
-                                                        : i === 1
-                                                            ? '(max-width: 768px) 100vw, 33vw'
-                                                            : '(max-width: 768px) 100vw, 17vw'
+                                                        ? '(max-width: 768px) 100vw, 58vw'
+                                                        : i === 1 || i === 2
+                                                            ? '(max-width: 768px) 100vw, 42vw'
+                                                            : '(max-width: 768px) 100vw, 50vw'
                                                 }
                                             />
 

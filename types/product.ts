@@ -48,6 +48,7 @@ export interface Subcategory {
     id: string;
     name: string;
     slug: string;
+    keywords?: string[];
 }
 
 export interface ProductFilters {

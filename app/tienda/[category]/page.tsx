@@ -2,9 +2,9 @@ import { Suspense } from 'react';
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import categoriesData from '@/data/categories.json';
 import CategoryClient from './CategoryClient';
-import type { Category, Product } from '@/types';
+import type { Product } from '@/types';
+import { getCatalogCategory } from '@/lib/catalog/taxonomy';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +15,7 @@ interface PageProps {
 
 export async function generateMetadata({ params }: { params: Promise<{ category: string }> }): Promise<Metadata> {
     const { category: slug } = await params;
-    const category = (categoriesData as Category[]).find(c => c.slug === slug);
+    const category = getCatalogCategory(slug);
     
     if (!category) return { title: 'Categoría no encontrada' };
 
@@ -47,20 +47,20 @@ async function getProducts(category: string) {
 
 export default async function CategoryPage({ params }: Omit<PageProps, 'searchParams'>) {
     const { category: categorySlug } = await params;
-    const category = (categoriesData as Category[]).find(c => c.slug === categorySlug);
+    const category = getCatalogCategory(categorySlug);
 
     if (!category) {
         notFound();
     }
 
-    const initialProducts = await getProducts(categorySlug);
+    const initialProducts = await getProducts(category.slug);
 
     return (
         <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Cargando...</div>}>
             <CategoryClient 
                 category={category} 
                 initialProducts={initialProducts} 
-                categorySlug={categorySlug} 
+                categorySlug={category.slug}
             />
         </Suspense>
     );

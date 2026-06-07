@@ -8,6 +8,7 @@ import {
     serializeVariantsForStorage,
     type ProductVariantDraft,
 } from '@/lib/product-variants';
+import { normalizeCategorySlug, validateProductTaxonomy } from '@/lib/catalog/taxonomy';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,7 +65,7 @@ export async function GET(request: Request) {
             .order('created_at', { ascending: false });
 
         if (slug) query = query.eq('slug', slug);
-        if (category) query = query.eq('category', category);
+        if (category) query = query.eq('category', normalizeCategorySlug(category));
         if (featured === 'true') query = query.eq('featured', true);
         if (isNew === 'true') query = query.eq('is_new', true);
         if (inStock === 'true') query = query.eq('in_stock', true);
@@ -143,12 +144,17 @@ export async function POST(request: Request) {
             return ApiResponse.badRequest('Faltan campos requeridos: name, price, category');
         }
 
+        const taxonomy = validateProductTaxonomy({ category, subcategory });
+        if (!taxonomy.valid) {
+            return ApiResponse.badRequest(taxonomy.error || 'Categoria o subcategoria invalida');
+        }
+
         const productData: Record<string, string | number | boolean | string[] | ReturnType<typeof serializeVariantsForStorage> | null> = {
             name,
             description: description || '',
             price: parseFloat(String(price)),
-            category,
-            subcategory: subcategory || null,
+            category: taxonomy.category!,
+            subcategory: taxonomy.subcategory ?? null,
             images: Array.isArray(images) ? images : [],
             stock_quantity: parseInt(String(stock_quantity)) || 0,
             featured: featured === true,
@@ -164,7 +170,7 @@ export async function POST(request: Request) {
         }
 
         if (variants && Array.isArray(variants) && variants.length > 0) {
-            const profile = getProductProfile(String(category), String(subcategory || ''));
+            const profile = getProductProfile(taxonomy.category!, taxonomy.subcategory ?? '');
             const serializedVariants = serializeVariantsForStorage(variants as ProductVariantDraft[], profile);
             const inventory = getInventoryFromVariants(serializedVariants);
 
@@ -189,9 +195,7 @@ export async function POST(request: Request) {
         // Invalidate Next.js cache so new product appears immediately on the frontend
         revalidatePath('/');
         revalidatePath('/tienda');
-        if (category) {
-            revalidatePath(`/tienda/${category}`);
-        }
+        revalidatePath(`/tienda/${taxonomy.category}`);
 
         return ApiResponse.success(data);
     } catch (error) {

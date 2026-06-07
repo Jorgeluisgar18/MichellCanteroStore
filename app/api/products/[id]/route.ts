@@ -7,6 +7,7 @@ import {
     serializeVariantsForStorage,
     type ProductVariantDraft,
 } from '@/lib/product-variants';
+import { validateProductTaxonomy } from '@/lib/catalog/taxonomy';
 
 export const dynamic = 'force-dynamic';
 
@@ -103,8 +104,39 @@ export async function PUT(
         if (name !== undefined) productData.name = name;
         if (description !== undefined) productData.description = description;
         if (price !== undefined) productData.price = parseFloat(String(price));
-        if (category !== undefined) productData.category = category;
-        if (subcategory !== undefined) productData.subcategory = subcategory || null;
+        if (category !== undefined || subcategory !== undefined) {
+            const { data: existingProduct, error: existingProductError } = await supabaseAdmin
+                .from('products')
+                .select('category, subcategory')
+                .eq('id', params.id)
+                .single();
+
+            if (existingProductError) {
+                console.error('Error fetching current product taxonomy:', existingProductError);
+                return NextResponse.json(
+                    { error: 'No se pudo obtener la categoria actual del producto' },
+                    { status: 500 }
+                );
+            }
+
+            existingProductCategory = existingProduct.category;
+            existingProductSubcategory = existingProduct.subcategory;
+
+            const taxonomy = validateProductTaxonomy({
+                category: category !== undefined ? category : existingProductCategory,
+                subcategory: subcategory !== undefined ? subcategory : existingProductSubcategory,
+            });
+
+            if (!taxonomy.valid) {
+                return NextResponse.json(
+                    { error: taxonomy.error || 'Categoria o subcategoria invalida' },
+                    { status: 400 }
+                );
+            }
+
+            productData.category = taxonomy.category!;
+            productData.subcategory = taxonomy.subcategory ?? null;
+        }
         if (images !== undefined) productData.images = Array.isArray(images) ? images : [];
         if (stock_quantity !== undefined) productData.stock_quantity = parseInt(String(stock_quantity)) || 0;
         if (featured !== undefined) productData.featured = featured === true;
@@ -122,7 +154,7 @@ export async function PUT(
         // Validar y agregar variantes si existen
         if (variants !== undefined) {
             if (Array.isArray(variants) && variants.length > 0) {
-                if (category === undefined || subcategory === undefined) {
+                if (existingProductCategory === null && existingProductSubcategory === null) {
                     const { data: existingProduct, error: existingProductError } = await supabaseAdmin
                         .from('products')
                         .select('category, subcategory')
@@ -141,12 +173,8 @@ export async function PUT(
                     existingProductSubcategory = existingProduct.subcategory;
                 }
 
-                const resolvedCategory = category !== undefined
-                    ? String(category)
-                    : String(existingProductCategory || '');
-                const resolvedSubcategory = subcategory !== undefined
-                    ? String(subcategory || '')
-                    : String(existingProductSubcategory || '');
+                const resolvedCategory = String(productData.category ?? existingProductCategory ?? '');
+                const resolvedSubcategory = String(productData.subcategory ?? existingProductSubcategory ?? '');
                 const profile = getProductProfile(resolvedCategory, resolvedSubcategory);
                 const serializedVariants = serializeVariantsForStorage(variants as ProductVariantDraft[], profile);
                 const inventory = getInventoryFromVariants(serializedVariants);
