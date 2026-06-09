@@ -68,6 +68,7 @@ import ErrorBoundary from '@/components/common/ErrorBoundary';
 import { ToastProvider } from '@/components/ui/Toast';
 import { ContentProvider } from '@/lib/contexts/ContentContext';
 import { getPageContent } from '@/lib/cms';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 export default async function RootLayout({
     children,
@@ -88,6 +89,7 @@ export default async function RootLayout({
                         </ErrorBoundary>
                     </ToastProvider>
                 </ContentProvider>
+                <SpeedInsights />
             </body>
         </html>
     );
