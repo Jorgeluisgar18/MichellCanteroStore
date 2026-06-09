@@ -162,12 +162,40 @@ export default function CheckoutClient() {
                 }
             });
 
-            checkout.open((result: { transaction: { status: string } }) => {
+            checkout.open(async (result: { transaction: { id?: string; status: string } }) => {
                 const transaction = result.transaction;
                 if (transaction.status === 'APPROVED') {
                     setPaymentApproved(true);
-                    clearCart();
-                    router.push(`/checkout/confirmacion?orderId=${order.id}&status=success`);
+                    try {
+                        if (!transaction.id) {
+                            throw new Error('Wompi no devolvio el identificador de la transaccion aprobada');
+                        }
+
+                        const reconcileResponse = await fetchWithCsrf('/api/payments/reconcile', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                orderId: order.id,
+                                email: formData.email,
+                                transactionId: transaction.id,
+                            }),
+                        });
+
+                        if (!reconcileResponse.ok) {
+                            const reconcilePayload = await reconcileResponse.json().catch(() => null);
+                            throw new Error(reconcilePayload?.error || 'No pudimos confirmar automaticamente el pago aprobado');
+                        }
+
+                        clearCart();
+                        router.push(`/checkout/confirmacion?orderId=${order.id}&status=success`);
+                        return;
+                    } catch (reconcileError) {
+                        console.error('Payment reconciliation error:', reconcileError);
+                        clearCart();
+                        router.push(`/checkout/confirmacion?orderId=${order.id}&status=manual_review`);
+                        return;
+                    }
+
                 } else {
                     // El webhook se encargará de actualizar el estado, 
                     // pero podemos redirigir al usuario

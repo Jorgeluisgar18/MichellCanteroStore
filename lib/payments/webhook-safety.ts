@@ -18,6 +18,15 @@ export interface WompiTransactionValidationInput {
     transactionCurrency: string | null | undefined;
 }
 
+export interface WompiReconciliationTransaction {
+    id: string;
+    reference?: string | null;
+    status?: string | null;
+    amount_in_cents?: number | null;
+    amountInCents?: number | null;
+    currency?: string | null;
+}
+
 export interface TerminalTransactionInput {
     wompiStatus: string;
     currentPaymentStatus: PaymentStatus;
@@ -132,6 +141,31 @@ export function validateWompiTransactionAgainstOrder(input: WompiTransactionVali
     }
 
     return null;
+}
+
+export function getSuccessfulWompiReconciliationTransaction(input: {
+    orderNumber: string;
+    orderTotal: number;
+    transactions: WompiReconciliationTransaction[];
+}): WompiReconciliationTransaction | null {
+    return input.transactions.find((transaction) => {
+        if (transaction.status !== 'APPROVED') {
+            return false;
+        }
+
+        const amountInCents =
+            typeof transaction.amount_in_cents === 'number'
+                ? transaction.amount_in_cents
+                : transaction.amountInCents;
+
+        return validateWompiTransactionAgainstOrder({
+            orderNumber: input.orderNumber,
+            orderTotal: input.orderTotal,
+            transactionReference: transaction.reference,
+            transactionAmountInCents: amountInCents,
+            transactionCurrency: transaction.currency,
+        }) === null;
+    }) ?? null;
 }
 
 export function isValidWompiSignatureShape(signature: unknown): signature is {

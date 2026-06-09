@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import {
     formatWebhookTimestampForLog,
     getPaymentStatusForWompiStatus,
+    getSuccessfulWompiReconciliationTransaction,
     getStockConfirmationFailure,
     getTerminalTransactionConflict,
     isValidWompiSignatureShape,
@@ -119,6 +120,57 @@ describe('payment webhook safety helpers', () => {
                 transactionCurrency: 'USD',
             }) ?? '',
             /currency/i
+        );
+    });
+
+    it('selects only approved matching Wompi transactions for checkout reconciliation', () => {
+        const transaction = getSuccessfulWompiReconciliationTransaction({
+            orderNumber: 'MC-20260607-81C17C',
+            orderTotal: 42_000,
+            transactions: [
+                {
+                    id: 'declined-transaction',
+                    reference: 'MC-20260607-81C17C',
+                    status: 'DECLINED',
+                    amount_in_cents: 4_200_000,
+                    currency: 'COP',
+                },
+                {
+                    id: 'approved-wrong-amount',
+                    reference: 'MC-20260607-81C17C',
+                    status: 'APPROVED',
+                    amount_in_cents: 4_100_000,
+                    currency: 'COP',
+                },
+                {
+                    id: 'approved-matching',
+                    reference: 'MC-20260607-81C17C',
+                    status: 'APPROVED',
+                    amount_in_cents: 4_200_000,
+                    currency: 'COP',
+                },
+            ],
+        });
+
+        assert.equal(transaction?.id, 'approved-matching');
+    });
+
+    it('does not reconcile when no Wompi transaction matches the order contract', () => {
+        assert.equal(
+            getSuccessfulWompiReconciliationTransaction({
+                orderNumber: 'MC-20260607-81C17C',
+                orderTotal: 42_000,
+                transactions: [
+                    {
+                        id: 'wrong-reference',
+                        reference: 'OTHER',
+                        status: 'APPROVED',
+                        amount_in_cents: 4_200_000,
+                        currency: 'COP',
+                    },
+                ],
+            }),
+            null
         );
     });
 

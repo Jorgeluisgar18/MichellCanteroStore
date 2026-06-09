@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/nextjs';
 import { sanitizeObservabilityContext } from '@/lib/observability/sanitize';
 
-export type CheckoutIssueArea = 'checkout' | 'checkout_params' | 'wompi_webhook' | 'stock' | 'health';
+export type CheckoutIssueArea = 'checkout' | 'checkout_params' | 'wompi_webhook' | 'wompi_reconciliation' | 'stock' | 'health';
 export type CheckoutIssueLevel = 'warning' | 'error' | 'fatal';
 
 export interface CheckoutIssueContext {

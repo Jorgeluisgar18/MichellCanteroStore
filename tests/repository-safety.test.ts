@@ -134,6 +134,30 @@ describe('repository safety rules', () => {
         assert.match(checkoutParams, /status:\s*409/);
     });
 
+    it('reconciles approved Wompi widget callbacks before sending buyers to success', () => {
+        const checkout = readFileSync(join(process.cwd(), 'app', 'checkout', 'CheckoutClient.tsx'), 'utf8');
+
+        assert.match(checkout, /\/api\/payments\/reconcile/);
+        assert.match(checkout, /transactionId:\s*transaction\.id/);
+        assert.match(checkout, /await\s+fetchWithCsrf\('\/api\/payments\/reconcile'/);
+    });
+
+    it('keeps Wompi reconciliation behind server validation and stock confirmation', () => {
+        const routePath = join(process.cwd(), 'app', 'api', 'payments', 'reconcile', 'route.ts');
+
+        assert.equal(existsSync(routePath), true);
+
+        const route = readFileSync(routePath, 'utf8');
+
+        assert.match(route, /WOMPI_PRIVATE_KEY/);
+        assert.match(route, /getWompiTransactionById/);
+        assert.match(route, /getSuccessfulWompiReconciliationTransaction/);
+        assert.match(route, /canAccessCheckoutParams/);
+        assert.match(route, /confirm_stock_reservation/);
+        assert.match(route, /stock_confirmation_blocked_paid_reconciliation/);
+        assert.match(route, /payment_status:\s*'paid'/);
+    });
+
     it('keeps order writes behind the backend API instead of public Data API grants', () => {
         const migrationsDir = join(process.cwd(), 'supabase', 'migrations');
         const migration = readdirSync(migrationsDir)
