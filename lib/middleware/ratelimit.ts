@@ -62,7 +62,7 @@ function getRateLimiter(config: RateLimitConfig) {
         ratelimiter = new Ratelimit({
             redis: client,
             limiter: Ratelimit.slidingWindow(config.maxRequests, `${config.windowMs} ms`),
-            analytics: true,
+            analytics: false,
             prefix: 'ratelimit',
         });
     }

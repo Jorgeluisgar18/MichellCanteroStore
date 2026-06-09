@@ -164,6 +164,7 @@ describe('repository safety rules', () => {
             cron.path === '/api/cron/audit-pending-payments'
         ));
 
+        assert.ok(vercelConfig.crons.length <= 2, 'Keep Vercel cron usage within the conservative free-plan budget');
         assert.ok(auditCron, 'Expected a pending payment audit cron');
         assert.equal(auditCron.schedule, '0 13 * * *');
 
@@ -178,6 +179,19 @@ describe('repository safety rules', () => {
         assert.match(route, /confirm_stock_reservation/);
         assert.match(route, /stock_confirmation_blocked_pending_payment_audit/);
         assert.match(route, /payment_status:\s*'paid'/);
+    });
+
+    it('keeps third-party observability and rate-limit features within free-plan usage', () => {
+        const nextConfig = readFileSync(join(process.cwd(), 'next.config.js'), 'utf8');
+        const rateLimit = readFileSync(join(process.cwd(), 'lib', 'middleware', 'ratelimit.ts'), 'utf8');
+        const layout = readFileSync(join(process.cwd(), 'app', 'layout.tsx'), 'utf8');
+
+        assert.match(nextConfig, /automaticVercelMonitors:\s*false/);
+        assert.match(rateLimit, /analytics:\s*false/);
+
+        if (layout.includes('SpeedInsights')) {
+            assert.match(layout, /<SpeedInsights\s+sampleRate=\{0\.1\}\s*\/>/);
+        }
     });
 
     it('keeps order writes behind the backend API instead of public Data API grants', () => {

@@ -137,11 +137,12 @@ const sentryOptions = {
     // Automatically tree-shake Sentry logger statements to reduce bundle size
     disableLogger: true,
 
-    // Enables automatic instrumentation of Vercel Cron Monitors.
+    // Keep disabled on the free Sentry plan: the project has 2 Vercel crons and
+    // Sentry Developer includes only 1 cron monitor.
     // See the following for more information:
     // https://docs.sentry.io/product/crons/
     // https://vercel.com/docs/cron-jobs
-    automaticVercelMonitors: true,
+    automaticVercelMonitors: false,
 };
 
 module.exports = withSentryConfig(nextConfig, sentryWebpackPluginOptions, sentryOptions);

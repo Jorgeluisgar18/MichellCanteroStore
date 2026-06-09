@@ -89,7 +89,7 @@ export default async function RootLayout({
                         </ErrorBoundary>
                     </ToastProvider>
                 </ContentProvider>
-                <SpeedInsights />
+                <SpeedInsights sampleRate={0.1} />
             </body>
         </html>
     );
