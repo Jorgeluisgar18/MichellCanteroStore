@@ -6,6 +6,10 @@ interface WompiTransactionResponse {
     data?: WompiReconciliationTransaction | null;
 }
 
+interface WompiTransactionsResponse {
+    data?: WompiReconciliationTransaction[] | null;
+}
+
 export async function getWompiTransactionById(input: {
     transactionId: string;
     privateKey: string;
@@ -30,4 +34,29 @@ export async function getWompiTransactionById(input: {
     const payload = await response.json() as WompiTransactionResponse;
 
     return payload.data ?? null;
+}
+
+export async function getWompiTransactionsByReference(input: {
+    reference: string;
+    privateKey: string;
+}): Promise<WompiReconciliationTransaction[]> {
+    const url = new URL(`${WOMPI_BASE_URL}/transactions`);
+    url.searchParams.set('reference', input.reference);
+
+    const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+            Authorization: `Bearer ${input.privateKey}`,
+            Accept: 'application/json',
+        },
+        cache: 'no-store',
+    });
+
+    if (!response.ok) {
+        throw new Error(`Wompi transaction reference lookup failed with status ${response.status}`);
+    }
+
+    const payload = await response.json() as WompiTransactionsResponse;
+
+    return Array.isArray(payload.data) ? payload.data : [];
 }

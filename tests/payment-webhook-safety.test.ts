@@ -231,3 +231,13 @@ describe('stock confirmation SQL contract', () => {
         assert.match(sql, /SET\s+status\s*=\s*'released'/i);
     });
 });
+
+describe('Wompi API adapter contract', () => {
+    it('supports reference lookup for pending payment audits', () => {
+        const wompiAdapter = readFileSync(join(process.cwd(), 'lib', 'payments', 'wompi.ts'), 'utf8');
+
+        assert.match(wompiAdapter, /getWompiTransactionsByReference/);
+        assert.match(wompiAdapter, /searchParams\.set\('reference'/);
+        assert.match(wompiAdapter, /new URL\(`\$\{WOMPI_BASE_URL\}\/transactions`\)/);
+    });
+});
