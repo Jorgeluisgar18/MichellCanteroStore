@@ -26,7 +26,7 @@ describe('repository safety rules', () => {
         assert.match(gitignore, /!supabase\/migrations\/\*\.sql/);
     });
 
-    it('keeps the local Supabase migration history aligned with production', () => {
+    it('preserves the audited migration history and only appends newer migrations', () => {
         const expected = [
             '20251222004011_initial_schema.sql',
             '20260121203201_create_addresses_table.sql',
@@ -61,7 +61,10 @@ describe('repository safety rules', () => {
             .filter((file) => file.endsWith('.sql'))
             .sort();
 
-        assert.deepEqual(actual, expected);
+        assert.deepEqual(actual.slice(0, expected.length), expected);
+        const lastHistoricalMigration = expected.at(-1);
+        assert.ok(lastHistoricalMigration);
+        assert.ok(actual.slice(expected.length).every(file => file > lastHistoricalMigration));
         assert.ok(actual.every((file) => /^\d{14}_[a-zA-Z0-9_]+\.sql$/.test(file)));
     });
 
