@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Script from 'next/script';
 import Header from '@/components/layout/Header';
@@ -15,6 +15,7 @@ import { fetchWithCsrf } from '@/lib/hooks/useCsrfToken';
 import { useToast } from '@/components/ui/Toast';
 import { STORE_CONFIG } from '@/lib/config';
 import { calculateCheckoutShippingCost } from '@/lib/checkout/safety';
+import { getCheckoutAttempt, type CheckoutAttempt } from '@/lib/checkout/idempotency';
 
 // Declare Wompi WidgetCheckout global type
 declare global {
@@ -30,6 +31,8 @@ export default function CheckoutClient() {
     const [wompiLoaded, setWompiLoaded] = useState(false);
     const [checkoutError, setCheckoutError] = useState<string | null>(null);
     const [paymentApproved, setPaymentApproved] = useState(false);
+    const submissionInFlight = useRef(false);
+    const checkoutAttempt = useRef<CheckoutAttempt | null>(null);
     const { showToast } = useToast();
 
     // Efecto para verificar si Wompi ya está cargado (por si el script termina antes del onLoad)
@@ -80,6 +83,8 @@ export default function CheckoutClient() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (submissionInFlight.current) return;
+        submissionInFlight.current = true;
         setIsProcessing(true);
         setCheckoutError(null);
 
@@ -90,36 +95,35 @@ export default function CheckoutClient() {
                 throw new Error('El sistema de pagos aún no está listo. Por favor, intenta de nuevo en un momento.');
             }
 
-            // ✅ SECURITY: Generate idempotency key to prevent duplicate orders
-            const idempotencyKey = crypto.randomUUID();
+            const orderRequest = {
+                shipping_name: formData.name,
+                shipping_email: formData.email,
+                shipping_phone: formData.phone,
+                shipping_address: formData.street,
+                shipping_city: formData.city,
+                shipping_state: formData.state,
+                shipping_zip_code: null,
+                shipping_method: formData.shippingMethod,
+                shipping_location: formData.shippingMethod === 'delivery' ? formData.shippingLocation : null,
+                payment_method: 'wompi',
+                items: items.map(item => ({
+                    product_id: item.product.id,
+                    product_name: item.product.name,
+                    product_price: item.product.price,
+                    product_image: item.product.images[0],
+                    quantity: item.quantity,
+                    variant_name: item.selectedVariant?.name,
+                    variant_id: item.selectedVariant?.id,
+                    subtotal: item.product.price * item.quantity,
+                })),
+            };
+            checkoutAttempt.current = getCheckoutAttempt(checkoutAttempt.current, orderRequest);
 
             // 1. Crear la orden en la base de datos a través de la API
             const orderResponse = await fetchWithCsrf('/api/orders', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    shipping_name: formData.name,
-                    shipping_email: formData.email,
-                    shipping_phone: formData.phone,
-                    shipping_address: formData.street,
-                    shipping_city: formData.city,
-                    shipping_state: formData.state,
-                    shipping_zip_code: null,
-                    shipping_method: formData.shippingMethod,
-                    shipping_location: formData.shippingMethod === 'delivery' ? formData.shippingLocation : null,
-                    payment_method: 'wompi',
-                    idempotency_key: idempotencyKey,
-                    items: items.map(item => ({
-                        product_id: item.product.id,
-                        product_name: item.product.name,
-                        product_price: item.product.price,
-                        product_image: item.product.images[0],
-                        quantity: item.quantity,
-                        variant_name: item.selectedVariant?.name,
-                        variant_id: item.selectedVariant?.id,
-                        subtotal: item.product.price * item.quantity
-                    }))
-                }),
+                body: JSON.stringify({ ...orderRequest, idempotency_key: checkoutAttempt.current.key }),
             });
 
             const { data: order, error: orderError } = await orderResponse.json();
@@ -162,8 +166,9 @@ export default function CheckoutClient() {
                 }
             });
 
-            checkout.open(async (result: { transaction: { id?: string; status: string } }) => {
-                const transaction = result.transaction;
+            checkout.open(async (result?: { transaction?: { id?: string; status: string } }) => {
+                const transaction = result?.transaction;
+                if (!transaction) return;
                 if (transaction.status === 'APPROVED') {
                     setPaymentApproved(true);
                     try {
@@ -208,6 +213,7 @@ export default function CheckoutClient() {
             const message = error instanceof Error ? error.message : 'Hubo un error al procesar tu pedido. Por favor intenta de nuevo.';
             setCheckoutError(message);
         } finally {
+            submissionInFlight.current = false;
             setIsProcessing(false);
         }
     };
@@ -572,7 +578,7 @@ export default function CheckoutClient() {
                                             <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 mb-4">
                                                 <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                                                 <span className="flex-1">{checkoutError}</span>
-                                                <button onClick={() => setCheckoutError(null)} className="opacity-60 hover:opacity-100">
+                                                <button type="button" aria-label="Cerrar mensaje de error" onClick={() => setCheckoutError(null)} className="opacity-60 hover:opacity-100">
                                                     <X className="w-4 h-4" />
                                                 </button>
                                             </div>

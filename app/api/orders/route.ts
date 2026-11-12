@@ -2,6 +2,8 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { ApiResponse } from '@/lib/api-responses';
 import { createClient } from '@/lib/supabase-server';
 import { captureCheckoutIssue } from '@/lib/observability/checkout';
+import { getOrderReplayStatus } from '@/lib/checkout/idempotency';
+import type { CreateOrderInput } from '@/lib/validations/order';
 import {
     calculateCheckoutShippingCost,
     canReuseExistingOrderForIdempotency,
@@ -11,6 +13,26 @@ import {
 } from '@/lib/checkout/safety';
 
 export const dynamic = 'force-dynamic';
+
+async function findIdempotentOrder(key: string, input: CreateOrderInput, userId: string | null) {
+    const { data: existing, error } = await supabaseAdmin.from('orders')
+        .select('*, order_items (*)').eq('idempotency_key', key).maybeSingle();
+    if (error) return ApiResponse.error('Error al verificar el intento de compra');
+    if (!existing) return null;
+    // Authorize before exposing intent mismatches or creation progress.
+    if (!canReuseExistingOrderForIdempotency({ existingOrderUserId: existing.user_id,
+        authenticatedUserId: userId, existingOrderEmail: existing.shipping_email, requestEmail: input.shipping_email })) {
+        return ApiResponse.forbidden('No tienes permiso para reutilizar esta orden');
+    }
+    const replay = getOrderReplayStatus(existing, input);
+    if (replay === 'mismatch') return ApiResponse.error('Este intento de compra corresponde a otros datos o productos', 409);
+    if (replay === 'incomplete') {
+        const response = ApiResponse.error('La orden todavía se está preparando. Intenta nuevamente en unos segundos.', 409);
+        response.headers.set('Retry-After', '3');
+        return response;
+    }
+    return ApiResponse.success(existing);
+}
 
 /**
  * GET /api/orders
@@ -107,29 +129,8 @@ export async function POST(request: Request) {
         logApiRequest('POST', '/api/orders', authenticatedUserId || 'guest');
 
         if (idempotency_key) {
-            const { data: existingOrder } = await supabaseAdmin
-                .from('orders')
-                .select('*, order_items (*)')
-                .eq('idempotency_key', idempotency_key)
-                .single();
-
-            if (existingOrder) {
-                if (!canReuseExistingOrderForIdempotency({
-                    existingOrderUserId: existingOrder.user_id,
-                    authenticatedUserId,
-                    existingOrderEmail: existingOrder.shipping_email,
-                    requestEmail: shipping_email,
-                })) {
-                    logger.warn('Blocked idempotency key reuse across buyer boundary', {
-                        authenticatedUserId,
-                        existingOrderId: existingOrder.id,
-                    });
-                    return ApiResponse.forbidden('No tienes permiso para reutilizar esta orden');
-                }
-
-                logger.info('Returning existing order (idempotency)');
-                return ApiResponse.success(existingOrder);
-            }
+            const replay = await findIdempotentOrder(idempotency_key, validatedData, authenticatedUserId);
+            if (replay) return replay;
         }
 
         const productIds = items.map((item) => item.product_id);
@@ -221,6 +222,10 @@ export async function POST(request: Request) {
             .single();
 
         if (orderError) {
+            if (orderError.code === '23505' && idempotency_key) {
+                const replay = await findIdempotentOrder(idempotency_key, validatedData, authenticatedUserId);
+                if (replay) return replay;
+            }
             logApiError('POST', '/api/orders', orderError);
             captureCheckoutIssue({
                 area: 'checkout',

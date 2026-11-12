@@ -53,6 +53,28 @@ Do not drop inventory evidence or columns when rolling application code back.
 
 ## Remaining Work
 
+### Order Creation Retries
+
+The mounted checkout retains its idempotency key after a transport or parameter
+error when meaningful request data is unchanged. A synchronous request guard blocks
+overlapping submissions before React rerenders. Changes to contact/shipping data,
+product/variant selections or quantities create a different intent; display-price
+snapshots do not define identity. The fingerprint stays in component memory and is
+not written to browser storage or logs. Reloads and other tabs are not coordinated.
+
+The order API authorizes the buyer before comparing replay intent. A matching,
+complete order is returned without reserving inventory again. Reusing a key with
+changed intent returns 409; incomplete item sets are a retryable 409 with `Retry-After`. A unique insert
+failure only becomes replay success after a fresh matching, authorized, complete
+order lookup. Other unique failures retain their error response.
+
+These guards do not make order/reservation/item creation atomic. An abandoned partial
+creation is not deleted or resumed automatically; that remains a subsequent backend
+unit. Payment eligibility still requires the separate checkout-parameter checks.
+The guard covers network submission, not the entire third-party widget lifetime;
+no undocumented widget-close API is assumed. Full DOM/browser and live-provider
+checkout verification remains pending.
+
 The daily cron schedule is unchanged. Its service-role-only claim RPC rotates at
 most 25 Wompi orders per invocation, including historical pending/failed payments
 and paid inventory exceptions. There is no 30-day cutoff. A private, RLS-enabled
