@@ -7,9 +7,7 @@ import type { CreateOrderInput } from '@/lib/validations/order';
 import {
     calculateCheckoutShippingCost,
     canReuseExistingOrderForIdempotency,
-    getReservationFailureMessage,
     normalizeOrderShippingFields,
-    type ReservationAttemptResult,
 } from '@/lib/checkout/safety';
 
 export const dynamic = 'force-dynamic';
@@ -80,7 +78,7 @@ export async function GET() {
 
 /**
  * POST /api/orders
- * Create a pending order, reserve stock, then create order items.
+ * Create a pending order, its items and stock holds in one database transaction.
  *
  * The customer is allowed to continue to Wompi only after stock has been
  * reserved. This prevents paid orders for inventory that cannot be fulfilled.
@@ -197,9 +195,8 @@ export async function POST(request: Request) {
             shipping_zip_code,
         });
 
-        const { data: order, error: orderError } = await supabaseAdmin
-            .from('orders')
-            .insert([{
+        const { data: created, error: orderError } = await supabaseAdmin.rpc('create_order_with_stock', {
+            order_param: {
                 user_id: authenticatedUserId,
                 order_number: orderNumber,
                 status: 'pending',
@@ -217,142 +214,35 @@ export async function POST(request: Request) {
                 idempotency_key: idempotency_key || null,
                 shipping_method,
                 shipping_location,
-            }])
-            .select()
-            .single();
+            },
+            items_param: validatedItems,
+        });
 
         if (orderError) {
             if (orderError.code === '23505' && idempotency_key) {
                 const replay = await findIdempotentOrder(idempotency_key, validatedData, authenticatedUserId);
                 if (replay) return replay;
             }
+            if (orderError.code === 'P0001') {
+                captureCheckoutIssue({ area: 'stock', name: 'stock_reservation_failed', level: 'warning',
+                    route: '/api/orders', orderNumber, reason: 'Atomic stock reservation rejected' });
+                return ApiResponse.badRequest('No pudimos reservar el inventario de tu pedido. Actualiza tu carrito e intenta nuevamente.', 'STOCK_RESERVATION_FAILED');
+            }
+            if (orderError.code === 'P0002') {
+                return ApiResponse.error('El catálogo cambió mientras preparábamos tu pedido. Intenta nuevamente.', 409);
+            }
             logApiError('POST', '/api/orders', orderError);
             captureCheckoutIssue({
                 area: 'checkout',
-                name: 'order_insert_failed',
+                name: 'order_create_transaction_failed',
                 route: '/api/orders',
                 metadata: { orderError },
             }, orderError);
             return ApiResponse.error('Error al crear la orden');
         }
 
-        const reservationResults: ReservationAttemptResult[] = [];
-        for (const item of validatedItems) {
-            try {
-                const { data: resData, error: resError } = await supabaseAdmin.rpc('reserve_product_stock', {
-                    product_id_param: item.product_id,
-                    order_id_param: order.id,
-                    quantity_param: item.quantity,
-                    expiration_minutes: 30,
-                });
-
-                if (resError || !resData?.success) {
-                    const warnMsg = resData?.error || resError?.message || 'Unknown reservation error';
-                    reservationResults.push({
-                        productName: item.product_name,
-                        success: false,
-                        error: warnMsg,
-                    });
-                    logger.warn('reserve_product_stock failed', {
-                        product: item.product_name,
-                        orderId: order.id,
-                        error: warnMsg,
-                    });
-                    captureCheckoutIssue({
-                        area: 'stock',
-                        name: 'stock_reservation_failed',
-                        level: 'warning',
-                        route: '/api/orders',
-                        orderId: order.id,
-                        productId: item.product_id,
-                        reason: warnMsg,
-                    }, resError);
-                } else {
-                    reservationResults.push({
-                        productName: item.product_name,
-                        success: true,
-                    });
-                }
-            } catch (rpcException) {
-                const warnMsg = rpcException instanceof Error ? rpcException.message : 'RPC call failed';
-                reservationResults.push({
-                    productName: item.product_name,
-                    success: false,
-                    error: warnMsg,
-                });
-                logger.warn('reserve_product_stock RPC unavailable', {
-                    product: item.product_name,
-                    orderId: order.id,
-                    error: warnMsg,
-                });
-                captureCheckoutIssue({
-                    area: 'stock',
-                    name: 'stock_reservation_rpc_exception',
-                    level: 'error',
-                    route: '/api/orders',
-                    orderId: order.id,
-                    productId: item.product_id,
-                    reason: warnMsg,
-                }, rpcException);
-            }
-        }
-
-        const reservationFailureMessage = getReservationFailureMessage(reservationResults);
-        if (reservationFailureMessage) {
-            await supabaseAdmin.rpc('release_stock_reservation', {
-                order_id_param: order.id,
-            });
-            await supabaseAdmin.from('orders').delete().eq('id', order.id);
-
-            logger.warn('Stock reservation failed; order rolled back before payment', {
-                orderId: order.id,
-                failedReservations: reservationResults.filter((result) => !result.success),
-            });
-            captureCheckoutIssue({
-                area: 'checkout',
-                name: 'order_rolled_back_after_stock_failure',
-                level: 'warning',
-                route: '/api/orders',
-                orderId: order.id,
-                reason: reservationFailureMessage,
-                metadata: {
-                    failedReservations: reservationResults.filter((result) => !result.success),
-                },
-            });
-
-            return ApiResponse.badRequest(reservationFailureMessage, 'STOCK_RESERVATION_FAILED');
-        }
-
-        const orderItems = validatedItems.map((item) => ({
-            order_id: order.id,
-            product_id: item.product_id,
-            product_name: item.product_name,
-            product_price: item.product_price,
-            product_image: item.product_image,
-            quantity: item.quantity,
-            variant_name: item.variant_name,
-            variant_id: item.variant_id,
-            subtotal: item.product_price * item.quantity,
-        }));
-
-        const { error: itemsError } = await supabaseAdmin.from('order_items').insert(orderItems);
-
-        if (itemsError) {
-            await supabaseAdmin.rpc('release_stock_reservation', {
-                order_id_param: order.id,
-            });
-            await supabaseAdmin.from('orders').delete().eq('id', order.id);
-            captureCheckoutIssue({
-                area: 'checkout',
-                name: 'order_items_insert_failed',
-                route: '/api/orders',
-                orderId: order.id,
-                metadata: { itemsError },
-            }, itemsError);
-            return ApiResponse.error('Error al crear items de la orden');
-        }
-
-        return ApiResponse.success({ ...order, items: orderItems }, 201);
+        if (!created?.order?.id || !Array.isArray(created.items)) return ApiResponse.error('Respuesta de creación de orden inválida');
+        return ApiResponse.success({ ...created.order, items: created.items }, 201);
     } catch (error) {
         captureCheckoutIssue({
             area: 'checkout',

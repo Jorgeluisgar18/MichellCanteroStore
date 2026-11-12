@@ -23,6 +23,7 @@ it('rejects changed or incomplete order replay and recovers only matching unique
         customer_notes: null, order_items: [{ product_id: productId, quantity: 1, variant_id: null }] };
     let current: typeof existing | null = existing;
     let uniqueRace = false, noRaceWinner = false, reads = 0, inserts = 0;
+    let creationCode: string | null = '23505';
     const client = {
         from(table: string) {
             let mode = 'read';
@@ -45,7 +46,15 @@ it('rejects changed or incomplete order replay and recovers only matching unique
             };
             return query;
         },
-        rpc() { throw new Error('Replaying an order must never reserve stock again'); },
+        async rpc(name: string, args: { order_param: Record<string, unknown>; items_param: Record<string, unknown>[] }) {
+            assert.equal(name, 'create_order_with_stock', 'the API must not perform separate stock mutations');
+            assert.equal(args.order_param.subtotal, 100);
+            assert.equal(args.items_param[0]?.product_price, 100, 'pricing comes from the database snapshot, not client display values');
+            inserts++;
+            if (creationCode) return { data: null, error: { code: creationCode, message: 'synthetic creation rejection' } };
+            return { data: { order: { ...existing, id: 'created-order' },
+                items: [{ ...args.items_param[0], order_id: 'created-order', subtotal: 100 }] }, error: null };
+        },
     };
     loader._load = function(name, parent, main) {
         if (name === '@/lib/supabase') return { supabaseAdmin: client };
@@ -76,6 +85,17 @@ it('rejects changed or incomplete order replay and recovers only matching unique
         assert.equal(inserts, 1);
         noRaceWinner = true; reads = 0;
         assert.equal((await route.POST(request())).status, 500, 'an unrelated unique failure cannot masquerade as replay success');
+        current = null; uniqueRace = false;
+        creationCode = null;
+        const created = await route.POST(request({ items: [{ ...input.items[0], product_price: 1 }] }));
+        assert.equal(created.status, 201);
+        const payload = await created.json();
+        assert.equal(payload.data.id, 'created-order');
+        assert.equal(payload.data.items[0].product_price, 100);
+        creationCode = 'P0001';
+        assert.equal((await route.POST(request())).status, 400);
+        creationCode = 'P0002';
+        assert.equal((await route.POST(request())).status, 409);
     } finally {
         loader._load = original;
         mock.timers.reset();

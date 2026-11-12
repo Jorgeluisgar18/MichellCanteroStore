@@ -68,9 +68,19 @@ changed intent returns 409; incomplete item sets are a retryable 409 with `Retry
 failure only becomes replay success after a fresh matching, authorized, complete
 order lookup. Other unique failures retain their error response.
 
-These guards do not make order/reservation/item creation atomic. An abandoned partial
-creation is not deleted or resumed automatically; that remains a subsequent backend
-unit. Payment eligibility still requires the separate checkout-parameter checks.
+Order, item and reservation creation now share `create_order_with_stock`, executable
+only by the service role. The API retains buyer validation and authoritative catalog/
+shipping calculations; the RPC locks products in stable order and rechecks effective
+prices/names against those snapshots. A catalog change produces a retryable conflict.
+It aggregates demand by product and uses the existing stock helper with 30-minute
+expiry. A helper JSON failure is raised, so the order, items, prior holds and transactional
+order audit writes roll back together. Item-insert failures also roll back all holds.
+Initial creation remains 201 with `items`; same-key ready replay remains 200 with
+`order_items`. No fallback to the old multi-request creation path is used.
+
+An abandoned partial creation from older code is not deleted or resumed automatically.
+Those historical rows require a separately controlled repair. Payment eligibility
+still requires the separate checkout-parameter checks.
 The guard covers network submission, not the entire third-party widget lifetime;
 no undocumented widget-close API is assumed. Full DOM/browser and live-provider
 checkout verification remains pending.

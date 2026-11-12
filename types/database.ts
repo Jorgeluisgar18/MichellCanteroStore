@@ -218,6 +218,10 @@ export interface Database {
         };
         Views: Record<string, never>;
         Functions: {
+            create_order_with_stock: {
+                Args: { order_param: Json; items_param: Json };
+                Returns: { order: Database['public']['Tables']['orders']['Row']; items: Json[] };
+            };
             claim_wompi_payment_audits: {
                 Args: { batch_size_param?: number };
                 Returns: { id: string; order_number: string; total: number; wompi_transaction_id: string | null }[];
