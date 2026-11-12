@@ -28,6 +28,10 @@ export interface Database {
     };
     public: {
         Tables: {
+            payment_audit_progress: Table<{
+                order_id: string;
+                last_claimed_at: string;
+            }>;
             addresses: Table<{
                 id: string;
                 user_id: string;
@@ -214,6 +218,10 @@ export interface Database {
         };
         Views: Record<string, never>;
         Functions: {
+            claim_wompi_payment_audits: {
+                Args: { batch_size_param?: number };
+                Returns: { id: string; order_number: string; total: number; wompi_transaction_id: string | null }[];
+            };
             finalize_wompi_payment: {
                 Args: {
                     order_id_param: string;

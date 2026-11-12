@@ -27,6 +27,10 @@ it('preserves payment route responses and delegates every write to the atomic RP
             return builder;
         },
         async rpc(name: string, args: Record<string, unknown>) {
+            if (name === 'claim_wompi_payment_audits') {
+                assert.equal(args.batch_size_param, 25);
+                return { data: [order], error: null };
+            }
             assert.equal(name, 'finalize_wompi_payment');
             assert.equal(args.amount_in_cents_param, 10000);
             calls++;

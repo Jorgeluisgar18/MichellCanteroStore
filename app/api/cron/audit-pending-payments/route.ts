@@ -54,13 +54,9 @@ export async function GET(request: Request) {
             level: 'fatal', route: '/api/cron/audit-pending-payments' });
         return NextResponse.json({ error: 'Payment configuration unavailable' }, { status: 503 });
     }
-    const auditBefore = new Date(Date.now() - 15 * 60 * 1000).toISOString();
-    const auditAfter = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    const { data: orders, error } = await supabaseAdmin.from('orders')
-        .select('id, order_number, total, status, payment_status, wompi_transaction_id')
-        .or('payment_status.eq.pending,and(payment_status.eq.paid,inventory_status.eq.review_required)')
-        .lt('created_at', auditBefore).gte('created_at', auditAfter)
-        .order('created_at', { ascending: true }).limit(AUDIT_LIMIT);
+    const { data: orders, error } = await supabaseAdmin.rpc('claim_wompi_payment_audits', {
+        batch_size_param: AUDIT_LIMIT,
+    });
     if (error) {
         captureCheckoutIssue({ area: 'wompi_reconciliation', name: 'pending_payment_audit_order_lookup_failed',
             route: '/api/cron/audit-pending-payments', metadata: { ordersError: error } }, error);

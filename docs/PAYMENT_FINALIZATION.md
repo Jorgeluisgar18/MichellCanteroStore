@@ -53,10 +53,19 @@ Do not drop inventory evidence or columns when rolling application code back.
 
 ## Remaining Work
 
-The daily cron schedule is unchanged. Its batch fairness and 30-day selection limit
-still require the separate T3 audit-queue change; this unit does not promise bounded
-recovery time when notifications are missed. Paid inventory exceptions are eligible
-for the existing audit window and can recover automatically after replenishment.
+The daily cron schedule is unchanged. Its service-role-only claim RPC rotates at
+most 25 Wompi orders per invocation, including historical pending/failed payments
+and paid inventory exceptions. There is no 30-day cutoff. A private, RLS-enabled
+progress table records claims without changing order timestamps or creating business
+audit snapshots. Claims expire after 15 minutes; failed or interrupted attempts can
+be retried later. This is not proof that an earlier worker has stopped. Atomic payment
+finalization remains responsible for avoiding duplicate stock effects.
+
+The limit bounds returned work, not total database scan cost. Recovery time depends
+on backlog, daily invocation, provider availability and execution limits; there is no
+immediate recovery guarantee when notifications are missed. Paid inventory exceptions
+can recover automatically after replenishment. Provider HTTP timeouts and complete
+runtime/quota certification remain release-readiness checks, not inferred guarantees.
 Email notifications run after commit, but durable outbox/retry delivery remains T6.
 Variant-level availability remains T4. Full controlled checkout E2E and production
 readiness remain T9. No new hosted service or paid scheduler is introduced.
