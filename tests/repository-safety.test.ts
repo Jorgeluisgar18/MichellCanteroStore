@@ -156,9 +156,9 @@ describe('repository safety rules', () => {
         assert.match(route, /getWompiTransactionById/);
         assert.match(route, /getSuccessfulWompiReconciliationTransaction/);
         assert.match(route, /canAccessCheckoutParams/);
-        assert.match(route, /confirm_stock_reservation/);
+        assert.match(route, /finalizeWompiPayment/);
         assert.match(route, /stock_confirmation_blocked_paid_reconciliation/);
-        assert.match(route, /payment_status:\s*'paid'/);
+        assert.doesNotMatch(route, /\.update\(/);
     });
 
     it('runs a daily pending payment audit through Vercel Cron', () => {
@@ -179,9 +179,9 @@ describe('repository safety rules', () => {
         assert.match(route, /CRON_SECRET/);
         assert.match(route, /getWompiTransactionsByReference/);
         assert.match(route, /getSuccessfulWompiReconciliationTransaction/);
-        assert.match(route, /confirm_stock_reservation/);
+        assert.match(route, /finalizeWompiPayment/);
         assert.match(route, /stock_confirmation_blocked_pending_payment_audit/);
-        assert.match(route, /payment_status:\s*'paid'/);
+        assert.doesNotMatch(route, /\.update\(/);
     });
 
     it('keeps third-party observability and rate-limit features within free-plan usage', () => {

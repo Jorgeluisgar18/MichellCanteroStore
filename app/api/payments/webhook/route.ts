@@ -1,412 +1,110 @@
 import { NextResponse } from 'next/server';
+import { createHash, timingSafeEqual } from 'crypto';
 import {
     formatWebhookTimestampForLog,
-    getOrderStatusForWompiStatus,
     getPaymentStatusForWompiStatus,
-    getStockConfirmationFailure,
-    getTerminalTransactionConflict,
     isValidWompiSignatureShape,
-    isDuplicateTransactionWebhook,
     validateWompiTransactionAgainstOrder,
 } from '@/lib/payments/webhook-safety';
+import { finalizeWompiPayment } from '@/lib/payments/finalize-payment';
+import { getWompiTransactionById } from '@/lib/payments/wompi';
 import { supabaseAdmin } from '@/lib/supabase';
 import { captureCheckoutIssue } from '@/lib/observability/checkout';
+import { logger } from '@/lib/utils/logger';
 
 function getNestedValue(source: unknown, path: string): unknown {
     let current: unknown = source;
-
     for (const segment of path.split('.')) {
-        if (!current || typeof current !== 'object') {
-            return undefined;
-        }
-
+        if (!current || typeof current !== 'object') return undefined;
         current = Reflect.get(current, segment);
     }
-
     return current;
 }
 
-function getTransactionAmountInCents(transaction: Record<string, unknown>): number | null {
-    const amount = transaction.amount_in_cents ?? transaction.amountInCents;
-
-    return typeof amount === 'number' ? amount : null;
-}
-
-// POST /api/payments/webhook - Manejar notificaciones de Wompi
 export async function POST(request: Request) {
     try {
-        const { logger } = await import('@/lib/utils/logger');
-        const WOMPI_EVENTS_SECRET = process.env.WOMPI_EVENTS_SECRET;
-        const crypto = await import('crypto');
-
-        // Obtener el body como texto para logging o validaciones futuras si es necesario
-        const rawBody = await request.text();
-        const body = JSON.parse(rawBody);
-        const { event, data, timestamp, signature } = body;
-
-        // ✅ SECURITY: Verify Webhook Signature
-        if (!WOMPI_EVENTS_SECRET) {
-            logger.error('CRITICAL: WOMPI_EVENTS_SECRET is not defined. Webhook not verified.');
-            return NextResponse.json({ error: 'Configuración incompleta' }, { status: 500 });
-        }
-
+        const secret = process.env.WOMPI_EVENTS_SECRET;
+        if (!secret) return NextResponse.json({ error: 'Configuración incompleta' }, { status: 500 });
+        const { event, data, timestamp, signature } = await request.json();
         if (!isValidWompiSignatureShape(signature)) {
-            logger.error('[webhook] RECHAZADO: Firma ausente o incompleta.', {
-                event,
-                hasSignature: !!signature,
-                hasChecksum: !!signature?.checksum,
-                hasProperties: !!signature?.properties,
-                timestamp: new Date().toISOString()
-            });
-            return NextResponse.json(
-                { error: 'Webhook signature is required' },
-                { status: 401 }
-            );
+            return NextResponse.json({ error: 'Webhook signature is required' }, { status: 401 });
         }
-
-        let concatenation = '';
-        for (const prop of signature.properties) {
-            const value = getNestedValue(data, prop);
-            concatenation += String(value ?? '');
-        }
-        concatenation += timestamp;
-        concatenation += WOMPI_EVENTS_SECRET;
-
-        const expectedChecksum = crypto.createHash('sha256')
-            .update(concatenation)
-            .digest('hex');
-
-        const Buffer = (await import('buffer')).Buffer;
-        const signaturesMatch = crypto.timingSafeEqual(
-            Buffer.from(expectedChecksum, 'hex'),
-            Buffer.from(signature.checksum, 'hex')
-        );
-
-        if (!signaturesMatch) {
-            logger.error('[webhook] FIRMA INVÁLIDA — posible intento de suplantación', {
-                event,
-                timestamp: new Date().toISOString()
-            });
+        const signedValues = signature.properties.map((prop: string) => String(getNestedValue(data, prop) ?? '')).join('');
+        const checksum = createHash('sha256').update(signedValues + timestamp + secret).digest('hex');
+        if (!timingSafeEqual(Buffer.from(checksum, 'hex'), Buffer.from(signature.checksum, 'hex'))) {
             return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
         }
-
-        logger.info('[webhook] Firma verificada correctamente.');
-
-        // ✅ SECURITY: Sanitized logging (no sensitive data)
-        logger.info('Wompi webhook received', {
-            event,
-            timestamp: formatWebhookTimestampForLog(timestamp)
-        });
-
-        // Validar que sea un evento de transacción
-        if (event !== 'transaction.updated') {
-            logger.info('Ignoring non-transaction event', { event });
-            return NextResponse.json({ received: true });
-        }
-
+        logger.info('Wompi webhook received', { event, timestamp: formatWebhookTimestampForLog(timestamp) });
+        if (event !== 'transaction.updated') return NextResponse.json({ received: true });
         const transaction = data?.transaction;
-
-        if (
-            !transaction ||
-            typeof transaction !== 'object' ||
-            typeof Reflect.get(transaction, 'reference') !== 'string' ||
-            typeof Reflect.get(transaction, 'status') !== 'string' ||
-            typeof Reflect.get(transaction, 'id') !== 'string'
-        ) {
-            logger.error('[webhook] Payload de transaccion incompleto', { event });
+        if (!transaction || typeof transaction.id !== 'string' || typeof transaction.reference !== 'string'
+            || typeof transaction.status !== 'string') {
             return NextResponse.json({ error: 'Payload de transaccion invalido' }, { status: 400 });
         }
-
-        const transactionRecord = transaction as Record<string, unknown>;
-        const reference = transactionRecord.reference as string;
-        const status = transactionRecord.status as string;
-        const wompiTransactionId = transactionRecord.id as string;
-
-        // ✅ SECURITY: Log only non-sensitive transaction data
-        logger.info('Processing transaction', {
-            reference,
-            status,
-            transactionId: wompiTransactionId
-        });
-
-        // Buscar la orden por order_number
-        const { data: order, error: orderError } = await supabaseAdmin
-            .from('orders')
-            .select('*')
-            .eq('order_number', reference)
-            .single();
-
-        if (orderError || !order) {
-            logger.error('Order not found for webhook', orderError, { reference });
-            captureCheckoutIssue({
-                area: 'wompi_webhook',
-                name: 'webhook_order_not_found',
-                level: 'warning',
-                route: '/api/payments/webhook',
-                orderNumber: reference,
-                transactionId: wompiTransactionId,
-                status,
-                metadata: { orderError },
-            }, orderError);
+        const { data: order, error } = await supabaseAdmin.from('orders').select('*')
+            .eq('order_number', transaction.reference).single();
+        if (error || !order) {
+            captureCheckoutIssue({ area: 'wompi_webhook', name: 'webhook_order_not_found', level: 'warning',
+                route: '/api/payments/webhook', orderNumber: transaction.reference, transactionId: transaction.id }, error);
             return NextResponse.json({ error: 'Orden no encontrada' }, { status: 404 });
         }
-
-        const transactionValidationFailure = validateWompiTransactionAgainstOrder({
-            orderNumber: order.order_number,
-            orderTotal: Number(order.total),
-            transactionReference: reference,
-            transactionAmountInCents: getTransactionAmountInCents(transactionRecord),
-            transactionCurrency: typeof transactionRecord.currency === 'string' ? transactionRecord.currency : null,
+        const mismatch = validateWompiTransactionAgainstOrder({
+            orderNumber: order.order_number, orderTotal: Number(order.total),
+            transactionReference: transaction.reference,
+            transactionAmountInCents: transaction.amount_in_cents ?? transaction.amountInCents,
+            transactionCurrency: transaction.currency,
         });
-
-        if (transactionValidationFailure) {
-            logger.error('[webhook] Transaccion no coincide con la orden', {
-                orderId: order.id,
-                reference,
-                transactionId: wompiTransactionId,
-                reason: transactionValidationFailure,
-            });
-            captureCheckoutIssue({
-                area: 'wompi_webhook',
-                name: 'webhook_transaction_order_mismatch',
-                level: 'warning',
-                route: '/api/payments/webhook',
-                orderId: order.id,
-                orderNumber: order.order_number,
-                transactionId: wompiTransactionId,
-                status,
-                reason: transactionValidationFailure,
-            });
+        if (mismatch) {
+            captureCheckoutIssue({ area: 'wompi_webhook', name: 'webhook_transaction_order_mismatch', level: 'warning',
+                route: '/api/payments/webhook', orderId: order.id, transactionId: transaction.id, reason: mismatch });
             return NextResponse.json({ error: 'La transaccion no coincide con la orden' }, { status: 400 });
         }
-
-        const nextPaymentStatus = getPaymentStatusForWompiStatus(status);
-
-        if (!nextPaymentStatus) {
-            logger.info('Ignoring non-terminal transaction status', {
-                orderId: order.id,
-                reference,
-                status,
-                transactionId: wompiTransactionId
-            });
+        if (!getPaymentStatusForWompiStatus(transaction.status)) {
             return NextResponse.json({ received: true, ignored: true });
         }
-
-        const terminalConflict = getTerminalTransactionConflict({
-            wompiStatus: status,
-            currentPaymentStatus: order.payment_status,
-            currentTransactionId: order.wompi_transaction_id,
-            incomingTransactionId: wompiTransactionId,
-        });
-
-        if (terminalConflict) {
-            logger.error('[webhook] Conflicto de transaccion terminal', {
-                orderId: order.id,
-                reference,
-                status,
-                transactionId: wompiTransactionId,
-                reason: terminalConflict,
-            });
-            captureCheckoutIssue({
-                area: 'wompi_webhook',
-                name: 'webhook_terminal_transaction_conflict',
-                route: '/api/payments/webhook',
-                orderId: order.id,
-                orderNumber: order.order_number,
-                transactionId: wompiTransactionId,
-                status,
-                paymentStatus: order.payment_status,
-                reason: terminalConflict,
-                metadata: {
-                    currentTransactionId: order.wompi_transaction_id,
-                },
-            });
+        // The checksum need not cover reference/currency. Bind those fields to the provider's record.
+        const privateKey = process.env.WOMPI_PRIVATE_KEY;
+        if (!privateKey) return NextResponse.json({ error: 'Configuracion de pago incompleta' }, { status: 500 });
+        const verified = await getWompiTransactionById({ transactionId: transaction.id, privateKey });
+        if (!verified || verified.id !== transaction.id || validateWompiTransactionAgainstOrder({
+            orderNumber: order.order_number, orderTotal: Number(order.total),
+            transactionReference: verified.reference,
+            transactionAmountInCents: verified.amount_in_cents ?? verified.amountInCents,
+            transactionCurrency: verified.currency,
+        })) return NextResponse.json({ error: 'La transaccion no coincide con la orden' }, { status: 400 });
+        const result = await finalizeWompiPayment(supabaseAdmin, order.id, verified);
+        if (result.outcome === 'conflict') {
+            captureCheckoutIssue({ area: 'wompi_webhook', name: 'webhook_terminal_transaction_conflict',
+                route: '/api/payments/webhook', orderId: order.id, transactionId: transaction.id, status: transaction.status });
             return NextResponse.json({ error: 'Conflicto de transaccion terminal' }, { status: 409 });
         }
-
-        if (isDuplicateTransactionWebhook(
-            status,
-            order.payment_status,
-            order.wompi_transaction_id,
-            wompiTransactionId
-        )) {
-            logger.info('Duplicate terminal webhook ignored', {
-                orderId: order.id,
-                reference,
-                status,
-                paymentStatus: order.payment_status
-            });
-            return NextResponse.json({ success: true, duplicate: true });
+        if (result.outcome === 'not_found') return NextResponse.json({ error: 'Orden no encontrada' }, { status: 404 });
+        if (result.outcome === 'inventory_review') {
+            captureCheckoutIssue({ area: 'stock', name: 'stock_confirmation_blocked_paid_order',
+                route: '/api/payments/webhook', orderId: order.id, orderNumber: order.order_number,
+                transactionId: transaction.id, status: transaction.status, reason: result.reason ?? null });
+            return NextResponse.json({ error: 'No se pudo confirmar el inventario de la orden' }, { status: 409 });
         }
-
-        // Mapear estados de Wompi a nuestros estados
-        const mappedOrderStatus = getOrderStatusForWompiStatus(status);
-        const orderStatus = mappedOrderStatus ?? order.status;
-        const paymentStatus = nextPaymentStatus;
-
-        if (status === 'APPROVED') {
-            // ✅ SECURITY: Confirm stock reservation and decrement stock
+        if (result.outcome === 'ignored') return NextResponse.json({ received: true, ignored: true });
+        if (!result.changed) return NextResponse.json({ success: true, duplicate: true });
+        // Notify only after a newly committed, inventory-confirmed approval.
+        if (result.payment_status === 'paid' && result.inventory_status === 'confirmed') {
             try {
-                const { data: confirmResult, error: confirmError } = await supabaseAdmin
-                    .rpc('confirm_stock_reservation', {
-                        order_id_param: order.id
-                    });
-
-                const stockFailure = getStockConfirmationFailure(confirmResult, confirmError);
-
-                if (stockFailure) {
-                    logger.error('Stock confirmation blocked paid order update', confirmError, {
-                        orderId: order.id,
-                        stockFailure,
-                        confirmResult
-                    });
-                    captureCheckoutIssue({
-                        area: 'stock',
-                        name: 'stock_confirmation_blocked_paid_order',
-                        route: '/api/payments/webhook',
-                        orderId: order.id,
-                        orderNumber: order.order_number,
-                        transactionId: wompiTransactionId,
-                        status,
-                        reason: stockFailure,
-                        metadata: { confirmResult, confirmError },
-                    }, confirmError);
-                    return NextResponse.json(
-                        { error: 'No se pudo confirmar el inventario de la orden' },
-                        { status: 409 }
-                    );
-                } else {
-                    logger.info('Stock reservation confirmed', {
-                        orderId: order.id,
-                        reservationsConfirmed: confirmResult?.reservations_confirmed
-                    });
-                }
-            } catch (stockCatchError) {
-                logger.error('Error in stock reservation confirmation', stockCatchError as Error);
-                captureCheckoutIssue({
-                    area: 'stock',
-                    name: 'stock_confirmation_exception',
-                    route: '/api/payments/webhook',
-                    orderId: order.id,
-                    orderNumber: order.order_number,
-                    transactionId: wompiTransactionId,
-                    status,
-                }, stockCatchError);
-                return NextResponse.json(
-                    { error: 'No se pudo confirmar el inventario de la orden' },
-                    { status: 500 }
-                );
-            }
-
-            // ENVIAR NOTIFICACIONES POR EMAIL
-            try {
-                const { data: orderItems } = await supabaseAdmin
-                    .from('order_items')
-                    .select('*')
-                    .eq('order_id', order.id);
-
-                if (orderItems) {
+                const { data: items } = await supabaseAdmin.from('order_items').select('*').eq('order_id', order.id);
+                if (items) {
                     const { sendOrderNotificationToAdmin, sendOrderConfirmationToCustomer } = await import('@/lib/email');
-                    await sendOrderNotificationToAdmin(order, orderItems);
-                    await sendOrderConfirmationToCustomer(order, orderItems);
+                    await sendOrderNotificationToAdmin(order, items);
+                    await sendOrderConfirmationToCustomer(order, items);
                 }
             } catch (emailError) {
-                logger.error('Error sending email notifications', emailError as Error);
-                captureCheckoutIssue({
-                    area: 'checkout',
-                    name: 'order_email_notification_failed',
-                    level: 'warning',
-                    route: '/api/payments/webhook',
-                    orderId: order.id,
-                    orderNumber: order.order_number,
-                    transactionId: wompiTransactionId,
-                    status,
-                }, emailError);
-            }
-        } else {
-            // ✅ SECURITY: Release stock reservation on payment failure
-            try {
-                const { data: releaseResult, error: releaseError } = await supabaseAdmin
-                    .rpc('release_stock_reservation', {
-                        order_id_param: order.id
-                    });
-
-                if (releaseError) {
-                    logger.error('Error releasing stock reservation', releaseError, {
-                        orderId: order.id
-                    });
-                    captureCheckoutIssue({
-                        area: 'stock',
-                        name: 'stock_release_failed_after_payment_failure',
-                        route: '/api/payments/webhook',
-                        orderId: order.id,
-                        orderNumber: order.order_number,
-                        transactionId: wompiTransactionId,
-                        status,
-                        metadata: { releaseError },
-                    }, releaseError);
-                } else {
-                    logger.info('Stock reservation released', {
-                        orderId: order.id,
-                        reservationsReleased: releaseResult?.reservations_released
-                    });
-                }
-            } catch (releaseError) {
-                logger.error('Error in stock reservation release', releaseError as Error);
-                captureCheckoutIssue({
-                    area: 'stock',
-                    name: 'stock_release_exception_after_payment_failure',
-                    route: '/api/payments/webhook',
-                    orderId: order.id,
-                    orderNumber: order.order_number,
-                    transactionId: wompiTransactionId,
-                    status,
-                }, releaseError);
+                captureCheckoutIssue({ area: 'checkout', name: 'order_email_notification_failed', level: 'warning',
+                    route: '/api/payments/webhook', orderId: order.id, transactionId: transaction.id }, emailError);
             }
         }
-
-        // Actualizar la orden
-        const { error: updateError } = await supabaseAdmin
-            .from('orders')
-            .update({
-                status: orderStatus,
-                payment_status: paymentStatus,
-                wompi_transaction_id: wompiTransactionId,
-                payment_id: wompiTransactionId,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', order.id);
-
-        if (updateError) {
-            logger.error('Error updating order', updateError);
-            captureCheckoutIssue({
-                area: 'wompi_webhook',
-                name: 'webhook_order_update_failed',
-                route: '/api/payments/webhook',
-                orderId: order.id,
-                orderNumber: order.order_number,
-                transactionId: wompiTransactionId,
-                status,
-                paymentStatus,
-                metadata: { updateError },
-            }, updateError);
-            return NextResponse.json({ error: 'Error al actualizar orden' }, { status: 500 });
-        }
-
-        logger.info('Webhook processed successfully', {
-            orderId: order.id,
-            status: paymentStatus
-        });
-
         return NextResponse.json({ success: true });
     } catch (error) {
-        const { logger } = await import('@/lib/utils/logger');
-        logger.error('Webhook processing error', error as Error);
-        captureCheckoutIssue({
-            area: 'wompi_webhook',
-            name: 'webhook_unhandled_exception',
-            route: '/api/payments/webhook',
-        }, error);
+        logger.error('Webhook processing error', error);
+        captureCheckoutIssue({ area: 'wompi_webhook', name: 'webhook_unhandled_exception', route: '/api/payments/webhook' }, error);
         return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
     }
 }

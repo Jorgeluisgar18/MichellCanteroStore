@@ -1,5 +1,6 @@
 import { ProductVariant } from './product';
 import { OrderStatus, PaymentStatus } from './order';
+import type { PaymentFinalizationResult } from '@/lib/payments/finalize-payment';
 
 export type Json =
     | string
@@ -139,6 +140,8 @@ export interface Database {
                 payment_status: PaymentStatus | string | null;
                 payment_id: string | null;
                 wompi_transaction_id: string | null;
+                inventory_status: 'unverified' | 'confirmed' | 'review_required';
+                inventory_review_reason: string | null;
                 idempotency_key: string | null;
                 customer_notes: string | null;
                 admin_notes: string | null;
@@ -211,6 +214,17 @@ export interface Database {
         };
         Views: Record<string, never>;
         Functions: {
+            finalize_wompi_payment: {
+                Args: {
+                    order_id_param: string;
+                    transaction_id_param: string;
+                    transaction_status_param: string;
+                    reference_param: string;
+                    amount_in_cents_param: number;
+                    currency_param: string;
+                };
+                Returns: PaymentFinalizationResult;
+            };
             cleanup_expired_reservations: {
                 Args: Record<string, never>;
                 Returns: { success: boolean; reservations_cleaned?: number; error?: string };

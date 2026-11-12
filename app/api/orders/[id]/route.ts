@@ -129,6 +129,9 @@ export async function PUT(
 
         if (error) {
             console.error('Error updating order:', error);
+            if (error.code === '23514' && error.message.includes('inventory')) {
+                return NextResponse.json({ error: 'El inventario debe resolverse antes de preparar o enviar esta orden' }, { status: 409 });
+            }
             return NextResponse.json(
                 { error: 'Error al actualizar orden' },
                 { status: 500 }
