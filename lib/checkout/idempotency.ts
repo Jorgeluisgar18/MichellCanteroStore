@@ -14,7 +14,7 @@ export type CheckoutIntent = {
 function canonicalItems(items: IntentItem[]) {
     const quantities = new Map<string, number>();
     for (const item of items) {
-        const key = JSON.stringify([item.product_id, item.variant_id ?? null, item.variant_name || null]);
+        const key = JSON.stringify([item.product_id, item.variant_id ?? null, item.variant_id ? null : item.variant_name || null]);
         quantities.set(key, (quantities.get(key) ?? 0) + item.quantity);
     }
     return Array.from(quantities.entries()).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);

@@ -58,6 +58,7 @@ export async function PUT(
         const body = await request.json();
         let existingProductCategory: string | null = null;
         let existingProductSubcategory: string | null = null;
+        let hadVariants = false;
 
         // Validar autenticación usando el cliente del servidor
         const { createClient } = await import('@/lib/supabase-server');
@@ -77,6 +78,18 @@ export async function PUT(
 
         if (profile?.role !== 'admin') {
             return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+        }
+
+        const inventoryWrite = ['stock_quantity', 'variants', 'in_stock'].some((key) => Object.prototype.hasOwnProperty.call(body, key));
+        const expectedVersion = body.expected_inventory_version;
+        if (inventoryWrite && (!Number.isInteger(expectedVersion) || expectedVersion < 0 || expectedVersion > 2147483647)) {
+            return NextResponse.json({ error: 'Se requiere una version de inventario valida' }, { status: 400 });
+        }
+        if (body.stock_quantity !== undefined && ((typeof body.stock_quantity !== 'number' && typeof body.stock_quantity !== 'string') || String(body.stock_quantity).trim() === '' || !Number.isInteger(Number(body.stock_quantity)) || Number(body.stock_quantity) < 0 || Number(body.stock_quantity) > 2147483647)) {
+            return NextResponse.json({ error: 'Cantidad de inventario invalida' }, { status: 400 });
+        }
+        if (body.variants !== undefined && !Array.isArray(body.variants)) {
+            return NextResponse.json({ error: 'Variantes invalidas' }, { status: 400 });
         }
 
         // Validar y sanitizar datos del producto
@@ -138,7 +151,7 @@ export async function PUT(
             productData.subcategory = taxonomy.subcategory ?? null;
         }
         if (images !== undefined) productData.images = Array.isArray(images) ? images : [];
-        if (stock_quantity !== undefined) productData.stock_quantity = parseInt(String(stock_quantity)) || 0;
+        if (stock_quantity !== undefined) productData.stock_quantity = Number(stock_quantity);
         if (featured !== undefined) productData.featured = featured === true;
         if (is_new !== undefined) productData.is_new = is_new === true;
         if (in_stock !== undefined) productData.in_stock = in_stock !== false;
@@ -149,6 +162,34 @@ export async function PUT(
         // Agregar compare_at_price
         if (compare_at_price !== undefined) {
             productData.compare_at_price = compare_at_price ? parseFloat(String(compare_at_price)) : null;
+        }
+
+        if (inventoryWrite) {
+            const { data: current, error: currentError } = await supabaseAdmin.from('products')
+                .select('category, subcategory, variants, stock_quantity, in_stock, inventory_version').eq('id', params.id).single();
+            if (currentError || !current) return NextResponse.json({ error: 'No se pudo obtener el inventario actual' }, { status: 500 });
+            existingProductCategory = current.category;
+            existingProductSubcategory = current.subcategory;
+            const currentVariants = Array.isArray(current.variants) ? current.variants as ProductVariantDraft[] : [];
+            hadVariants = currentVariants.length > 0;
+            if (variants === undefined && currentVariants.length > 0) {
+                let inventory;
+                try {
+                    inventory = getInventoryFromVariants(serializeVariantsForStorage(currentVariants, getProductProfile(current.category ?? '', current.subcategory ?? '')));
+                } catch {
+                    return NextResponse.json({ error: 'El inventario requiere correccion de variantes' }, { status: 409 });
+                }
+                if (current.stock_quantity !== inventory.stock_quantity || (stock_quantity !== undefined && Number(stock_quantity) !== inventory.stock_quantity) || (in_stock !== undefined && in_stock !== inventory.in_stock)) {
+                    return NextResponse.json({ error: 'El inventario debe coincidir con las variantes' }, { status: 409 });
+                }
+            }
+            if (variants !== undefined && currentVariants.length > 0) {
+                const sameQuantities = variants.length === currentVariants.length && currentVariants.every((old) => variants.some((next: ProductVariantDraft) => next?.id === old?.id && Number(next?.stock_quantity) === Number(old?.stock_quantity)));
+                const oldTotal = currentVariants.reduce((sum, item) => sum + Number(item?.stock_quantity), 0);
+                if (current.stock_quantity !== oldTotal && sameQuantities) {
+                    return NextResponse.json({ error: 'Corrige las cantidades historicas antes de guardar' }, { status: 409 });
+                }
+            }
         }
 
         // Validar y agregar variantes si existen
@@ -176,26 +217,40 @@ export async function PUT(
                 const resolvedCategory = String(productData.category ?? existingProductCategory ?? '');
                 const resolvedSubcategory = String(productData.subcategory ?? existingProductSubcategory ?? '');
                 const profile = getProductProfile(resolvedCategory, resolvedSubcategory);
-                const serializedVariants = serializeVariantsForStorage(variants as ProductVariantDraft[], profile);
-                const inventory = getInventoryFromVariants(serializedVariants);
+                let serializedVariants;
+                let inventory;
+                try {
+                    serializedVariants = serializeVariantsForStorage(variants as ProductVariantDraft[], profile);
+                    inventory = getInventoryFromVariants(serializedVariants);
+                } catch {
+                    return NextResponse.json({ error: 'Variantes o cantidades invalidas' }, { status: 400 });
+                }
 
                 productData.variants = serializedVariants;
                 productData.stock_quantity = inventory.stock_quantity;
                 productData.in_stock = inventory.in_stock;
             } else {
                 productData.variants = [];
-                productData.stock_quantity = 0;
-                productData.in_stock = false;
+                if (hadVariants) {
+                    productData.stock_quantity = 0;
+                    productData.in_stock = false;
+                }
             }
         }
 
         // Actualizar producto usando el cliente admin
-        const { data, error } = await supabaseAdmin
+        let updateQuery = supabaseAdmin
             .from('products')
             .update(productData)
-            .eq('id', params.id)
+            .eq('id', params.id);
+        if (inventoryWrite) updateQuery = updateQuery.eq('inventory_version', expectedVersion);
+        const { data, error } = await updateQuery
             .select()
-            .single();
+            .maybeSingle();
+
+        if ((!error && !data) || error?.code === 'PGRST116' || (error?.code === '23514' && /inventory/i.test(error.message))) {
+            return NextResponse.json({ error: 'El inventario cambio o tiene reservas activas; recarga el producto' }, { status: 409 });
+        }
 
         if (error) {
             console.error('Error updating product:', error);

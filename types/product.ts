@@ -14,6 +14,7 @@ export interface ProductVariant {
 }
 
 export interface Product {
+    inventory_version?: number;
     id: string;
     name: string;
     slug: string;

@@ -148,6 +148,10 @@ export async function POST(request: Request) {
         if (!taxonomy.valid) {
             return ApiResponse.badRequest(taxonomy.error || 'Categoria o subcategoria invalida');
         }
+        if (stock_quantity !== undefined && ((typeof stock_quantity !== 'number' && typeof stock_quantity !== 'string') || String(stock_quantity).trim() === '' || !Number.isInteger(Number(stock_quantity)) || Number(stock_quantity) < 0 || Number(stock_quantity) > 2147483647)) {
+            return ApiResponse.badRequest('Cantidad de inventario invalida');
+        }
+        if (variants !== undefined && !Array.isArray(variants)) return ApiResponse.badRequest('Variantes invalidas');
 
         const productData: Record<string, string | number | boolean | string[] | ReturnType<typeof serializeVariantsForStorage> | null> = {
             name,
@@ -156,7 +160,7 @@ export async function POST(request: Request) {
             category: taxonomy.category!,
             subcategory: taxonomy.subcategory ?? null,
             images: Array.isArray(images) ? images : [],
-            stock_quantity: parseInt(String(stock_quantity)) || 0,
+            stock_quantity: stock_quantity === undefined ? 0 : Number(stock_quantity),
             featured: featured === true,
             is_new: is_new === true,
             in_stock: in_stock !== false,
@@ -171,8 +175,14 @@ export async function POST(request: Request) {
 
         if (variants && Array.isArray(variants) && variants.length > 0) {
             const profile = getProductProfile(taxonomy.category!, taxonomy.subcategory ?? '');
-            const serializedVariants = serializeVariantsForStorage(variants as ProductVariantDraft[], profile);
-            const inventory = getInventoryFromVariants(serializedVariants);
+            let serializedVariants;
+            let inventory;
+            try {
+                serializedVariants = serializeVariantsForStorage(variants as ProductVariantDraft[], profile);
+                inventory = getInventoryFromVariants(serializedVariants);
+            } catch {
+                return ApiResponse.badRequest('Variantes o cantidades invalidas');
+            }
 
             productData.variants = serializedVariants;
             productData.stock_quantity = inventory.stock_quantity;

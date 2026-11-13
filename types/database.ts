@@ -100,6 +100,7 @@ export interface Database {
                 updated_at?: string | null;
             }>;
             products: Table<{
+                inventory_version: number;
                 id: string;
                 name: string;
                 slug: string;

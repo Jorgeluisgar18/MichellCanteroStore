@@ -17,6 +17,7 @@ import type { Product, ProductVariant } from '@/types';
 import ReviewForm from '@/components/product/ReviewForm';
 import ReviewList, { Review } from '@/components/product/ReviewList';
 import ProductImage from '@/components/product/ProductImage';
+import { getSelectionCapacity } from '@/lib/checkout/variant-selection';
 
 interface ProductClientProps {
     initialProduct: Product;
@@ -50,7 +51,7 @@ function getInitialVariant(product: Product): ProductVariant | undefined {
         return undefined;
     }
 
-    return product.variants.find((variant) => variant.inStock) ?? product.variants.at(0);
+    return product.variants.find((variant) => getSelectionCapacity(product, variant.id) > 0);
 }
 
 function getVariantImage(product: Product, variant?: ProductVariant): string | undefined {
@@ -128,7 +129,7 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
         }
 
         const nextApparelVariants = product.variants?.filter((variant) => variant.type === 'color_size') ?? [];
-        const nextVariant = nextApparelVariants.find((variant) => variant.inStock) ?? nextApparelVariants.at(0);
+        const nextVariant = nextApparelVariants.find((variant) => getSelectionCapacity(product, variant.id) > 0);
 
         if (!nextVariant) {
             return;
@@ -154,12 +155,16 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
         }
 
         setSelectedImageUrl(getVariantImage(product, selectedVariant));
-        setQuantity((currentQuantity) => Math.min(Math.max(1, currentQuantity), selectedVariant.stock_quantity || 1));
+        setQuantity((currentQuantity) => Math.min(Math.max(1, currentQuantity), Math.max(1, getSelectionCapacity(product, selectedVariant.id))));
     }, [product, selectedVariant]);
 
     const displayedImage = selectedImageUrl || product.images?.at(0);
 
     const handleAddToCart = () => {
+        if (getSelectionCapacity(product, selectedVariant?.id) < quantity || !Number.isInteger(quantity) || quantity < 1) {
+            showToast('La cantidad seleccionada no está disponible', 'error');
+            return;
+        }
         if (product.variants && product.variants.length > 0 && !selectedVariant) {
             showToast('Por favor selecciona una opción', 'error');
             return;
@@ -171,8 +176,7 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
 
     const handleColorSelect = (colorKey: string) => {
         setSelectedColorKey(colorKey);
-        const nextVariant = apparelVariants.find((variant) => getVariantColorKey(variant) === colorKey && variant.inStock)
-            ?? apparelVariants.find((variant) => getVariantColorKey(variant) === colorKey);
+        const nextVariant = apparelVariants.find((variant) => getVariantColorKey(variant) === colorKey && getSelectionCapacity(product, variant.id) > 0);
 
         if (!nextVariant) {
             return;
@@ -183,11 +187,12 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
     };
 
     const handleVariantSelect = (variant: ProductVariant) => {
+        if (getSelectionCapacity(product, variant.id) === 0) return;
         setSelectedVariant(variant);
         setSelectedImageUrl(getVariantImage(product, variant));
     };
 
-    const maxAvailableQuantity = selectedVariant?.stock_quantity || product.stock_quantity;
+    const maxAvailableQuantity = getSelectionCapacity(product, selectedVariant?.id);
 
     return (
         <>
@@ -354,6 +359,7 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
                                                             key={variant.id}
                                                             type="button"
                                                             onClick={() => handleVariantSelect(variant)}
+                                                            disabled={getSelectionCapacity(product, variant.id) === 0}
                                                             className={`rounded-xl border-2 px-5 py-2.5 font-medium transition-all ${isSelected
                                                                 ? 'border-primary-600 bg-primary-50 text-primary-700 shadow-sm'
                                                                 : 'border-neutral-200 text-neutral-700 hover:border-neutral-300'
@@ -377,6 +383,7 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
                                                         key={variant.id}
                                                         type="button"
                                                         onClick={() => handleVariantSelect(variant)}
+                                                        disabled={getSelectionCapacity(product, variant.id) === 0}
                                                         className={`flex items-center gap-3 rounded-full border px-4 py-2 text-sm transition-all ${isSelected
                                                             ? 'border-primary-600 bg-primary-50 text-primary-700'
                                                             : 'border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400'
@@ -410,6 +417,7 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
                                                             key={variant.id}
                                                             type="button"
                                                             onClick={() => handleVariantSelect(variant)}
+                                                            disabled={getSelectionCapacity(product, variant.id) === 0}
                                                             className={`relative h-10 w-10 rounded-full border-2 transition-all ${isSelected
                                                                 ? 'scale-110 border-primary-600 ring-2 ring-primary-100 ring-offset-2'
                                                                 : 'border-neutral-200 hover:border-neutral-400'
@@ -428,6 +436,7 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
                                                         key={variant.id}
                                                         type="button"
                                                         onClick={() => handleVariantSelect(variant)}
+                                                        disabled={getSelectionCapacity(product, variant.id) === 0}
                                                         className={`rounded-xl border-2 px-5 py-2.5 font-medium transition-all ${isSelected
                                                             ? 'border-primary-600 bg-primary-50 text-primary-700 shadow-sm'
                                                             : 'border-neutral-200 text-neutral-700 hover:border-neutral-300'
@@ -451,7 +460,7 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
                                     <button
                                         type="button"
                                         onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                        disabled={!product.in_stock || (selectedVariant && selectedVariant.stock_quantity === 0)}
+                                        disabled={maxAvailableQuantity === 0 || quantity <= 1}
                                         className="rounded-lg border border-neutral-300 p-2 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-30"
                                     >
                                         <Minus className="w-4 h-4" />
@@ -460,7 +469,7 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
                                     <button
                                         type="button"
                                         onClick={() => setQuantity(Math.min(maxAvailableQuantity, quantity + 1))}
-                                        disabled={!product.in_stock || (selectedVariant && selectedVariant.stock_quantity === 0) || quantity >= maxAvailableQuantity}
+                                        disabled={maxAvailableQuantity === 0 || quantity >= maxAvailableQuantity}
                                         className="rounded-lg border border-neutral-300 p-2 hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-30"
                                     >
                                         <Plus className="w-4 h-4" />
@@ -475,9 +484,9 @@ export default function ProductClient({ initialProduct, relatedProducts, initial
                                     className="flex-1"
                                     leftIcon={<ShoppingCart className="w-5 h-5" />}
                                     onClick={handleAddToCart}
-                                    disabled={!product.in_stock || (selectedVariant && selectedVariant.stock_quantity === 0)}
+                                    disabled={maxAvailableQuantity === 0 || quantity > maxAvailableQuantity}
                                 >
-                                    {(!product.in_stock || (selectedVariant && selectedVariant.stock_quantity === 0)) ? 'Agotado' : 'Agregar al carrito'}
+                                    {maxAvailableQuantity === 0 ? 'Agotado' : 'Agregar al carrito'}
                                 </Button>
                                 <Button
                                     variant="outline"

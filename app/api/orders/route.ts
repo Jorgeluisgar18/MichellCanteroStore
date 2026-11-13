@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase-server';
 import { captureCheckoutIssue } from '@/lib/observability/checkout';
 import { getOrderReplayStatus } from '@/lib/checkout/idempotency';
 import type { CreateOrderInput } from '@/lib/validations/order';
+import { resolveVariantSelection, validateSelectionLines } from '@/lib/checkout/variant-selection';
 import {
     calculateCheckoutShippingCost,
     canReuseExistingOrderForIdempotency,
@@ -142,6 +143,8 @@ export async function POST(request: Request) {
         }
 
         const validatedItems = [];
+        const selectionFailure = validateSelectionLines(productsInDb ?? [], items);
+        if (selectionFailure) return ApiResponse.badRequest(selectionFailure, 'INVALID_VARIANT_SELECTION');
         for (const item of items) {
             const product = productsInDb?.find(p => p.id === item.product_id);
 
@@ -153,17 +156,9 @@ export async function POST(request: Request) {
                 return ApiResponse.badRequest(`La cantidad solicitada de "${product.name}" ya no esta disponible. Por favor actualiza tu carrito.`);
             }
 
-            let finalPrice = product.price;
-            if (item.variant_id && Array.isArray(product.variants)) {
-                const variant = (product.variants as Array<{
-                    id: string;
-                    priceModifier?: number;
-                }>).find(v => v.id === item.variant_id);
-
-                if (typeof variant?.priceModifier === 'number') {
-                    finalPrice = product.price + variant.priceModifier;
-                }
-            }
+            const selection = resolveVariantSelection(product, item.variant_id);
+            if (!selection.ok) return ApiResponse.badRequest(selection.error, 'INVALID_VARIANT_SELECTION');
+            const finalPrice = selection.price;
 
             validatedItems.push({
                 product_id: item.product_id,
@@ -171,7 +166,7 @@ export async function POST(request: Request) {
                 product_price: finalPrice,
                 product_image: product.images?.[0] || '',
                 quantity: item.quantity,
-                variant_name: item.variant_name || null,
+                variant_name: selection.variant?.name ?? null,
                 variant_id: item.variant_id || null,
             });
         }
@@ -219,6 +214,7 @@ export async function POST(request: Request) {
         });
 
         if (orderError) {
+            if (orderError.code === 'P0003') return ApiResponse.badRequest('La variante seleccionada ya no está disponible.', 'INVALID_VARIANT_SELECTION');
             if (orderError.code === '23505' && idempotency_key) {
                 const replay = await findIdempotentOrder(idempotency_key, validatedData, authenticatedUserId);
                 if (replay) return replay;

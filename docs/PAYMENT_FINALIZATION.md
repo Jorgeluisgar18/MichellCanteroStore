@@ -53,6 +53,32 @@ Do not drop inventory evidence or columns when rolling application code back.
 
 ## Remaining Work
 
+### Authoritative Variant Inventory
+
+Variants represent physical remaining quantities. New reservations carry a per-variant
+allocation map; `NULL` means historical/unattributed evidence and is not automatically
+backfilled. Unknown active product holds conservatively consume variant availability.
+Creation and approved-payment recovery validate the selected identity and its free
+quantity under the same product locks used by stock mutations.
+
+The variant-aware transaction wrappers retain the prior payment validation/rollback
+logic in private implementations (not executable by service/client roles). Approval
+deducts product and selected variant quantities atomically and records attributed
+confirmation evidence. Replays do not deduct again. A shortage persists paid status
+with a fulfillment hold; replenishment can resolve that shortage automatically.
+Historical paid/confirmed inventory without variant evidence stays explicitly
+uncertain across retries and replenishment; it is not silently deducted again.
+
+Inventory versions protect admin saves from overwriting sales. Database guards also
+protect active reservations and require consistent variant totals when allocations
+are edited. See `INVENTORY_ADMIN.md` and `VARIANT_SELECTION.md` for client contracts.
+The migration requests a Data API schema-cache refresh after adding/rebinding RPCs,
+using the [documented Supabase notification](https://supabase.com/kb/troubleshooting/refresh-postgrest-schema).
+Release checks must still confirm the hosted API recognizes the new signatures and grants.
+Neither the migration nor the normalization script repairs historical stock. Before
+release, inventory discrepancies and legacy allocation evidence require a controlled
+read-only preflight and an approved correction plan, not inferred restocking.
+
 ### Order Creation Retries
 
 The mounted checkout retains its idempotency key after a transport or parameter

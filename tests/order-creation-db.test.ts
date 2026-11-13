@@ -52,7 +52,7 @@ it('commits order, items and stock holds together or rolls all of them back', { 
             CREATE TABLE products(id uuid PRIMARY KEY, name text NOT NULL, price numeric(10,2), stock_quantity integer CHECK(stock_quantity>=0),
                 in_stock boolean DEFAULT true, variants jsonb DEFAULT '[]', updated_at timestamptz DEFAULT now());
             CREATE TABLE orders(id uuid PRIMARY KEY DEFAULT uuid_generate_v4(), user_id uuid, order_number text UNIQUE NOT NULL,
-                status text DEFAULT 'pending', payment_status text DEFAULT 'pending', inventory_status text DEFAULT 'unverified',
+                status text DEFAULT 'pending', payment_status text DEFAULT 'pending', wompi_transaction_id text, payment_id text,
                 subtotal numeric(10,2) NOT NULL, tax numeric(10,2) DEFAULT 0, shipping numeric(10,2) NOT NULL, total numeric(10,2) NOT NULL,
                 shipping_name text NOT NULL, shipping_email text NOT NULL, shipping_phone text NOT NULL, shipping_address text NOT NULL,
                 shipping_city text NOT NULL, shipping_state text NOT NULL, shipping_zip_code text NOT NULL DEFAULT '',
@@ -66,7 +66,7 @@ it('commits order, items and stock holds together or rolls all of them back', { 
             CREATE FUNCTION audit_order_insert() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN INSERT INTO public.audit_marker VALUES(NEW.id); RETURN NEW; END $$;
             CREATE TRIGGER audit_order_insert AFTER INSERT ON orders FOR EACH ROW EXECUTE FUNCTION audit_order_insert();
             INSERT INTO products(id,name,price,stock_quantity) VALUES('${product}','Fixture',100,5),('${second}','Fixture',100,5);`);
-        for (const name of ['20260129203241_stock_reservation.sql', '20260603014012_20260603_fix_stock_reservation_schema.sql', '20261112150230_restrict_stock_rpc_execution.sql']) {
+        for (const name of ['20260122162342_inventory_management_functions.sql', '20260129203241_stock_reservation.sql', '20260603014012_20260603_fix_stock_reservation_schema.sql', '20261112150230_restrict_stock_rpc_execution.sql']) {
             sql(readFileSync(join(process.cwd(), 'supabase/migrations', name), 'utf8'));
         }
         const name = readdirSync(join(process.cwd(), 'supabase/migrations')).find(file => file.endsWith('_atomic_order_creation.sql'));
@@ -141,5 +141,93 @@ it('commits order, items and stock holds together or rolls all of them back', { 
         }
         sql(`SET ROLE service_role; ${call()}`);
         assert.equal(sql('SELECT count(*) FROM orders;'), '1');
+        // Upgrade the same historical fixture to the variant-aware engine.
+        sql(readFileSync(join(process.cwd(), 'supabase/migrations/20261112182940_atomic_wompi_finalization.sql'), 'utf8'));
+        const variantMigration = readdirSync(join(process.cwd(), 'supabase/migrations')).find(file => file.endsWith('_authoritative_variant_inventory.sql'));
+        assert.ok(variantMigration);
+        sql(readFileSync(join(process.cwd(), 'supabase/migrations', variantMigration), 'utf8'));
+        const variants = (a: number, b = 9) => [
+            { id: 'red', name: 'Red', stock_quantity: a, inStock: a > 0 },
+            { id: 'blue', name: 'Blue', stock_quantity: b, inStock: b > 0 },
+        ];
+        const resetVariants = () => {
+            sql(`TRUNCATE order_items,stock_reservations,orders,audit_marker;
+                UPDATE products SET variants='${JSON.stringify(variants(1))}',stock_quantity=10,in_stock=true,price=100,name='Fixture' WHERE id='${product}';
+                UPDATE products SET variants='[]',stock_quantity=5,in_stock=true,price=100,name='Fixture' WHERE id='${second}';`);
+        };
+        const selected = [{ ...items[0], quantity: 1, variant_id: 'red', variant_name: 'Forged label' }];
+        const oneOrder = { ...order, subtotal: 100, total: 100 };
+        const finalize = (id: string, reference = 'ATOMIC-1', tx = 'variant-tx') =>
+            `SELECT public.finalize_wompi_payment('${id}','${tx}','APPROVED','${reference}',10000,'COP');`;
+        resetVariants();
+        assert.notEqual(docker(args, call(oneOrder, [{ ...selected[0], variant_id: null }])).status, 0);
+        assert.notEqual(docker(args, call(oneOrder, [{ ...selected[0], variant_id: 'missing' }])).status, 0);
+        empty();
+        const red = JSON.parse(sql(call(oneOrder, selected)));
+        assert.equal(red.items[0].variant_name, 'Red', 'the saved label comes from the catalog');
+        assert.equal(sql("SELECT variant_quantities->>'red' FROM stock_reservations;"), '1');
+        const version = sql(`SELECT inventory_version FROM products WHERE id='${product}';`);
+        assert.equal(JSON.parse(sql(finalize(red.order.id).replace('10000', '9999'))).outcome, 'conflict');
+        assert.equal(sql('SELECT status FROM stock_reservations;'), 'reserved', 'rejected approval cannot release valid holds');
+        assert.notEqual(docker(args, call({ ...oneOrder, order_number: 'SECOND', idempotency_key: randomUUID() }, selected)).status, 0);
+        assert.equal(JSON.parse(sql(finalize(red.order.id))).outcome, 'finalized');
+        assert.equal(sql(`SELECT variants->0->>'stock_quantity' FROM products WHERE id='${product}';`), '0');
+        assert.equal(sql(`SELECT stock_quantity FROM products WHERE id='${product}';`), '9');
+        sql('GRANT SELECT,UPDATE ON public.products TO service_role;');
+        const paidVersion = sql(`SELECT inventory_version FROM products WHERE id='${product}';`);
+        sql(`SET ROLE service_role; UPDATE public.products SET name='Metadata edit',inventory_version=0 WHERE id='${product}'; RESET ROLE;`);
+        assert.equal(sql(`SELECT inventory_version FROM products WHERE id='${product}';`), paidVersion, 'version assignment cannot reset the counter');
+        assert.equal(JSON.parse(sql(finalize(red.order.id))).outcome, 'already_finalized');
+        assert.equal(sql(`UPDATE products SET variants='${JSON.stringify(variants(1))}',stock_quantity=10
+            WHERE id='${product}' AND inventory_version=${version} RETURNING id;`), 'UPDATE 0');
+        sql(`SET ROLE service_role; UPDATE products SET variants='${JSON.stringify(variants(0,8))}',stock_quantity=8
+            WHERE id='${product}' AND inventory_version=${paidVersion}; RESET ROLE;`);
+        assert.equal(sql(`SELECT stock_quantity FROM products WHERE id='${product}';`), '8');
+        resetVariants();
+        const simultaneous = await Promise.all([concurrent(call(oneOrder, selected)),
+            concurrent(call({ ...oneOrder, order_number: 'OTHER', idempotency_key: randomUUID() }, selected))]);
+        assert.equal(simultaneous.filter(code => code === 0).length, 1, 'only one order may reserve the last red unit');
+        assert.equal(sql('SELECT count(*) FROM orders;'), '1');
+        // Expired approval cannot steal a newer active reservation, but replenishment permits recovery.
+        resetVariants();
+        const expired = JSON.parse(sql(call(oneOrder, selected)));
+        sql("UPDATE stock_reservations SET expires_at=now()-interval '1 minute';");
+        const newer = JSON.parse(sql(call({ ...oneOrder, order_number: 'NEWER', idempotency_key: randomUUID() }, selected)));
+        assert.equal(JSON.parse(sql(finalize(expired.order.id))).outcome, 'inventory_review');
+        assert.equal(sql(`SELECT stock_quantity FROM products WHERE id='${product}';`), '10');
+        assert.equal(JSON.parse(sql(finalize(newer.order.id, 'NEWER', 'newer-tx'))).outcome, 'finalized');
+        sql(`UPDATE products SET variants='${JSON.stringify(variants(1))}',stock_quantity=10 WHERE id='${product}';`);
+        assert.equal(JSON.parse(sql(finalize(expired.order.id))).outcome, 'finalized');
+        assert.equal(sql(`SELECT stock_quantity FROM products WHERE id='${product}';`), '9');
+        // A product-only historical confirmation is not proof that variant inventory was deducted.
+        resetVariants();
+        const legacy = JSON.parse(sql(call(oneOrder, selected)));
+        sql(`UPDATE stock_reservations SET status='confirmed',variant_quantities=NULL;
+            UPDATE products SET stock_quantity=9 WHERE id='${product}';`);
+        for (let attempt = 0; attempt < 2; attempt++) {
+            const review = JSON.parse(sql(finalize(legacy.order.id)));
+            assert.equal(review.outcome, 'inventory_review');
+            assert.equal(review.reason, 'legacy_variant_inventory_unverified');
+            assert.equal(sql(`SELECT variants->0->>'stock_quantity' FROM products WHERE id='${product}';`), '1');
+            assert.equal(sql(`SELECT stock_quantity FROM products WHERE id='${product}';`), '9');
+        }
+        resetVariants();
+        const unverified = JSON.parse(sql(call(oneOrder, selected)));
+        sql(`UPDATE orders SET payment_status='paid',wompi_transaction_id='variant-tx',inventory_status='unverified';
+            UPDATE products SET stock_quantity=9 WHERE id='${product}';`);
+        assert.equal(JSON.parse(sql(finalize(unverified.order.id))).reason, 'legacy_variant_inventory_unverified');
+        sql(`UPDATE products SET variants='${JSON.stringify(variants(1))}',stock_quantity=10 WHERE id='${product}';`);
+        assert.equal(JSON.parse(sql(finalize(unverified.order.id))).reason, 'legacy_variant_inventory_unverified');
+        assert.equal(sql(`SELECT stock_quantity FROM products WHERE id='${product}';`), '10', 'replenishment cannot erase legacy accounting uncertainty');
+        resetVariants();
+        const held = JSON.parse(sql(call(oneOrder, selected)));
+        assert.notEqual(docker(args, `UPDATE products SET variants='${JSON.stringify(variants(0))}',stock_quantity=9 WHERE id='${product}';`).status, 0);
+        assert.equal(JSON.parse(sql(`SELECT public.confirm_stock_reservation('${held.order.id}');`)).success, false);
+        assert.notEqual(docker(args, `SELECT public.decrement_product_stock('${product}',1);`).status, 0);
+        assert.equal(sql("SELECT has_function_privilege('service_role','public.create_order_with_stock_product_only(jsonb,jsonb)','EXECUTE');"), 'f');
+        assert.equal(sql("SELECT has_function_privilege('service_role','public.finalize_wompi_payment_product_only(uuid,text,text,text,bigint,text)','EXECUTE');"), 'f');
+        for (const role of ['anon','authenticated']) {
+            assert.notEqual(docker(args, `SET ROLE ${role}; ${call({ ...oneOrder, order_number: 'DENIED', idempotency_key: randomUUID() }, selected)}`).status, 0);
+        }
     } finally { assert.equal(docker(['stop', container]).status, 0); }
 });

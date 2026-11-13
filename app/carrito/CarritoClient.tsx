@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/Card';
 import ProductImage from '@/components/product/ProductImage';
 import { useCartStore } from '@/store/cartStore';
 import { formatPrice } from '@/lib/utils';
+import { getSelectionCapacity } from '@/lib/checkout/variant-selection';
 
 export default function CarritoClient() {
     const [isMounted, setIsMounted] = useState(false);
@@ -147,7 +148,8 @@ export default function CarritoClient() {
                                                                 )
                                                             }
                                                             className="p-2.5 border border-neutral-300 rounded-xl hover:bg-neutral-100 active:scale-95 transition-transform touch-manipulation"
-                                                            disabled={item.quantity >= item.product.stock_quantity}
+                                                            disabled={item.quantity >= getSelectionCapacity(item.product, item.selectedVariant?.id)
+                                                                || items.filter(other => other.product.id === item.product.id).reduce((sum, other) => sum + other.quantity, 0) >= item.product.stock_quantity}
                                                             aria-label="Aumentar cantidad"
                                                         >
                                                             <Plus className="w-4 h-4" />

@@ -21,6 +21,8 @@ it('keys checkout attempts by meaningful intent, not display snapshots or reques
     assert.equal(getOrderReplayStatus({ ...input, order_items: [] }, input), 'incomplete');
     assert.equal(getOrderReplayStatus({ ...input, order_items: [{ product_id: 'product-1', quantity: 1 }] }, input), 'incomplete');
     assert.equal(getOrderReplayStatus({ ...input, order_items: [{ product_id: 'other-product', quantity: 2 }] }, input), 'mismatch');
+    const selected = { ...input, items: [{ ...input.items[0]!, variant_id: 'legacy-red', variant_name: 'Client label' }] };
+    assert.equal(getOrderReplayStatus({ ...input, order_items: [{ ...selected.items[0]!, variant_name: 'Catalog label' }] }, selected), 'ready');
 });
 
 it('retains retry keys, suppresses overlapping submissions and keeps dismiss buttons non-submitting', async () => {

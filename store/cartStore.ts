@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Product, CartItem, ProductVariant } from '@/types';
+import { resolveVariantSelection, validateSelectionLines } from '../lib/checkout/variant-selection';
 
 interface CartStore {
     items: CartItem[];
@@ -27,27 +28,20 @@ export const useCartStore = create<CartStore>()(
 
             addItem: (product, quantity = 1, variant) => {
                 set((state) => {
+                    if (!Number.isInteger(quantity) || quantity <= 0) return state;
+                    const selection = resolveVariantSelection(product, variant?.id);
+                    if (!selection.ok) return state;
                     const existingItemIndex = state.items.findIndex(
                         (item) =>
                             item.product.id === product.id &&
                             item.selectedVariant?.id === variant?.id
                     );
 
-                    if (existingItemIndex > -1) {
-                        const newItems = [...state.items];
-                        const item = newItems[existingItemIndex];
-                        if (item) {
-                            item.quantity += quantity;
-                        }
-                        return { items: newItems };
-                    }
-
-                    return {
-                        items: [
-                            ...state.items,
-                            { product, quantity, selectedVariant: variant },
-                        ],
-                    };
+                    const next = { product, quantity: quantity + (state.items[existingItemIndex]?.quantity ?? 0), selectedVariant: selection.variant };
+                    const items = existingItemIndex >= 0 ? state.items.map((item, index) => index === existingItemIndex ? next : item) : [...state.items, next];
+                    const products = items.map(item => item.product.id === product.id ? product : item.product);
+                    if (validateSelectionLines(products, items.map(item => ({ product_id: item.product.id, quantity: item.quantity, variant_id: item.selectedVariant?.id })))) return state;
+                    return { items };
                 });
             },
 
@@ -64,19 +58,22 @@ export const useCartStore = create<CartStore>()(
             },
 
             updateQuantity: (productId, quantity, variantId) => {
-                if (quantity <= 0) {
+                if (quantity === 0) {
                     get().removeItem(productId, variantId);
                     return;
                 }
 
-                set((state) => ({
-                    items: state.items.map((item) =>
+                if (!Number.isInteger(quantity) || quantity < 1) return;
+                set((state) => {
+                    const items = state.items.map((item) =>
                         item.product.id === productId &&
                             item.selectedVariant?.id === variantId
                             ? { ...item, quantity }
                             : item
-                    ),
-                }));
+                    );
+                    if (validateSelectionLines(items.map(item => item.product), items.map(item => ({ product_id: item.product.id, quantity: item.quantity, variant_id: item.selectedVariant?.id })))) return state;
+                    return { items };
+                });
             },
 
             clearCart: () => set({ items: [] }),

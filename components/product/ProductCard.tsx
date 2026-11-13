@@ -11,6 +11,7 @@ import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import ProductImage from '@/components/product/ProductImage';
+import { getSelectionCapacity } from '@/lib/checkout/variant-selection';
 
 interface ProductCardProps {
     product: Product;
@@ -20,13 +21,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     const addItem = useCartStore((state) => state.addItem);
     const { isInWishlist, toggleItem } = useWishlistStore();
     const inWishlist = isInWishlist(product.id);
+    const requiresSelection = Boolean(product.variants?.length);
+    const available = requiresSelection
+        ? product.variants!.some(variant => getSelectionCapacity(product, variant.id) > 0)
+        : getSelectionCapacity(product) > 0;
 
     const discount = product.compare_at_price
         ? calculateDiscount(product.price, product.compare_at_price)
         : 0;
 
     const handleAddToCart = (e: React.MouseEvent) => {
+        if (requiresSelection) return;
         e.preventDefault();
+        if (!available) return;
         addItem(product, 1);
     };
 
@@ -59,7 +66,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                                 -{discount}%
                             </Badge>
                         )}
-                        {!product.in_stock && (
+                        {!available && (
                             <Badge variant="default" size="sm">
                                 Agotado
                             </Badge>
@@ -79,7 +86,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                     </button>
 
                     {/* Quick Add Button */}
-                    {product.in_stock && (
+                    {available && (
                         <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button
                                 onClick={handleAddToCart}
@@ -88,7 +95,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                                 className="w-full"
                                 leftIcon={<ShoppingCart className="w-4 h-4" />}
                             >
-                                Agregar al Carrito
+                                {requiresSelection ? 'Seleccionar opciones' : 'Agregar al Carrito'}
                             </Button>
                         </div>
                     )}

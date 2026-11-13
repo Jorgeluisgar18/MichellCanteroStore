@@ -4,7 +4,7 @@ import { z } from 'zod';
 export const OrderItemSchema = z.object({
     product_id: z.string().uuid('ID de producto inválido'),
     quantity: z.number().int().positive('La cantidad debe ser positiva').max(100, 'Cantidad máxima: 100'),
-    variant_id: z.string().uuid().optional(),
+    variant_id: z.string().min(1).max(200).refine(value => value.trim().length > 0).optional(),
     variant_name: z.string().optional(),
 });
 

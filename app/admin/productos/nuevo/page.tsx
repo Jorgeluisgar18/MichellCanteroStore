@@ -20,6 +20,7 @@ import {
     getInventoryFromVariants,
     getProductProfile,
     normalizeVariant,
+    serializeVariantsForStorage,
 } from '@/lib/product-variants';
 import { getCatalogCategories, getCatalogSubcategories, validateProductTaxonomy } from '@/lib/catalog/taxonomy';
 import Image from 'next/image';
@@ -36,6 +37,7 @@ interface Variant {
     colorHex?: string;
     size?: string;
     sku?: string;
+    priceModifier?: number;
 }
 
 const EMPTY_VARIANT_NAME_SENTINEL = 'Sin nombre';
@@ -116,6 +118,7 @@ export default function ProductFormPage() {
 
     const [loading, setLoading] = useState(isEditing);
     const [isSaving, setIsSaving] = useState(false);
+    const [editInventoryVersion, setEditInventoryVersion] = useState<number | null>(null);
     const [formData, setFormData] = useState<ProductFormData>({
         name: '',
         slug: '',
@@ -167,10 +170,13 @@ export default function ProductFormPage() {
     }, [productProfile]);
 
     const fetchProduct = async () => {
+        setEditInventoryVersion(null);
         try {
             const res = await fetch(`/api/products/${productId}`, { cache: 'no-store' });
             const data = await res.json();
             if (data.data) {
+                const version = data.data.inventory_version;
+                setEditInventoryVersion(Number.isInteger(version) && version >= 0 && version <= 2147483647 ? version : null);
                 const profile = getProductProfile(data.data.category || '', data.data.subcategory || '');
                 setFormData({
                     ...data.data,
@@ -357,6 +363,15 @@ export default function ProductFormPage() {
             delete payload.updated_at;
             delete payload.rating;
             delete payload.review_count;
+            delete payload.inventory_version;
+            delete payload.expected_inventory_version;
+            if (isEditing) {
+                if (editInventoryVersion === null) {
+                    showToast('Recarga el producto para obtener su version de inventario.', 'error');
+                    return;
+                }
+                payload.expected_inventory_version = editInventoryVersion;
+            }
 
             // Asegurar tipos correctos para la base de datos
             payload.price = parseFloat(String(payload.price)) || 0;
@@ -379,28 +394,15 @@ export default function ProductFormPage() {
 
             // Limpiar variantes para asegurar que tengan el formato correcto
             if (payload.variants && Array.isArray(payload.variants)) {
-                const normalizedVariants = payload.variants.map((v: unknown) => {
-                    const variant = normalizeVariant(v as Variant, productProfile);
-                    return {
-                        id: variant.id || crypto.randomUUID(),
-                        name: variant.name || 'Sin nombre',
-                        type: variant.type,
-                        value: variant.value || '',
-                        stock_quantity: parseInt(String(variant.stock_quantity)) || 0,
-                        inStock: (parseInt(String(variant.stock_quantity)) || 0) > 0,
-                        image: variant.image || '',
-                        colorName: variant.colorName || null,
-                        colorHex: variant.colorHex || null,
-                        size: variant.size || null,
-                        sku: variant.sku || null,
-                    };
-                });
+                const normalizedVariants = serializeVariantsForStorage(payload.variants as Variant[], productProfile);
 
                 payload.variants = normalizedVariants;
 
-                const inventory = getInventoryFromVariants(normalizedVariants as Variant[]);
-                payload.stock_quantity = inventory.stock_quantity;
-                payload.in_stock = inventory.in_stock;
+                if (normalizedVariants.length > 0) {
+                    const inventory = getInventoryFromVariants(normalizedVariants);
+                    payload.stock_quantity = inventory.stock_quantity;
+                    payload.in_stock = inventory.in_stock;
+                }
             }
 
             const res = await fetchWithCsrf(url, {

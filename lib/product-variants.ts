@@ -14,6 +14,7 @@ export type ProductVariantDraft = {
     colorHex?: string | null;
     size?: string | null;
     sku?: string | null;
+    priceModifier?: number;
 };
 
 const SHADE_SUBCATEGORIES = new Set([
@@ -149,6 +150,9 @@ export function createVariant(profile: ProductProfile): ProductVariant {
 
 export function normalizeVariant(variant: ProductVariantDraft, profile: ProductProfile): ProductVariant {
     const base = createVariant(profile);
+    if (variant.priceModifier !== undefined && !Number.isFinite(variant.priceModifier)) {
+        throw new Error('Invalid variant price modifier');
+    }
     const stockQuantity = parseStockQuantity(variant.stock_quantity);
     const image = toOptionalString(variant.image) || '';
     const sku = toOptionalString(variant.sku);
@@ -164,6 +168,7 @@ export function normalizeVariant(variant: ProductVariantDraft, profile: ProductP
         const normalizedColorHex = getEffectiveColorCode(colorHex, value, base.colorHex || '#d4a373');
 
         return {
+            ...(variant.priceModifier !== undefined ? { priceModifier: variant.priceModifier } : {}),
             id: toOptionalString(variant.id) || base.id,
             name: `${normalizedColorName} / ${normalizedSize}`,
             type: 'color_size',
@@ -182,6 +187,7 @@ export function normalizeVariant(variant: ProductVariantDraft, profile: ProductP
         const normalizedColorCode = getEffectiveColorCode(colorHex, value, base.colorHex || '#d4a373');
 
         return {
+            ...(variant.priceModifier !== undefined ? { priceModifier: variant.priceModifier } : {}),
             id: toOptionalString(variant.id) || base.id,
             name: name || 'Sin nombre',
             type: 'shade',
@@ -200,6 +206,7 @@ export function normalizeVariant(variant: ProductVariantDraft, profile: ProductP
         const normalizedColorCode = getEffectiveColorCode(colorHex, value, base.colorHex || '#000000');
 
         return {
+            ...(variant.priceModifier !== undefined ? { priceModifier: variant.priceModifier } : {}),
             id: toOptionalString(variant.id) || base.id,
             name: name || 'Sin nombre',
             type: normalizedType,
@@ -214,6 +221,7 @@ export function normalizeVariant(variant: ProductVariantDraft, profile: ProductP
     }
 
     return {
+        ...(variant.priceModifier !== undefined ? { priceModifier: variant.priceModifier } : {}),
         id: toOptionalString(variant.id) || base.id,
         name: name || 'Sin nombre',
         type: 'size',
@@ -231,7 +239,21 @@ export function normalizeVariants(variants: ProductVariantDraft[], profile: Prod
 }
 
 export function serializeVariantsForStorage(variants: ProductVariantDraft[], profile: ProductProfile) {
-    return normalizeVariants(variants, profile).map((variant) => ({
+    const ids = new Set<string>();
+    for (const variant of variants) {
+        if (!variant || typeof variant !== 'object') throw new Error('Invalid variant');
+        if (variant.id !== undefined && variant.id !== null) {
+            if (typeof variant.id !== 'string' || !variant.id || variant.id.trim() !== variant.id || variant.id.length > 200 || ids.has(variant.id)) {
+                throw new Error('Invalid or duplicate variant ID');
+            }
+            ids.add(variant.id);
+        }
+        const quantity = variant.stock_quantity;
+        if ((typeof quantity !== 'number' && typeof quantity !== 'string') || String(quantity).trim() === '' || !Number.isInteger(Number(quantity)) || Number(quantity) < 0 || Number(quantity) > 2147483647) {
+            throw new Error('Invalid variant stock quantity');
+        }
+    }
+    return normalizeVariants(variants.map((variant) => ({ ...variant, stock_quantity: Number(variant.stock_quantity) })), profile).map((variant) => ({
         id: variant.id,
         name: variant.name,
         type: variant.type,
@@ -243,11 +265,13 @@ export function serializeVariantsForStorage(variants: ProductVariantDraft[], pro
         colorHex: variant.colorHex || null,
         size: variant.size || null,
         sku: variant.sku || null,
+        ...(variant.priceModifier !== undefined ? { priceModifier: variant.priceModifier } : {}),
     }));
 }
 
 export function getInventoryFromVariants(variants: Array<{ stock_quantity: number }>) {
     const totalStock = variants.reduce((sum, variant) => sum + variant.stock_quantity, 0);
+    if (!Number.isSafeInteger(totalStock) || totalStock < 0 || totalStock > 2147483647) throw new Error('Invalid total stock quantity');
 
     return {
         stock_quantity: totalStock,

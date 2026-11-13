@@ -45,7 +45,7 @@ it('atomically finalizes verified payments and recovers expired inventory', {
     try {
         let ready = false;
         for (let i = 0; i < 100; i++) {
-            if (docker(['exec', container, 'pg_isready', '-U', 'postgres']).status === 0) { ready = true; break; }
+            if (docker(['exec', container, 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres']).status === 0) { ready = true; break; }
             Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100);
         }
         assert.ok(ready);

@@ -26,7 +26,7 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 async function main() {
     const { data: products, error } = await supabase
         .from('products')
-        .select('id, name, category, subcategory, variants, stock_quantity, in_stock')
+        .select('id, name, category, subcategory, variants, stock_quantity, in_stock, inventory_version')
         .order('created_at', { ascending: true });
 
     if (error) {
@@ -53,6 +53,12 @@ async function main() {
         const profile = getProductProfile(product.category || '', product.subcategory || '');
         const normalizedVariants = serializeVariantsForStorage(variants, profile);
         const inventory = getInventoryFromVariants(normalizedVariants);
+        if (product.stock_quantity !== inventory.stock_quantity) {
+            throw new Error(`Historical inventory mismatch for ${product.id}; explicit quantity correction required`);
+        }
+        if (!Number.isInteger(product.inventory_version) || product.inventory_version < 0 || product.inventory_version > 2147483647) {
+            throw new Error(`Missing inventory version for ${product.id}`);
+        }
 
         const variantsChanged = JSON.stringify(normalizedVariants) !== JSON.stringify(variants);
         const inventoryChanged = product.stock_quantity !== inventory.stock_quantity
@@ -63,18 +69,22 @@ async function main() {
             continue;
         }
 
-        const { error: updateError } = await supabase
+        const { data: updatedProduct, error: updateError } = await supabase
             .from('products')
             .update({
                 variants: normalizedVariants,
                 stock_quantity: inventory.stock_quantity,
                 in_stock: inventory.in_stock,
             })
-            .eq('id', product.id);
+            .eq('id', product.id)
+            .eq('inventory_version', product.inventory_version)
+            .select('id')
+            .maybeSingle();
 
         if (updateError) {
             throw new Error(`No se pudo normalizar ${product.name}: ${updateError.message}`);
         }
+        if (!updatedProduct) throw new Error(`Inventory changed for ${product.id}; normalization aborted`);
 
         updated += 1;
         console.log(`Normalizado: ${product.name} (${product.id})`);
