@@ -1,4 +1,5 @@
 import { normalizeEmail, normalizeOrderShippingFields } from './safety';
+import { formatCheckoutUuid, validCartId } from './cart-session';
 
 type IntentItem = {
     product_id: string; quantity: number;
@@ -33,6 +34,17 @@ export function checkoutIntentFingerprint(input: CheckoutIntent): string {
 }
 
 export type CheckoutAttempt = { key: string; fingerprint: string };
+export async function deriveCheckoutAttempt(cartId: string | null, input: CheckoutIntent): Promise<CheckoutAttempt> {
+    if (!validCartId(cartId)) throw new Error('El identificador del carrito no es válido.');
+    const subtle = globalThis.crypto?.subtle;
+    if (!subtle) throw new Error('El navegador no puede conservar un intento seguro. Usa una conexión HTTPS y vuelve a intentar.');
+    const fingerprint = checkoutIntentFingerprint(input);
+    const digest = await subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify([
+        'michell-checkout-attempt-v1', cartId ?? 'legacy', fingerprint,
+    ])));
+    return { fingerprint, key: formatCheckoutUuid(new Uint8Array(digest), 8) };
+}
+
 export function getCheckoutAttempt(previous: CheckoutAttempt | null, input: CheckoutIntent,
     createKey: () => string = () => crypto.randomUUID()): CheckoutAttempt {
     const fingerprint = checkoutIntentFingerprint(input);

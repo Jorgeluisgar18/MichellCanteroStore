@@ -38,9 +38,12 @@ it('retains retry keys, suppresses overlapping submissions and keeps dismiss but
     const item = { product: { id: 'product-1', name: 'Fixture', price: 100, images: ['https://example.test/product.jpg'] }, quantity: 1 };
     const sent: Record<string, unknown>[] = [];
     let pending: Promise<Response> | null = null;
+    let onSend: (() => void) | undefined;
     const { STORE_CONFIG: config } = require(join(process.cwd(), 'lib/config.ts'));
     const dummy = () => null;
-    Object.defineProperty(globalThis, 'window', { configurable: true, value: { WidgetCheckout: class {} } });
+    Object.defineProperty(globalThis, 'window', { configurable: true, value: {
+        localStorage: { getItem: () => JSON.stringify({ state: { items: [item], cartId: null } }) },
+    } });
     Object.defineProperty(globalThis, 'React', { configurable: true, value: React });
     loader._load = function(name, parent, main) {
         if (name === 'react' && parent.filename?.endsWith('CheckoutClient.tsx')) return { ...React,
@@ -51,6 +54,7 @@ it('retains retry keys, suppresses overlapping submissions and keeps dismiss but
             }, useRef: (initial: unknown) => ({ current: initial }), useEffect() {},
         };
         if (name === 'next/navigation') return { useRouter: () => ({ replace() {}, push() {} }) };
+        if (name === '@/lib/checkout/use-cart-session') return { useCartSession: () => true };
         if (name === 'next/script') return { default: dummy };
         if (name.startsWith('@/components/')) return { default: dummy, Card: dummy, useToast: () => ({ showToast() {} }) };
         if (name === '@/store/cartStore') {
@@ -64,6 +68,7 @@ it('retains retry keys, suppresses overlapping submissions and keeps dismiss but
         if (name === '@/lib/config') return { STORE_CONFIG: config };
         if (name === '@/lib/hooks/useCsrfToken') return { fetchWithCsrf: async (_url: string, options: RequestInit) => {
             sent.push(JSON.parse(String(options.body)));
+            onSend?.();
             if (pending) return pending;
             throw new Error('Synthetic lost response');
         } };
@@ -88,14 +93,22 @@ it('retains retry keys, suppresses overlapping submissions and keeps dismiss but
         await submit(event); await submit(event);
         assert.equal(sent.length, 2);
         assert.equal(sent[0]?.idempotency_key, sent[1]?.idempotency_key, 'transport failure must retain retry identity');
+        state = 0;
+        const reloadedStart = nodes.length;
+        walk(Checkout());
+        const reloadedSubmit = nodes.slice(reloadedStart).find(node => node.type === 'form')?.props.onSubmit;
+        assert.ok(reloadedSubmit);
+        await reloadedSubmit(event);
+        assert.equal(sent[0]?.idempotency_key, sent[sent.length - 1]?.idempotency_key, 'a fresh checkout instance must recover the same creation attempt');
         item.quantity = 2;
         await submit(event);
-        assert.notEqual(sent[1]?.idempotency_key, sent[2]?.idempotency_key, 'changed checkout intent needs a different key');
+        assert.notEqual(sent[sent.length - 2]?.idempotency_key, sent[sent.length - 1]?.idempotency_key, 'changed checkout intent needs a different key');
         sent.length = 0;
         let finish!: (response: Response) => void;
         pending = new Promise(resolve => { finish = resolve; });
+        const sending = new Promise<void>(resolve => { onSend = resolve; });
         const first = submit(event), second = submit(event);
-        await new Promise(resolve => setImmediate(resolve));
+        await sending;
         try { assert.equal(sent.length, 1, 'synchronous guard must work before React can rerender'); }
         finally {
             finish(new Response(JSON.stringify({ error: 'Synthetic rejected response' }), { status: 409 }));

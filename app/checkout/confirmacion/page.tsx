@@ -11,6 +11,8 @@ import Link from 'next/link';
 import { useCartStore } from '@/store/cartStore';
 import { fetchWithCsrf } from '@/lib/hooks/useCsrfToken';
 import { cartContentsFingerprint, readReturnContext, saveReturnContext, verifyCheckoutReturn, type ReturnState } from '@/lib/checkout/wompi-checkout-web';
+import { synchronizeCartStorage } from '@/lib/checkout/cart-session';
+import { useCartSession } from '@/lib/checkout/use-cart-session';
 
 interface Order {
     id: string;
@@ -28,8 +30,10 @@ function ConfirmacionContent() {
     const [loading, setLoading] = useState(true);
     const [verification, setVerification] = useState<ReturnState>('unverified');
     const [retry, setRetry] = useState(0);
+    const hydrated = useCartSession();
 
     useEffect(() => {
+        if (!hydrated) return;
         let active = true;
         setLoading(true);
         setOrder(null);
@@ -43,6 +47,7 @@ function ConfirmacionContent() {
             let receipt: Order | null = null;
             if (orderId) {
                 try {
+                    synchronizeCartStorage(window.localStorage, useCartStore);
                     const response = await fetch(`/api/orders/${encodeURIComponent(orderId)}`, { cache: 'no-store' });
                     const payload = response.ok ? await response.json() : null;
                     if (payload?.data?.id === orderId && typeof payload.data.payment_status === 'string') receipt = payload.data;
@@ -59,7 +64,8 @@ function ConfirmacionContent() {
                     // Consume cleanup before applying it; a later visit must preserve a new cart.
                     saveReturnContext(window.sessionStorage, { ...context, cartHandled: true });
                     const current = useCartStore.getState().items;
-                    if (cartContentsFingerprint(current) === context.cartFingerprint) useCartStore.getState().replaceSnapshot(current, []);
+                    const sameCycle = (useCartStore.getState().cartId ?? null) === (context.cartId ?? null);
+                    if (sameCycle && cartContentsFingerprint(current) === context.cartFingerprint) useCartStore.getState().replaceSnapshot(current, []);
                 } catch { /* A damaged local cart must not invalidate a verified server result. */ }
             }
             setOrder(receipt);
@@ -67,7 +73,7 @@ function ConfirmacionContent() {
             setLoading(false);
         })();
         return () => { active = false; };
-    }, [orderId, transactionId, retry]);
+    }, [orderId, transactionId, retry, hydrated]);
 
     if (loading) {
         return (

@@ -13,7 +13,9 @@ import { CreditCard, CheckCircle, Truck, MapPin, AlertCircle, X } from 'lucide-r
 import { fetchWithCsrf } from '@/lib/hooks/useCsrfToken';
 import { STORE_CONFIG } from '@/lib/config';
 import { calculateCheckoutShippingCost } from '@/lib/checkout/safety';
-import { getCheckoutAttempt, type CheckoutAttempt } from '@/lib/checkout/idempotency';
+import { deriveCheckoutAttempt } from '@/lib/checkout/idempotency';
+import { synchronizeCartStorage } from '@/lib/checkout/cart-session';
+import { useCartSession } from '@/lib/checkout/use-cart-session';
 import { cartLineTotal, refreshCartCatalog } from '@/lib/checkout/cart-freshness';
 import { buildWompiWebFields, cartContentsFingerprint, saveReturnContext, submitWompiWeb } from '@/lib/checkout/wompi-checkout-web';
 
@@ -23,9 +25,9 @@ export default function CheckoutClient() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [checkoutError, setCheckoutError] = useState<string | null>(null);
     const submissionInFlight = useRef(false);
-    const checkoutAttempt = useRef<CheckoutAttempt | null>(null);
     const handoffStarted = useRef(false);
     const mounted = useRef(true);
+    const hydrated = useCartSession(setCheckoutError);
 
     useEffect(() => {
         mounted.current = true;
@@ -72,23 +74,26 @@ export default function CheckoutClient() {
     const total = subtotal + shipping;
 
     useEffect(() => {
-        if (items.length === 0) {
+        if (hydrated && items.length === 0) {
             router.replace('/carrito');
         }
-    }, [items.length, router]);
+    }, [hydrated, items.length, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (submissionInFlight.current || handoffStarted.current || !mounted.current) return;
+        if (!hydrated || submissionInFlight.current || handoffStarted.current || !mounted.current) return;
         submissionInFlight.current = true;
         setIsProcessing(true);
         setCheckoutError(null);
 
         try {
+            synchronizeCartStorage(window.localStorage, useCartStore);
             const snapshot = useCartStore.getState().items;
+            const cartId = useCartStore.getState().cartId ?? null;
             if (snapshot !== items) throw new Error('El carrito cambió. Revisa el resumen e intenta nuevamente.');
             const fresh = await refreshCartCatalog(snapshot);
             if (!mounted.current) return;
+            synchronizeCartStorage(window.localStorage, useCartStore);
             if (!useCartStore.getState().replaceSnapshot(snapshot, fresh.items)) {
                 throw new Error('El carrito cambió durante la verificación. Revisa el resumen e intenta nuevamente.');
             }
@@ -100,6 +105,13 @@ export default function CheckoutClient() {
                 subtotal: reviewedSubtotal, shippingMethod: formData.shippingMethod, shippingLocation: formData.shippingLocation,
             });
             const reviewedCents = Math.round(reviewedTotal * 100);
+            const assertCurrentCart = () => {
+                synchronizeCartStorage(window.localStorage, useCartStore);
+                const current = useCartStore.getState();
+                if (current.items !== fresh.items || (current.cartId ?? null) !== cartId) {
+                    throw new Error('El carrito cambió en otra pestaña o durante la verificación. Revisa el resumen antes de continuar.');
+                }
+            };
 
             const orderRequest = {
                 shipping_name: formData.name,
@@ -123,17 +135,20 @@ export default function CheckoutClient() {
                     subtotal: cartLineTotal(item),
                 })),
             };
-            checkoutAttempt.current = getCheckoutAttempt(checkoutAttempt.current, orderRequest);
+            const attempt = await deriveCheckoutAttempt(cartId, orderRequest);
+            if (!mounted.current) return;
+            assertCurrentCart();
 
             // 1. Crear la orden en la base de datos a través de la API
             const orderResponse = await fetchWithCsrf('/api/orders', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...orderRequest, idempotency_key: checkoutAttempt.current.key }),
+                body: JSON.stringify({ ...orderRequest, idempotency_key: attempt.key }),
             });
 
             const { data: order, error: orderError } = await orderResponse.json();
             if (!mounted.current) return;
+            assertCurrentCart();
 
             if (orderError || !order) {
                 throw new Error(orderError || 'Error al crear la orden');
@@ -156,6 +171,7 @@ export default function CheckoutClient() {
 
             const { data: params, error: paramsError } = await paramsResponse.json();
             if (!mounted.current) return;
+            assertCurrentCart();
 
             if (paramsError || !params) {
                 throw new Error(paramsError || 'Error al obtener parámetros de pago');
@@ -167,7 +183,7 @@ export default function CheckoutClient() {
             if (params.reference !== order.order_number) throw new Error('La referencia de pago no coincide con tu orden.');
             const fields = buildWompiWebFields(params, window.location.origin, order.id);
             saveReturnContext(window.sessionStorage, { orderId: order.id, email: formData.email,
-                cartFingerprint: cartContentsFingerprint(fresh.items), createdAt: Date.now() });
+                cartFingerprint: cartContentsFingerprint(fresh.items), cartId, createdAt: Date.now() });
             handoffStarted.current = true;
             try { submitWompiWeb(fields); } catch (error) { handoffStarted.current = false; throw error; }
 
@@ -208,6 +224,9 @@ export default function CheckoutClient() {
         if (name in formData) validateField(name, value);
     };
 
+    if (!hydrated) {
+        return <><Header /><main className="min-h-screen bg-neutral-50 flex items-center justify-center"><p>Cargando carrito...</p></main><Footer /></>;
+    }
     if (items.length === 0) {
         return null;
     }

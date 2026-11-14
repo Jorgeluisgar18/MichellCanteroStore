@@ -18,6 +18,8 @@ it('updates changed prices for review, blocks stale reads and never opens paymen
     const resetCart = () => store.setState({ items: [{ product, quantity: 1 }] });
     resetCart();
     let current = product;
+    let hydrated = false, redirects = 0;
+    let remoteCartRaw: string | null | undefined;
     let read: (() => Promise<Response>) | undefined;
     let posts = 0, opened = 0, orderTotal = 100, paramsDelta = 0;
     let editBeforePayment = false;
@@ -33,6 +35,7 @@ it('updates changed prices for review, blocks stale reads and never opens paymen
     } };
     Object.defineProperty(globalThis, 'React', { configurable: true, value: React });
     Object.defineProperty(globalThis, 'window', { configurable: true, value: { location: { origin: 'https://store.test' },
+        localStorage: { getItem: () => remoteCartRaw === undefined ? JSON.stringify({ state: { items: store.getState().items, cartId: store.getState().cartId } }) : remoteCartRaw },
         sessionStorage: { setItem: (key: string, value: string) => { if (storageDenied) throw new Error('denied'); storage.set(key, value); }, getItem: (key: string) => storage.get(key) ?? null },
         addEventListener(_name: string, listener: () => void) { restore = listener; }, removeEventListener() {},
     } });
@@ -48,10 +51,14 @@ it('updates changed prices for review, blocks stale reads and never opens paymen
                 return [slots[index], (value: unknown) => { slots[index] = value; }];
             },
             useRef(initial: unknown) { const index = cursor++; if (!(index in slots)) slots[index] = { current: initial }; return slots[index]; },
-            useEffect(effect: () => void) { const index = cursor++; if (!(index in slots)) { slots[index] = true; effect(); } },
+            useEffect(effect: () => void, deps: unknown[]) {
+                const index = cursor++, key = JSON.stringify(deps);
+                if (slots[index] !== key) { slots[index] = key; effect(); }
+            },
         };
-        if (name === '@/store/cartStore') return { useCartStore: Object.assign(() => store.getState(), { getState: store.getState }) };
-        if (name === 'next/navigation') return { useRouter: () => ({ replace() {}, push() {} }) };
+        if (name === '@/store/cartStore') return { useCartStore: Object.assign(() => store.getState(), { getState: store.getState, setState: store.setState }) };
+        if (name === 'next/navigation') return { useRouter: () => ({ replace() { redirects++; }, push() {} }) };
+        if (name === '@/lib/checkout/use-cart-session') return { useCartSession: () => hydrated };
         if (name === 'next/script') return { default: dummy };
         if (name.startsWith('@/components/')) return { default: dummy, Card: dummy, useToast: () => ({ showToast() {} }) };
         if (name === '@/lib/config') return { STORE_CONFIG: config };
@@ -79,6 +86,9 @@ it('updates changed prices for review, blocks stale reads and never opens paymen
         const Checkout = require(join(process.cwd(), 'app/checkout/CheckoutClient.tsx')).default;
         const render = () => { cursor = 0; return nodes(Checkout()); };
         const submit = () => render().find(node => node.type === 'form')!.props.onSubmit!({ preventDefault() {} });
+        assert.equal(render().some(node => node.type === 'form'), false);
+        assert.equal(redirects, 0, 'unhydrated carts must not redirect or expose checkout submission');
+        hydrated = true;
         current = { ...product, price: 120 };
         await submit();
         assert.equal(posts, 0, 'price changes require explicit review before creating an order');
@@ -114,6 +124,32 @@ it('updates changed prices for review, blocks stale reads and never opens paymen
         storageDenied = true; resetCart(); posts = 0;
         await submit(); assert.equal(posts, 2); assert.equal(opened, 0, 'failed continuity storage must stop the payment handoff');
         storageDenied = false;
+        resetCart(); posts = 0;
+        read = () => new Promise(resolve => { finish = resolve; });
+        const remoteRefresh = submit();
+        remoteCartRaw = JSON.stringify({ state: { items: [{ product, quantity: 3 }], cartId: store.getState().cartId } });
+        finish(new Response(JSON.stringify({ data: product })));
+        await remoteRefresh;
+        assert.equal(posts, 0, 'a delayed storage event must not let catalog refresh overwrite another tab');
+        assert.equal(store.getState().items[0]?.quantity, 3);
+        remoteCartRaw = undefined; read = undefined; resetCart(); posts = 0;
+        const digestDescriptor = Object.getOwnPropertyDescriptor(crypto.subtle, 'digest');
+        let releaseHash!: (value: ArrayBuffer) => void, hashing!: () => void;
+        const startedHash = new Promise<void>(resolve => { hashing = resolve; });
+        Object.defineProperty(crypto.subtle, 'digest', { configurable: true, value: () => {
+            hashing(); return new Promise<ArrayBuffer>(resolve => { releaseHash = resolve; });
+        } });
+        try {
+            const duringHash = submit();
+            await startedHash;
+            remoteCartRaw = null;
+            releaseHash(new ArrayBuffer(32)); await duringHash;
+            assert.equal(posts, 0, 'a remote clear during hashing must stop order creation');
+            assert.equal(store.getState().items.length, 0);
+        } finally {
+            if (digestDescriptor) Object.defineProperty(crypto.subtle, 'digest', digestDescriptor); else Reflect.deleteProperty(crypto.subtle, 'digest');
+            remoteCartRaw = undefined;
+        }
         for (const mode of ['deleted', 'offline', 'unavailable']) {
             posts = 0; resetCart();
             read = async () => {
@@ -123,6 +159,8 @@ it('updates changed prices for review, blocks stale reads and never opens paymen
             await submit(); assert.equal(posts, 0); assert.equal(opened, 0);
             assert.equal(store.getState().items[0]?.product, product);
         }
+        store.getState().clearCart(); render();
+        assert.equal(redirects, 1, 'a hydrated empty cart redirects normally');
     } finally {
         loader._load = original; globalThis.fetch = oldFetch; console.error = oldError;
         store.setState({ items: [] });

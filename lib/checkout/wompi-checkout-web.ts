@@ -1,7 +1,8 @@
 import type { CartItem } from '../../types';
+import { validCartId } from './cart-session';
 
 export type ReturnState = 'verified' | 'pending' | 'review' | 'unverified';
-export type CheckoutReturnContext = { orderId: string; email: string; cartFingerprint: string; createdAt: number; cartHandled?: boolean };
+export type CheckoutReturnContext = { orderId: string; email: string; cartFingerprint: string; createdAt: number; cartHandled?: boolean; cartId?: string | null };
 type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 const prefix = 'wompi-return:';
 const ttl = 24 * 60 * 60 * 1000;
@@ -19,6 +20,7 @@ function validContext(value: unknown): value is CheckoutReturnContext {
         && typeof data.email === 'string' && data.email.includes('@') && data.email.length <= 320
         && typeof data.cartFingerprint === 'string' && data.cartFingerprint.length <= 50_000
         && (data.cartHandled === undefined || typeof data.cartHandled === 'boolean')
+        && validCartId(data.cartId)
         && Number.isFinite(data.createdAt) && data.createdAt >= 0;
 }
 

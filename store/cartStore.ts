@@ -2,9 +2,11 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Product, CartItem, ProductVariant } from '@/types';
 import { resolveVariantSelection, validateSelectionLines } from '../lib/checkout/variant-selection';
+import { createCartCycleId } from '../lib/checkout/cart-session';
 
 interface CartStore {
     items: CartItem[];
+    cartId: string | null;
     addItem: (product: Product, quantity?: number, variant?: ProductVariant) => void;
     removeItem: (productId: string, variantId?: string) => void;
     updateQuantity: (productId: string, quantity: number, variantId?: string) => void;
@@ -26,6 +28,7 @@ export const useCartStore = create<CartStore>()(
     persist(
         (set, get) => ({
             items: [],
+            cartId: null,
 
             addItem: (product, quantity = 1, variant) => {
                 set((state) => {
@@ -42,20 +45,21 @@ export const useCartStore = create<CartStore>()(
                     const items = existingItemIndex >= 0 ? state.items.map((item, index) => index === existingItemIndex ? next : item) : [...state.items, next];
                     const products = items.map(item => item.product.id === product.id ? product : item.product);
                     if (validateSelectionLines(products, items.map(item => ({ product_id: item.product.id, quantity: item.quantity, variant_id: item.selectedVariant?.id })))) return state;
-                    return { items };
+                    return { items, cartId: state.items.length ? state.cartId : createCartCycleId() };
                 });
             },
 
             removeItem: (productId, variantId) => {
-                set((state) => ({
-                    items: state.items.filter(
+                set((state) => {
+                    const items = state.items.filter(
                         (item) =>
                             !(
                                 item.product.id === productId &&
                                 item.selectedVariant?.id === variantId
                             )
-                    ),
-                }));
+                    );
+                    return { items, cartId: items.length ? state.cartId : null };
+                });
             },
 
             updateQuantity: (productId, quantity, variantId) => {
@@ -77,11 +81,11 @@ export const useCartStore = create<CartStore>()(
                 });
             },
 
-            clearCart: () => set({ items: [] }),
+            clearCart: () => set({ items: [], cartId: null }),
 
             replaceSnapshot: (expected, items) => {
                 if (get().items !== expected) return false;
-                set({ items });
+                set({ items, cartId: items.length ? get().cartId : null });
                 return true;
             },
 

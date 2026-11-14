@@ -23,7 +23,9 @@ it('verifies hosted returns without trusting URL status or exposing guest order 
     let receipt: unknown = null;
     const dummy = () => null;
     Object.defineProperty(globalThis, 'React', { configurable: true, value: React });
-    Object.defineProperty(globalThis, 'window', { configurable: true, value: { sessionStorage: storage } });
+    Object.defineProperty(globalThis, 'window', { configurable: true, value: { sessionStorage: storage,
+        localStorage: { getItem: () => JSON.stringify({ state: { items: useCartStore.getState().items, cartId: useCartStore.getState().cartId } }) },
+    } });
     globalThis.fetch = async () => new Response(JSON.stringify({ data: receipt }), { status: receipt ? 200 : 401 });
     loader._load = function(name, parent, main) {
         if (name === 'react' && parent.filename?.replace(/\\/g, '/').endsWith('/confirmacion/page.tsx')) return { ...React,
@@ -37,6 +39,7 @@ it('verifies hosted returns without trusting URL status or exposing guest order 
             },
         };
         if (name === 'next/navigation') return { useSearchParams: () => search };
+        if (name === '@/lib/checkout/use-cart-session') return { useCartSession: () => true };
         if (name === 'next/link' || name.startsWith('@/components/')) return { __esModule: true, default: dummy, Card: dummy };
         if (name === '@/lib/hooks/useCsrfToken') return { fetchWithCsrf: async () => {
             posts++;
@@ -55,7 +58,7 @@ it('verifies hosted returns without trusting URL status or exposing guest order 
     };
     const reset = (withContext = true) => {
         cleanups.forEach(cleanup => cleanup()); cleanups = []; slots = []; map.clear(); posts = 0; receipt = null;
-        useCartStore.setState({ items: [{ product, quantity: 1 }] });
+        useCartStore.setState({ items: [{ product, quantity: 1 }], cartId: null });
         if (withContext) saveReturnContext(storage, { orderId: 'order', email: 'buyer@example.test',
             cartFingerprint: cartContentsFingerprint(useCartStore.getState().items), createdAt: Date.now() });
     };
@@ -72,6 +75,13 @@ it('verifies hosted returns without trusting URL status or exposing guest order 
         useCartStore.setState({ items: [{ product, quantity: 1 }] });
         render(); await flush();
         assert.equal(useCartStore.getState().items.length, 1, 'reopening an old paid return must not erase a new identical cart');
+        reset();
+        const previousCycle = crypto.randomUUID();
+        saveReturnContext(storage, { orderId: 'order', email: 'buyer@example.test', cartFingerprint: cartContentsFingerprint(useCartStore.getState().items),
+            cartId: previousCycle, createdAt: Date.now() });
+        useCartStore.setState({ cartId: crypto.randomUUID() });
+        render(); await flush();
+        assert.equal(useCartStore.getState().items.length, 1, 'an unconsumed return from a different cycle cannot clear identical contents');
         reset(false); render(); await flush();
         assert.equal(posts, 0);
         assert.doesNotMatch(JSON.stringify(render()), /Pago Confirmado/);
