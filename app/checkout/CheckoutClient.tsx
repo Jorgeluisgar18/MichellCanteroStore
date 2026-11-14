@@ -16,6 +16,7 @@ import { useToast } from '@/components/ui/Toast';
 import { STORE_CONFIG } from '@/lib/config';
 import { calculateCheckoutShippingCost } from '@/lib/checkout/safety';
 import { getCheckoutAttempt, type CheckoutAttempt } from '@/lib/checkout/idempotency';
+import { cartLineTotal, refreshCartCatalog } from '@/lib/checkout/cart-freshness';
 
 // Declare Wompi WidgetCheckout global type
 declare global {
@@ -95,6 +96,21 @@ export default function CheckoutClient() {
                 throw new Error('El sistema de pagos aún no está listo. Por favor, intenta de nuevo en un momento.');
             }
 
+            const snapshot = useCartStore.getState().items;
+            if (snapshot !== items) throw new Error('El carrito cambió. Revisa el resumen e intenta nuevamente.');
+            const fresh = await refreshCartCatalog(snapshot);
+            if (!useCartStore.getState().replaceSnapshot(snapshot, fresh.items)) {
+                throw new Error('El carrito cambió durante la verificación. Revisa el resumen e intenta nuevamente.');
+            }
+            if (fresh.priceChanged) {
+                throw new Error('Actualizamos los precios de tu carrito. Revisa el nuevo total y confirma nuevamente para continuar.');
+            }
+            const reviewedSubtotal = fresh.items.reduce((sum, item) => sum + cartLineTotal(item), 0);
+            const reviewedTotal = reviewedSubtotal + calculateCheckoutShippingCost({
+                subtotal: reviewedSubtotal, shippingMethod: formData.shippingMethod, shippingLocation: formData.shippingLocation,
+            });
+            const reviewedCents = Math.round(reviewedTotal * 100);
+
             const orderRequest = {
                 shipping_name: formData.name,
                 shipping_email: formData.email,
@@ -106,7 +122,7 @@ export default function CheckoutClient() {
                 shipping_method: formData.shippingMethod,
                 shipping_location: formData.shippingMethod === 'delivery' ? formData.shippingLocation : null,
                 payment_method: 'wompi',
-                items: items.map(item => ({
+                items: fresh.items.map(item => ({
                     product_id: item.product.id,
                     product_name: item.product.name,
                     product_price: item.product.price,
@@ -114,7 +130,7 @@ export default function CheckoutClient() {
                     quantity: item.quantity,
                     variant_name: item.selectedVariant?.name,
                     variant_id: item.selectedVariant?.id,
-                    subtotal: item.product.price * item.quantity,
+                    subtotal: cartLineTotal(item),
                 })),
             };
             checkoutAttempt.current = getCheckoutAttempt(checkoutAttempt.current, orderRequest);
@@ -131,6 +147,9 @@ export default function CheckoutClient() {
             if (orderError || !order) {
                 throw new Error(orderError || 'Error al crear la orden');
             }
+            if (!Number.isFinite(Number(order.total)) || Math.round(Number(order.total) * 100) !== reviewedCents) {
+                throw new Error('El total de la orden cambió. No se abrió el pago. Revisa tu pedido antes de continuar.');
+            }
 
             // 2. Obtener parámetros de Wompi
             const paramsResponse = await fetchWithCsrf('/api/payments/checkout-params', {
@@ -138,7 +157,7 @@ export default function CheckoutClient() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     orderId: order.id,
-                    amount: total, // Use local total calculation
+                    amount: reviewedTotal,
                     email: formData.email,
                     reference: order.order_number,
                 }),
@@ -148,6 +167,9 @@ export default function CheckoutClient() {
 
             if (paramsError || !params) {
                 throw new Error(paramsError || 'Error al obtener parámetros de pago');
+            }
+            if (params.amountInCents !== reviewedCents || useCartStore.getState().items !== fresh.items) {
+                throw new Error('El pedido cambió antes de abrir el pago. Revisa el resumen e intenta nuevamente.');
             }
 
             // 3. Abrir el Widget de Wompi
@@ -503,7 +525,7 @@ export default function CheckoutClient() {
                                                         {item.product.name} x {item.quantity}
                                                     </span>
                                                     <span className="font-medium">
-                                                        {formatPrice(item.product.price * item.quantity)}
+                                                        {formatPrice(cartLineTotal(item))}
                                                     </span>
                                                 </div>
                                             ))}

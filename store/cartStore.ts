@@ -9,6 +9,7 @@ interface CartStore {
     removeItem: (productId: string, variantId?: string) => void;
     updateQuantity: (productId: string, quantity: number, variantId?: string) => void;
     clearCart: () => void;
+    replaceSnapshot: (expected: CartItem[], items: CartItem[]) => boolean;
     getItemCount: () => number;
     getSubtotal: () => number;
     getTax: () => number;
@@ -77,6 +78,12 @@ export const useCartStore = create<CartStore>()(
             },
 
             clearCart: () => set({ items: [] }),
+
+            replaceSnapshot: (expected, items) => {
+                if (get().items !== expected) return false;
+                set({ items });
+                return true;
+            },
 
             getItemCount: () => {
                 return get().items.reduce((total, item) => total + item.quantity, 0);

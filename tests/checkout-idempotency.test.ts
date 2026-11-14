@@ -53,7 +53,14 @@ it('retains retry keys, suppresses overlapping submissions and keeps dismiss but
         if (name === 'next/navigation') return { useRouter: () => ({ replace() {}, push() {} }) };
         if (name === 'next/script') return { default: dummy };
         if (name.startsWith('@/components/')) return { default: dummy, Card: dummy, useToast: () => ({ showToast() {} }) };
-        if (name === '@/store/cartStore') return { useCartStore: () => ({ items: [item], getSubtotal: () => 100, clearCart() {} }) };
+        if (name === '@/store/cartStore') {
+            const cart = { items: [item], getSubtotal: () => 100, clearCart() {}, replaceSnapshot() { return true; } };
+            return { useCartStore: Object.assign(() => cart, { getState: () => cart }) };
+        }
+        if (name === '@/lib/checkout/cart-freshness') return {
+            refreshCartCatalog: async (items: unknown[]) => ({ items, priceChanged: false }),
+            cartLineTotal: (item: { product: { price: number }; quantity: number }) => item.product.price * item.quantity,
+        };
         if (name === '@/lib/config') return { STORE_CONFIG: config };
         if (name === '@/lib/hooks/useCsrfToken') return { fetchWithCsrf: async (_url: string, options: RequestInit) => {
             sent.push(JSON.parse(String(options.body)));
@@ -88,6 +95,7 @@ it('retains retry keys, suppresses overlapping submissions and keeps dismiss but
         let finish!: (response: Response) => void;
         pending = new Promise(resolve => { finish = resolve; });
         const first = submit(event), second = submit(event);
+        await new Promise(resolve => setImmediate(resolve));
         try { assert.equal(sent.length, 1, 'synchronous guard must work before React can rerender'); }
         finally {
             finish(new Response(JSON.stringify({ error: 'Synthetic rejected response' }), { status: 409 }));
