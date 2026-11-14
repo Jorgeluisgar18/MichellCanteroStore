@@ -15,6 +15,7 @@ it('preserves payment route responses and delegates every write to the atomic RP
     const order = { id: 'order-1', order_number: 'TEST-1', total: 100, user_id: null,
         shipping_email: accessEmail, payment_status: 'pending', inventory_status: 'unverified' };
     const transaction = { id: 'txn-1', reference: 'TEST-1', amount_in_cents: 10000, currency: 'COP', status: 'APPROVED' };
+    let referenceRows: typeof transaction[] | undefined;
     const client = {
         from(table: string) {
             const builder = {
@@ -52,7 +53,7 @@ it('preserves payment route responses and delegates every write to the atomic RP
         if (name === '@/lib/supabase-server') return { createClient: () => ({ auth: { getUser: async () => ({ data: { user: null } }) } }) };
         if (name === '@/lib/payments/wompi') return {
             getWompiTransactionById: async () => transaction,
-            getWompiTransactionsByReference: async () => [transaction],
+            getWompiTransactionsByReference: async () => referenceRows ?? [transaction],
         };
         if (name === '@/lib/email') return {
             sendOrderNotificationToAdmin: async () => { assert.ok(calls > 0); emails++; },
@@ -108,6 +109,18 @@ it('preserves payment route responses and delegates every write to the atomic RP
         const summary = await (await cron.GET(cronRequest())).json();
         assert.equal(summary.unchanged, 1);
         assert.equal(summary.reconciled, 0);
+        const recovery = new Request('http://localhost/api/payments/reconcile', { method: 'POST',
+            body: JSON.stringify({ orderId: order.id, email: accessEmail }) });
+        assert.equal((await reconcile.POST(recovery)).status, 200, 'lost redirect ID recovers by authorized order reference');
+        const recoverAgain = () => new Request('http://localhost/api/payments/reconcile', { method: 'POST',
+            body: JSON.stringify({ orderId: order.id, email: accessEmail }) });
+        referenceRows = [{ ...transaction, id: 'declined', status: 'DECLINED' }, { ...transaction, id: 'pending', status: 'PENDING' }];
+        assert.equal((await reconcile.POST(recoverAgain())).status, 202, 'pending retry must not be hidden by historical decline');
+        referenceRows.reverse();
+        assert.equal((await reconcile.POST(recoverAgain())).status, 202);
+        referenceRows = [{ ...transaction, status: 'DECLINED' }];
+        assert.equal((await reconcile.POST(recoverAgain())).status, 409);
+        referenceRows = undefined;
         result = { ...result, outcome: 'conflict' };
         assert.equal((await webhook.POST(signedWebhook())).status, 409);
     } finally {

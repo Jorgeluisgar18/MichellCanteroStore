@@ -5,7 +5,6 @@ import { captureCheckoutIssue } from '@/lib/observability/checkout';
 import { logger } from '@/lib/utils/logger';
 import {
     canAccessCheckoutParams,
-    canRequestCheckoutParamsForReservation,
 } from '@/lib/checkout/safety';
 import { buildWompiCheckoutParams } from '@/lib/payments/checkout-params';
 
@@ -45,44 +44,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'No tienes permiso para pagar esta orden' }, { status: 403 });
         }
 
-        if (order.payment_status !== 'pending') {
-            return NextResponse.json(
-                { error: `Esta orden ya fue procesada (estado: ${order.payment_status})` },
-                { status: 400 }
-            );
-        }
-
-        const { count: activeReservationCount, error: reservationError } = await supabaseAdmin
-            .from('stock_reservations')
-            .select('id', { count: 'exact', head: true })
-            .eq('order_id', orderId)
-            .eq('status', 'reserved')
-            .gt('expires_at', new Date().toISOString());
-
-        if (reservationError) {
-            logger.error('[checkout-params] Error verificando reserva de stock', reservationError, {
-                orderId,
-            });
-            captureCheckoutIssue({
-                area: 'checkout_params',
-                name: 'reservation_lookup_failed',
-                route: '/api/payments/checkout-params',
-                orderId,
-                metadata: { reservationError },
-            }, reservationError);
-            return NextResponse.json(
-                { error: 'No pudimos verificar la reserva de inventario' },
-                { status: 500 }
-            );
-        }
-
-        if (!canRequestCheckoutParamsForReservation({ activeReservationCount })) {
-            return NextResponse.json(
-                { error: 'La reserva de stock expiro. Por favor actualiza tu carrito y crea una nueva orden.' },
-                { status: 409 }
-            );
-        }
-
         if (!WOMPI_PUBLIC_KEY || !WOMPI_INTEGRITY_SECRET) {
             logger.error('[checkout-params] Variables de Wompi no configuradas', {
                 hasPublicKey: !!WOMPI_PUBLIC_KEY,
@@ -102,13 +63,21 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Configuracion de pago incompleta' }, { status: 500 });
         }
 
+        const { data: claim, error: claimError } = await supabaseAdmin.rpc('claim_wompi_checkout', { order_id_param: orderId });
+        if (claimError || !claim) throw claimError ?? new Error('Missing checkout claim');
+        if (claim.outcome === 'existing' || claim.outcome === 'processed') {
+            return NextResponse.json({ code: 'payment_verification_required', orderId }, { status: 202 });
+        }
+        if (claim.outcome !== 'issued' || typeof claim.total !== 'number' || !claim.order_number) {
+            return NextResponse.json({ error: 'No pudimos iniciar otro pago. Verifica el estado de tu pedido.' }, { status: 409 });
+        }
         const checkoutParams = buildWompiCheckoutParams({
             publicKey: WOMPI_PUBLIC_KEY,
             integritySecret: WOMPI_INTEGRITY_SECRET,
             siteUrl: SITE_URL,
             orderId,
-            orderNumber: order.order_number,
-            orderTotal: Number(order.total),
+            orderNumber: claim.order_number,
+            orderTotal: claim.total,
             customerEmail: email,
         });
 

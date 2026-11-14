@@ -219,6 +219,10 @@ export interface Database {
         };
         Views: Record<string, never>;
         Functions: {
+            claim_wompi_checkout: {
+                Args: { order_id_param: string };
+                Returns: { outcome: 'issued' | 'existing' | 'processed' | 'reservation_invalid' | 'not_found'; total?: number; order_number?: string };
+            };
             create_order_with_stock: {
                 Args: { order_param: Json; items_param: Json };
                 Returns: { order: Database['public']['Tables']['orders']['Row']; items: Json[] };

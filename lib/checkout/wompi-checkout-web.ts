@@ -82,7 +82,7 @@ export function submitWompiWeb(fields: Record<string, string>, doc: Document = d
 const inFlight = new Map<string, Promise<ReturnState>>();
 export function verifyCheckoutReturn(context: CheckoutReturnContext, transactionId: string,
     post: (url: string, init: RequestInit) => Promise<Response>): Promise<ReturnState> {
-    if (!validContext(context) || !transactionId.trim() || transactionId.length > 256) return Promise.resolve('unverified');
+    if (!validContext(context) || transactionId.length > 256) return Promise.resolve('unverified');
     const key = JSON.stringify([context.orderId, context.email, transactionId]);
     const existing = inFlight.get(key);
     if (existing) return existing;

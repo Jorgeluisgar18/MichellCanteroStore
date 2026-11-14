@@ -151,7 +151,7 @@ it('commits order, items and stock holds together or rolls all of them back', { 
             { id: 'blue', name: 'Blue', stock_quantity: b, inStock: b > 0 },
         ];
         const resetVariants = () => {
-            sql(`TRUNCATE order_items,stock_reservations,orders,audit_marker;
+            sql(`TRUNCATE order_items,stock_reservations,orders,audit_marker CASCADE;
                 UPDATE products SET variants='${JSON.stringify(variants(1))}',stock_quantity=10,in_stock=true,price=100,name='Fixture' WHERE id='${product}';
                 UPDATE products SET variants='[]',stock_quantity=5,in_stock=true,price=100,name='Fixture' WHERE id='${second}';`);
         };
@@ -229,5 +229,33 @@ it('commits order, items and stock holds together or rolls all of them back', { 
         for (const role of ['anon','authenticated']) {
             assert.notEqual(docker(args, `SET ROLE ${role}; ${call({ ...oneOrder, order_number: 'DENIED', idempotency_key: randomUUID() }, selected)}`).status, 0);
         }
+        sql(readFileSync(join(process.cwd(), 'supabase/migrations/20261114213626_single_payment_attempt.sql'), 'utf8'));
+        resetVariants();
+        const launch = JSON.parse(sql(call(oneOrder, selected)));
+        const claim = `SELECT public.claim_wompi_checkout('${launch.order.id}');`;
+        const claims = await Promise.all([concurrent(claim), concurrent(claim)]);
+        assert.deepEqual(claims, [0, 0]);
+        assert.equal(sql('SELECT count(*) FROM public.wompi_checkout_attempts;'), '1');
+        assert.equal(JSON.parse(sql(claim)).outcome, 'existing');
+        sql('UPDATE public.wompi_checkout_attempts SET issued_at=now()-interval \'2 days\';');
+        assert.equal(JSON.parse(sql(claim)).outcome, 'existing', 'elapsed time cannot unlock an issued checkout');
+        assert.equal(JSON.parse(sql(finalize(launch.order.id))).outcome, 'finalized');
+        const stockAfterPayment = sql(`SELECT variants::text,stock_quantity FROM products WHERE id='${product}';`);
+        assert.equal(JSON.parse(sql(finalize(launch.order.id, 'ATOMIC-1', 'second-approved'))).reason, 'duplicate_approved_payment');
+        assert.equal(JSON.parse(sql(finalize(launch.order.id, 'ATOMIC-1', 'second-approved'))).reason, 'duplicate_approved_payment');
+        assert.equal(sql('SELECT count(*) FROM public.wompi_payment_exceptions;'), '1');
+        assert.equal(sql(`SELECT wompi_transaction_id FROM orders WHERE id='${launch.order.id}';`), 'variant-tx');
+        assert.equal(sql(`SELECT variants::text,stock_quantity FROM products WHERE id='${product}';`), stockAfterPayment);
+        assert.equal(JSON.parse(sql(finalize(launch.order.id))).outcome, 'already_finalized');
+        for (const role of ['anon', 'authenticated']) {
+            assert.notEqual(docker(args, `SET ROLE ${role}; ${claim}`).status, 0);
+            assert.notEqual(docker(args, `SET ROLE ${role}; SELECT * FROM public.wompi_payment_exceptions;`).status, 0);
+        }
+        sql('TRUNCATE public.wompi_payment_exceptions,public.wompi_checkout_attempts;');
+        resetVariants();
+        const incomplete = JSON.parse(sql(call(oneOrder, selected)));
+        sql('UPDATE stock_reservations SET variant_quantities=\'{}\';');
+        assert.equal(JSON.parse(sql(`SELECT public.claim_wompi_checkout('${incomplete.order.id}');`)).outcome, 'reservation_invalid');
+        assert.equal(sql('SELECT count(*) FROM public.wompi_checkout_attempts;'), '0');
     } finally { assert.equal(docker(['stop', container]).status, 0); }
 });

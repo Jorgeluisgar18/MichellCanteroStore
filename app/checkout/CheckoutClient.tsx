@@ -158,7 +158,10 @@ export default function CheckoutClient() {
             }
 
             // 2. Obtener parámetros de Wompi
-            const paramsResponse = await fetchWithCsrf('/api/payments/checkout-params', {
+            saveReturnContext(window.sessionStorage, { orderId: order.id, email: formData.email,
+                cartFingerprint: cartContentsFingerprint(fresh.items), cartId, createdAt: Date.now() });
+            let paramsResponse: Response;
+            try { paramsResponse = await fetchWithCsrf('/api/payments/checkout-params', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -167,7 +170,15 @@ export default function CheckoutClient() {
                     email: formData.email,
                     reference: order.order_number,
                 }),
-            });
+            }); } catch {
+                router.push(`/checkout/confirmacion?orderId=${encodeURIComponent(order.id)}`);
+                return;
+            }
+
+            if (paramsResponse.status === 202) {
+                router.push(`/checkout/confirmacion?orderId=${encodeURIComponent(order.id)}`);
+                return;
+            }
 
             const { data: params, error: paramsError } = await paramsResponse.json();
             if (!mounted.current) return;

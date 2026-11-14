@@ -10,6 +10,17 @@ interface WompiTransactionsResponse {
     data?: WompiReconciliationTransaction[] | null;
 }
 
+function checkedTransaction(value: unknown): WompiReconciliationTransaction {
+    const row = value as WompiReconciliationTransaction | null;
+    if (!row || typeof row.id !== 'string' || !row.id || row.id.length > 200
+        || typeof row.reference !== 'string' || !row.reference || row.reference.length > 200
+        || !['APPROVED', 'DECLINED', 'PENDING', 'VOIDED', 'ERROR'].includes(row.status ?? '')
+        || row.currency !== 'COP' || !Number.isSafeInteger(row.amount_in_cents) || Number(row.amount_in_cents) <= 0) {
+        throw new Error('Invalid Wompi transaction response');
+    }
+    return row;
+}
+
 export async function getWompiTransactionById(input: {
     transactionId: string;
     privateKey: string;
@@ -33,7 +44,9 @@ export async function getWompiTransactionById(input: {
 
     const payload = await response.json() as WompiTransactionResponse;
 
-    return payload.data ?? null;
+    const transaction = checkedTransaction(payload.data);
+    if (transaction.id !== input.transactionId) throw new Error('Wompi transaction ID mismatch');
+    return transaction;
 }
 
 export async function getWompiTransactionsByReference(input: {
@@ -58,5 +71,10 @@ export async function getWompiTransactionsByReference(input: {
 
     const payload = await response.json() as WompiTransactionsResponse;
 
-    return Array.isArray(payload.data) ? payload.data : [];
+    if (!Array.isArray(payload.data)) throw new Error('Invalid Wompi reference response');
+    const rows = payload.data.map(checkedTransaction);
+    if (rows.some(row => row.reference !== input.reference) || new Set(rows.map(row => row.id)).size !== rows.length) {
+        throw new Error('Wompi reference response mismatch');
+    }
+    return rows;
 }

@@ -4,15 +4,16 @@ import { createClient } from '@/lib/supabase-server';
 import { canAccessCheckoutParams } from '@/lib/checkout/safety';
 import { captureCheckoutIssue } from '@/lib/observability/checkout';
 import { logger } from '@/lib/utils/logger';
-import { getWompiTransactionById } from '@/lib/payments/wompi';
+import { getWompiTransactionById, getWompiTransactionsByReference } from '@/lib/payments/wompi';
 import { finalizeWompiPayment } from '@/lib/payments/finalize-payment';
 import { getPaymentStatusForWompiStatus, getSuccessfulWompiReconciliationTransaction } from '@/lib/payments/webhook-safety';
 
 export async function POST(request: Request) {
     try {
         const { orderId, email, transactionId } = await request.json();
-        if (!orderId || !email || !transactionId) {
-            return NextResponse.json({ error: 'Faltan parametros: orderId, email y transactionId son requeridos' }, { status: 400 });
+        if (typeof orderId !== 'string' || !orderId || typeof email !== 'string' || !email
+            || (transactionId != null && (typeof transactionId !== 'string' || transactionId.length > 200))) {
+            return NextResponse.json({ error: 'Faltan parametros validos: orderId y email son requeridos' }, { status: 400 });
         }
         const { data: { user } } = await createClient().auth.getUser();
         const { data: order, error } = await supabaseAdmin.from('orders')
@@ -29,17 +30,34 @@ export async function POST(request: Request) {
                 route: '/api/payments/reconcile', orderId: order.id });
             return NextResponse.json({ error: 'Configuracion de pago incompleta' }, { status: 500 });
         }
-        const transaction = await getWompiTransactionById({ transactionId, privateKey });
+        const transactions = transactionId
+            ? [await getWompiTransactionById({ transactionId, privateKey })].filter((row): row is NonNullable<typeof row> => row !== null)
+            : await getWompiTransactionsByReference({ reference: order.order_number, privateKey });
+        const transaction = transactions[0];
         const approved = getSuccessfulWompiReconciliationTransaction({ orderNumber: order.order_number,
-            orderTotal: Number(order.total), transactions: transaction ? [transaction] : [] });
+            orderTotal: Number(order.total), transactions });
         if (!approved) {
+            const allFailed = transactions.length > 0 && transactions.every(row => getPaymentStatusForWompiStatus(row.status ?? '') === 'failed');
             captureCheckoutIssue({ area: 'wompi_reconciliation', name: 'approved_transaction_not_found',
-                level: getPaymentStatusForWompiStatus(transaction?.status ?? '') === 'failed' ? 'warning' : 'error',
+                level: allFailed ? 'warning' : 'error',
                 route: '/api/payments/reconcile', orderId: order.id, transactionId, status: transaction?.status ?? null });
             return NextResponse.json({ error: 'La transaccion aun no aparece aprobada en Wompi' },
-                { status: getPaymentStatusForWompiStatus(transaction?.status ?? '') === 'failed' ? 409 : 202 });
+                { status: allFailed ? 409 : 202 });
         }
         const result = await finalizeWompiPayment(supabaseAdmin, order.id, approved);
+        // Every verified approval must reach the locked finalizer; do not hide a second charge with find().
+        let duplicateApproval = false;
+        for (const candidate of transactions) {
+            if (candidate.id === approved.id || !getSuccessfulWompiReconciliationTransaction({ orderNumber: order.order_number,
+                orderTotal: Number(order.total), transactions: [candidate] })) continue;
+            const extra = await finalizeWompiPayment(supabaseAdmin, order.id, candidate);
+            if (extra.outcome === 'conflict') duplicateApproval = true;
+        }
+        if (duplicateApproval) {
+            captureCheckoutIssue({ area: 'wompi_reconciliation', name: 'multiple_approved_transactions',
+                route: '/api/payments/reconcile', orderId: order.id });
+            return NextResponse.json({ error: 'Detectamos pagos que requieren verificacion. No repitas el pago.' }, { status: 409 });
+        }
         if (result.outcome === 'conflict') {
             captureCheckoutIssue({ area: 'wompi_reconciliation', name: 'terminal_transaction_conflict',
                 route: '/api/payments/reconcile', orderId: order.id, transactionId });

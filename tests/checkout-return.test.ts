@@ -102,6 +102,16 @@ it('verifies hosted returns without trusting URL status or exposing guest order 
             assert.doesNotMatch(JSON.stringify(render()), /Pago Confirmado/, 'newer protected order state must supersede the earlier reconciliation result');
             assert.equal(useCartStore.getState().items.length, 1);
         }
+        reset(); responseStatus = 409;
+        receipt = { id: 'order', order_number: 'PRIVATE', total: 100, payment_status: 'paid', inventory_status: 'confirmed' };
+        render(); await flush();
+        assert.doesNotMatch(JSON.stringify(render()), /Pago Confirmado/, 'a paid receipt cannot hide a verified payment conflict');
+        reset(); responseStatus = 200;
+        search = new URLSearchParams('orderId=order');
+        render(); await flush();
+        assert.equal(posts, 1, 'missing redirect ID must recover through the backend');
+        assert.match(JSON.stringify(render()), /Pago Confirmado/);
+        search = new URLSearchParams('orderId=order&id=tx');
         reset(); let finish!: (response: Response) => void;
         deferred = new Promise(resolve => { finish = resolve; });
         render(); useCartStore.getState().updateQuantity('p', 2);

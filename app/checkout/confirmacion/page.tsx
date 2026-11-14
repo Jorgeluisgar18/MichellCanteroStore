@@ -41,8 +41,8 @@ function ConfirmacionContent() {
         void (async () => {
             let context = null;
             try { context = orderId ? readReturnContext(window.sessionStorage, orderId) : null; } catch { /* Storage may be disabled. */ }
-            let result: ReturnState = context && transactionId
-                ? await verifyCheckoutReturn(context, transactionId, fetchWithCsrf) : 'unverified';
+            let result: ReturnState = context
+                ? await verifyCheckoutReturn(context, transactionId ?? '', fetchWithCsrf) : 'unverified';
             if (!active) return;
             let receipt: Order | null = null;
             if (orderId) {
@@ -54,7 +54,7 @@ function ConfirmacionContent() {
                 } catch { /* A guest cannot read the protected order endpoint. */ }
             }
             if (!active) return;
-            if (receipt?.payment_status === 'paid') {
+            if (receipt?.payment_status === 'paid' && result !== 'review') {
                 result = receipt.inventory_status === 'confirmed' ? 'verified' : 'review';
             } else if (receipt) {
                 result = receipt.payment_status === 'pending' ? 'pending' : 'review';
@@ -74,6 +74,12 @@ function ConfirmacionContent() {
         })();
         return () => { active = false; };
     }, [orderId, transactionId, retry, hydrated]);
+
+    useEffect(() => {
+        if (loading || !['pending', 'unverified'].includes(verification) || retry >= 5) return;
+        const timer = setTimeout(() => setRetry(value => value + 1), 5000);
+        return () => clearTimeout(timer);
+    }, [loading, verification, retry]);
 
     if (loading) {
         return (

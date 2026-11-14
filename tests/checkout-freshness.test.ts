@@ -23,6 +23,7 @@ it('updates changed prices for review, blocks stale reads and never opens paymen
     let read: (() => Promise<Response>) | undefined;
     let posts = 0, opened = 0, orderTotal = 100, paramsDelta = 0;
     let editBeforePayment = false;
+    let recoveryMode = '', recoveryNavigations = 0;
     const slots: unknown[] = [];
     let cursor = 0;
     const dummy = () => null;
@@ -57,13 +58,17 @@ it('updates changed prices for review, blocks stale reads and never opens paymen
             },
         };
         if (name === '@/store/cartStore') return { useCartStore: Object.assign(() => store.getState(), { getState: store.getState, setState: store.setState }) };
-        if (name === 'next/navigation') return { useRouter: () => ({ replace() { redirects++; }, push() {} }) };
+        if (name === 'next/navigation') return { useRouter: () => ({ replace() { redirects++; }, push(url: string) {
+            assert.equal(url, '/checkout/confirmacion?orderId=order'); recoveryNavigations++;
+        } }) };
         if (name === '@/lib/checkout/use-cart-session') return { useCartSession: () => hydrated };
         if (name === 'next/script') return { default: dummy };
         if (name.startsWith('@/components/')) return { default: dummy, Card: dummy, useToast: () => ({ showToast() {} }) };
         if (name === '@/lib/config') return { STORE_CONFIG: config };
         if (name === '@/lib/hooks/useCsrfToken') return { fetchWithCsrf: async (url: string) => {
             posts++;
+            if (url !== '/api/orders' && recoveryMode === 'network') throw new Error('lost response');
+            if (url !== '/api/orders' && recoveryMode === 'existing') return new Response('{}', { status: 202 });
             if (editBeforePayment && url !== '/api/orders') store.getState().updateQuantity('p', 2);
             return new Response(JSON.stringify({ data: url === '/api/orders'
                 ? { id: 'order', order_number: 'ref', total: orderTotal }
@@ -122,7 +127,7 @@ it('updates changed prices for review, blocks stale reads and never opens paymen
         assert.equal(opened, 0, 'a cart edited while order/parameters load must not open payment');
         editBeforePayment = false;
         storageDenied = true; resetCart(); posts = 0;
-        await submit(); assert.equal(posts, 2); assert.equal(opened, 0, 'failed continuity storage must stop the payment handoff');
+        await submit(); assert.equal(posts, 1); assert.equal(opened, 0, 'failed continuity storage must stop before claiming a payment handoff');
         storageDenied = false;
         resetCart(); posts = 0;
         read = () => new Promise(resolve => { finish = resolve; });
@@ -159,6 +164,15 @@ it('updates changed prices for review, blocks stale reads and never opens paymen
             await submit(); assert.equal(posts, 0); assert.equal(opened, 0);
             assert.equal(store.getState().items[0]?.product, product);
         }
+        read = undefined;
+        for (const mode of ['network', 'existing']) {
+            recoveryMode = mode; resetCart(); posts = 0;
+            await submit();
+            assert.equal(posts, 2);
+            assert.equal(opened, 0, 'uncertain issuance never opens another checkout');
+            assert.ok(storage.get('wompi-return:order'), 'recovery context precedes the uncertain request');
+        }
+        assert.equal(recoveryNavigations, 2);
         store.getState().clearCart(); render();
         assert.equal(redirects, 1, 'a hydrated empty cart redirects normally');
     } finally {

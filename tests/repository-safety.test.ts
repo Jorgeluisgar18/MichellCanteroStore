@@ -130,10 +130,11 @@ describe('repository safety rules', () => {
             'utf8'
         );
 
-        assert.match(checkoutParams, /stock_reservations/);
-        assert.match(checkoutParams, /\.eq\('status', 'reserved'\)/);
-        assert.match(checkoutParams, /\.gt\('expires_at', new Date\(\)\.toISOString\(\)\)/);
-        assert.match(checkoutParams, /canRequestCheckoutParamsForReservation/);
+        assert.match(checkoutParams, /rpc\('claim_wompi_checkout'/);
+        const claim = readFileSync(join(process.cwd(), 'supabase/migrations/20261114213626_single_payment_attempt.sql'), 'utf8');
+        assert.match(claim, /expires_at>now\(\)/);
+        assert.match(claim, /held.quantity IS DISTINCT FROM demand.quantity/);
+        assert.match(claim, /expected_variants/);
         assert.match(checkoutParams, /status:\s*409/);
     });
 
@@ -143,7 +144,7 @@ describe('repository safety rules', () => {
         const transport = readFileSync(join(process.cwd(), 'lib/checkout/wompi-checkout-web.ts'), 'utf8');
         assert.doesNotMatch(checkout, /widget\.js|new WidgetCheckout/);
         assert.match(checkout, /submitWompiWeb/);
-        assert.match(confirmation, /verifyCheckoutReturn\(context, transactionId, fetchWithCsrf\)/);
+        assert.match(confirmation, /verifyCheckoutReturn\(context, transactionId \?\? '', fetchWithCsrf\)/);
         assert.doesNotMatch(confirmation, /searchParams\.get\('status'\)/);
         assert.match(transport, /response\.status !== 200/);
     });
