@@ -27,14 +27,22 @@ declare global {
 
 export default function CheckoutClient() {
     const router = useRouter();
-    const { items, getSubtotal, clearCart } = useCartStore();
+    const { items, getSubtotal } = useCartStore();
     const [isProcessing, setIsProcessing] = useState(false);
     const [wompiLoaded, setWompiLoaded] = useState(false);
     const [checkoutError, setCheckoutError] = useState<string | null>(null);
     const [paymentApproved, setPaymentApproved] = useState(false);
     const submissionInFlight = useRef(false);
     const checkoutAttempt = useRef<CheckoutAttempt | null>(null);
+    const widgetSession = useRef<{ handled: boolean } | null>(null);
+    const resultInFlight = useRef(false);
+    const mounted = useRef(true);
     const { showToast } = useToast();
+
+    useEffect(() => {
+        mounted.current = true;
+        return () => { mounted.current = false; widgetSession.current = null; };
+    }, []);
 
     // Efecto para verificar si Wompi ya está cargado (por si el script termina antes del onLoad)
     useEffect(() => {
@@ -84,8 +92,11 @@ export default function CheckoutClient() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (submissionInFlight.current) return;
+        if (submissionInFlight.current || resultInFlight.current || !mounted.current) return;
         submissionInFlight.current = true;
+        const session = { handled: false };
+        widgetSession.current = session;
+        const isCurrent = () => mounted.current && widgetSession.current === session;
         setIsProcessing(true);
         setCheckoutError(null);
 
@@ -99,6 +110,7 @@ export default function CheckoutClient() {
             const snapshot = useCartStore.getState().items;
             if (snapshot !== items) throw new Error('El carrito cambió. Revisa el resumen e intenta nuevamente.');
             const fresh = await refreshCartCatalog(snapshot);
+            if (!isCurrent()) return;
             if (!useCartStore.getState().replaceSnapshot(snapshot, fresh.items)) {
                 throw new Error('El carrito cambió durante la verificación. Revisa el resumen e intenta nuevamente.');
             }
@@ -143,6 +155,7 @@ export default function CheckoutClient() {
             });
 
             const { data: order, error: orderError } = await orderResponse.json();
+            if (!isCurrent()) return;
 
             if (orderError || !order) {
                 throw new Error(orderError || 'Error al crear la orden');
@@ -164,6 +177,7 @@ export default function CheckoutClient() {
             });
 
             const { data: params, error: paramsError } = await paramsResponse.json();
+            if (!isCurrent()) return;
 
             if (paramsError || !params) {
                 throw new Error(paramsError || 'Error al obtener parámetros de pago');
@@ -190,7 +204,10 @@ export default function CheckoutClient() {
 
             checkout.open(async (result?: { transaction?: { id?: string; status: string } }) => {
                 const transaction = result?.transaction;
-                if (!transaction) return;
+                if (!isCurrent() || session.handled || !transaction || typeof transaction.status !== 'string') return;
+                session.handled = true;
+                resultInFlight.current = true;
+                setIsProcessing(true);
                 if (transaction.status === 'APPROVED') {
                     setPaymentApproved(true);
                     try {
@@ -213,12 +230,14 @@ export default function CheckoutClient() {
                             throw new Error(reconcilePayload?.error || 'No pudimos confirmar automaticamente el pago aprobado');
                         }
 
-                        clearCart();
+                        if (!isCurrent()) return;
+                        useCartStore.getState().replaceSnapshot(fresh.items, []);
                         router.push(`/checkout/confirmacion?orderId=${order.id}&status=success`);
                         return;
                     } catch (reconcileError) {
                         console.error('Payment reconciliation error:', reconcileError);
-                        clearCart();
+                        if (!isCurrent()) return;
+                        useCartStore.getState().replaceSnapshot(fresh.items, []);
                         router.push(`/checkout/confirmacion?orderId=${order.id}&status=manual_review`);
                         return;
                     }
@@ -226,17 +245,17 @@ export default function CheckoutClient() {
                 } else {
                     // El webhook se encargará de actualizar el estado, 
                     // pero podemos redirigir al usuario
-                    router.push(`/checkout/confirmacion?orderId=${order.id}&status=${transaction.status.toLowerCase()}`);
+                    router.push(`/checkout/confirmacion?orderId=${order.id}&status=${encodeURIComponent(transaction.status.toLowerCase())}`);
                 }
             });
 
         } catch (error) {
             console.error('Checkout error:', error);
             const message = error instanceof Error ? error.message : 'Hubo un error al procesar tu pedido. Por favor intenta de nuevo.';
-            setCheckoutError(message);
+            if (isCurrent()) setCheckoutError(message);
         } finally {
             submissionInFlight.current = false;
-            setIsProcessing(false);
+            if (mounted.current && !resultInFlight.current) setIsProcessing(false);
         }
     };
 
