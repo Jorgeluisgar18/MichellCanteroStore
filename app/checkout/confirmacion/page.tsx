@@ -130,10 +130,10 @@ function ConfirmacionContent() {
                                 <Clock className="w-12 h-12 text-yellow-600" />
                             </div>
                             <h1 className="text-3xl font-display font-bold text-neutral-900 mb-4">
-                                Pago en Proceso
+                                Verificando tu pago
                             </h1>
                             <p className="text-neutral-600 mb-8">
-                                Tu pago está siendo procesado por la entidad financiera. Te notificaremos por correo electrónico una vez se confirme.
+                                Estamos consultando el estado de tu pedido y todavía no confirmamos el pago. Si ya pagaste, no lo repitas. Puedes volver a verificar desde esta página.
                             </p>
                         </>
                     )}

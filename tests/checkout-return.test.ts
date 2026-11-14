@@ -89,6 +89,10 @@ it('verifies hosted returns without trusting URL status or exposing guest order 
         for (const status of [202, 409, 500]) {
             reset(); responseStatus = status; render(); await flush();
             assert.doesNotMatch(JSON.stringify(render()), /Pago Confirmado/);
+            if (status === 202) {
+                assert.match(JSON.stringify(render()), /Verificando tu pago/);
+                assert.doesNotMatch(JSON.stringify(render()), /procesado por la entidad financiera/);
+            }
             assert.equal(useCartStore.getState().items.length, 1);
         }
         reset(false); responseStatus = 200;

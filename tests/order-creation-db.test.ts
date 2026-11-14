@@ -257,5 +257,68 @@ it('commits order, items and stock holds together or rolls all of them back', { 
         sql('UPDATE stock_reservations SET variant_quantities=\'{}\';');
         assert.equal(JSON.parse(sql(`SELECT public.claim_wompi_checkout('${incomplete.order.id}');`)).outcome, 'reservation_invalid');
         assert.equal(sql('SELECT count(*) FROM public.wompi_checkout_attempts;'), '0');
+        const legacyIssued = JSON.parse(sql(call({ ...oneOrder, order_number: 'CUTOVER-ISSUED', idempotency_key: randomUUID() },
+            [{ ...items[0], product_id: second, quantity: 1 }])));
+        assert.equal(JSON.parse(sql(`SELECT public.claim_wompi_checkout('${legacyIssued.order.id}');`)).outcome, 'issued');
+        const issuedAt = sql(`SELECT issued_at FROM public.wompi_checkout_attempts WHERE order_id='${legacyIssued.order.id}';`);
+        const paidBeforeCutover = JSON.parse(sql(call({ ...oneOrder, order_number: 'CUTOVER-PAID', idempotency_key: randomUUID() },
+            [{ ...items[0], product_id: second, quantity: 1 }])));
+        assert.equal(JSON.parse(sql(finalize(paidBeforeCutover.order.id, 'CUTOVER-PAID', 'cutover-paid-tx'))).outcome, 'finalized');
+        const existingStates = sql(`SELECT id,payment_status,wompi_transaction_id,inventory_status,status FROM orders ORDER BY id;`);
+        const stateHash = () => sql(`SELECT md5(jsonb_build_object(
+            'orders',(SELECT jsonb_agg(to_jsonb(o) ORDER BY id) FROM orders o),
+            'products',(SELECT jsonb_agg(to_jsonb(p) ORDER BY id) FROM products p),
+            'holds',(SELECT jsonb_agg(to_jsonb(r) ORDER BY id) FROM stock_reservations r),
+            'attempts',(SELECT jsonb_agg(to_jsonb(a) ORDER BY order_id) FROM wompi_checkout_attempts a))::text);`);
+        const beforeRejectedCutover = stateHash();
+        const holder = concurrent("SET application_name='cutover-blocker'; BEGIN; LOCK TABLE orders IN ROW SHARE MODE; SELECT pg_sleep(8); COMMIT;");
+        let holderReady = false;
+        for (let i = 0; i < 40; i++) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+            if (sql("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE application_name='cutover-blocker' AND wait_event='PgSleep');") === 't') { holderReady = true; break; }
+        }
+        assert.ok(holderReady);
+        const rejected = docker(args, readFileSync(join(process.cwd(), 'supabase/migrations/20261114221037_controlled_payment_cutover.sql'), 'utf8'));
+        assert.notEqual(rejected.status, 0);
+        assert.match(rejected.stderr, /lock timeout/);
+        assert.equal(await holder, 0);
+        assert.equal(stateHash(), beforeRejectedCutover, 'rejected cutover must preserve all fixture data');
+        assert.equal(sql("SELECT count(*) FROM information_schema.columns WHERE table_name='wompi_checkout_attempts' AND column_name='issuance_origin';"), '0');
+        const inFlight = concurrent(`SET application_name='cutover-fixture'; BEGIN;
+            ${call({ ...oneOrder, order_number: 'CUTOVER-IN-FLIGHT', idempotency_key: randomUUID() }, [{ ...items[0], product_id: second, quantity: 1 }])}
+            SELECT pg_sleep(3); COMMIT;`);
+        let sleeping = false;
+        for (let i = 0; i < 40; i++) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+            if (sql("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE application_name='cutover-fixture' AND wait_event='PgSleep');") === 't') { sleeping = true; break; }
+        }
+        assert.ok(sleeping, 'fixture transaction must be in flight before cutover');
+        const beforeCutover = sql(`SELECT variants::text,stock_quantity FROM products ORDER BY id;`);
+        sql(readFileSync(join(process.cwd(), 'supabase/migrations/20261114221037_controlled_payment_cutover.sql'), 'utf8'));
+        assert.equal(await inFlight, 0);
+        assert.equal(JSON.parse(sql(`SELECT public.claim_wompi_checkout('${incomplete.order.id}');`)).outcome, 'existing', 'old uncertainty cannot produce another checkout');
+        assert.equal(sql(`SELECT issuance_origin FROM public.wompi_checkout_attempts WHERE order_id='${incomplete.order.id}';`), 'legacy_uncertain');
+        assert.equal(sql("SELECT issuance_origin FROM public.wompi_checkout_attempts WHERE order_id=(SELECT id FROM orders WHERE order_number='CUTOVER-IN-FLIGHT');"), 'legacy_uncertain');
+        assert.equal(sql(`SELECT issued_at FROM public.wompi_checkout_attempts WHERE order_id='${legacyIssued.order.id}';`), issuedAt);
+        assert.equal(sql(`SELECT issuance_origin FROM public.wompi_checkout_attempts WHERE order_id='${legacyIssued.order.id}';`), 'application');
+        assert.equal(sql(`SELECT variants::text,stock_quantity FROM products ORDER BY id;`), beforeCutover);
+        assert.equal(sql(`SELECT count(*) FROM public.wompi_checkout_attempts WHERE order_id='${paidBeforeCutover.order.id}';`), '0', 'paid orders are not relabeled as uncertain');
+        assert.equal(sql("SELECT id,payment_status,wompi_transaction_id,inventory_status,status FROM orders WHERE order_number<>'CUTOVER-IN-FLIGHT' ORDER BY id;"), existingStates);
+        const freshOrder = JSON.parse(sql(call({ ...oneOrder, order_number: 'AFTER-CUTOVER', idempotency_key: randomUUID() }, [{ ...items[0], product_id: second, quantity: 1 }])));
+        assert.equal(JSON.parse(sql(`SELECT public.claim_wompi_checkout('${freshOrder.order.id}');`)).outcome, 'issued');
+        assert.equal(sql(`SELECT issuance_origin FROM public.wompi_checkout_attempts WHERE order_id='${freshOrder.order.id}';`), 'application');
+        for (const role of ['anon', 'authenticated']) {
+            assert.notEqual(docker(args, `SET ROLE ${role}; UPDATE public.wompi_checkout_attempts SET issuance_origin='application';`).status, 0);
+            const beforeDenied = stateHash();
+            for (const statement of [
+                'SELECT * FROM public.wompi_checkout_attempts',
+                'DELETE FROM public.wompi_checkout_attempts',
+                `INSERT INTO public.wompi_checkout_attempts(order_id,issuance_origin) VALUES('${paidBeforeCutover.order.id}','application')`,
+                `SELECT public.claim_wompi_checkout('${incomplete.order.id}')`,
+            ]) {
+                assert.notEqual(docker(args, `SET ROLE ${role}; ${statement};`).status, 0);
+                assert.equal(stateHash(), beforeDenied);
+            }
+        }
     } finally { assert.equal(docker(['stop', container]).status, 0); }
 });
