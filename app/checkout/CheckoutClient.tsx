@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import Script from 'next/script';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Button from '@/components/ui/Button';
@@ -12,43 +11,31 @@ import { useCartStore } from '@/store/cartStore';
 import { formatPrice } from '@/lib/utils';
 import { CreditCard, CheckCircle, Truck, MapPin, AlertCircle, X } from 'lucide-react';
 import { fetchWithCsrf } from '@/lib/hooks/useCsrfToken';
-import { useToast } from '@/components/ui/Toast';
 import { STORE_CONFIG } from '@/lib/config';
 import { calculateCheckoutShippingCost } from '@/lib/checkout/safety';
 import { getCheckoutAttempt, type CheckoutAttempt } from '@/lib/checkout/idempotency';
 import { cartLineTotal, refreshCartCatalog } from '@/lib/checkout/cart-freshness';
-
-// Declare Wompi WidgetCheckout global type
-declare global {
-    interface Window {
-        WidgetCheckout: unknown;
-    }
-}
+import { buildWompiWebFields, cartContentsFingerprint, saveReturnContext, submitWompiWeb } from '@/lib/checkout/wompi-checkout-web';
 
 export default function CheckoutClient() {
     const router = useRouter();
     const { items, getSubtotal } = useCartStore();
     const [isProcessing, setIsProcessing] = useState(false);
-    const [wompiLoaded, setWompiLoaded] = useState(false);
     const [checkoutError, setCheckoutError] = useState<string | null>(null);
-    const [paymentApproved, setPaymentApproved] = useState(false);
     const submissionInFlight = useRef(false);
     const checkoutAttempt = useRef<CheckoutAttempt | null>(null);
-    const widgetSession = useRef<{ handled: boolean } | null>(null);
-    const resultInFlight = useRef(false);
+    const handoffStarted = useRef(false);
     const mounted = useRef(true);
-    const { showToast } = useToast();
 
     useEffect(() => {
         mounted.current = true;
-        return () => { mounted.current = false; widgetSession.current = null; };
-    }, []);
-
-    // Efecto para verificar si Wompi ya está cargado (por si el script termina antes del onLoad)
-    useEffect(() => {
-        if (typeof window !== 'undefined' && window.WidgetCheckout) {
-            setWompiLoaded(true);
-        }
+        const restore = () => {
+            submissionInFlight.current = false;
+            handoffStarted.current = false;
+            setIsProcessing(false);
+        };
+        window.addEventListener('pageshow', restore);
+        return () => { mounted.current = false; window.removeEventListener('pageshow', restore); };
     }, []);
 
     const [formData, setFormData] = useState({
@@ -85,32 +72,23 @@ export default function CheckoutClient() {
     const total = subtotal + shipping;
 
     useEffect(() => {
-        if (items.length === 0 && !paymentApproved) {
+        if (items.length === 0) {
             router.replace('/carrito');
         }
-    }, [items.length, paymentApproved, router]);
+    }, [items.length, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (submissionInFlight.current || resultInFlight.current || !mounted.current) return;
+        if (submissionInFlight.current || handoffStarted.current || !mounted.current) return;
         submissionInFlight.current = true;
-        const session = { handled: false };
-        widgetSession.current = session;
-        const isCurrent = () => mounted.current && widgetSession.current === session;
         setIsProcessing(true);
         setCheckoutError(null);
 
         try {
-            // Verificar que Wompi esté cargado
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            if (!wompiLoaded || typeof window === 'undefined' || !(window as any).WidgetCheckout) {
-                throw new Error('El sistema de pagos aún no está listo. Por favor, intenta de nuevo en un momento.');
-            }
-
             const snapshot = useCartStore.getState().items;
             if (snapshot !== items) throw new Error('El carrito cambió. Revisa el resumen e intenta nuevamente.');
             const fresh = await refreshCartCatalog(snapshot);
-            if (!isCurrent()) return;
+            if (!mounted.current) return;
             if (!useCartStore.getState().replaceSnapshot(snapshot, fresh.items)) {
                 throw new Error('El carrito cambió durante la verificación. Revisa el resumen e intenta nuevamente.');
             }
@@ -155,7 +133,7 @@ export default function CheckoutClient() {
             });
 
             const { data: order, error: orderError } = await orderResponse.json();
-            if (!isCurrent()) return;
+            if (!mounted.current) return;
 
             if (orderError || !order) {
                 throw new Error(orderError || 'Error al crear la orden');
@@ -177,7 +155,7 @@ export default function CheckoutClient() {
             });
 
             const { data: params, error: paramsError } = await paramsResponse.json();
-            if (!isCurrent()) return;
+            if (!mounted.current) return;
 
             if (paramsError || !params) {
                 throw new Error(paramsError || 'Error al obtener parámetros de pago');
@@ -186,76 +164,22 @@ export default function CheckoutClient() {
                 throw new Error('El pedido cambió antes de abrir el pago. Revisa el resumen e intenta nuevamente.');
             }
 
-            // 3. Abrir el Widget de Wompi
-            // @ts-expect-error Wompi widget is a global script
-            const checkout = new WidgetCheckout({
-                currency: params.currency,
-                amountInCents: params.amountInCents,
-                reference: params.reference,
-                publicKey: params.publicKey,
-                signature: {
-                    integrity: params.signature
-                },
-                redirectUrl: params.redirectUrl,
-                customerData: {
-                    email: params.customerEmail
-                }
-            });
-
-            checkout.open(async (result?: { transaction?: { id?: string; status: string } }) => {
-                const transaction = result?.transaction;
-                if (!isCurrent() || session.handled || !transaction || typeof transaction.status !== 'string') return;
-                session.handled = true;
-                resultInFlight.current = true;
-                setIsProcessing(true);
-                if (transaction.status === 'APPROVED') {
-                    setPaymentApproved(true);
-                    try {
-                        if (!transaction.id) {
-                            throw new Error('Wompi no devolvio el identificador de la transaccion aprobada');
-                        }
-
-                        const reconcileResponse = await fetchWithCsrf('/api/payments/reconcile', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                orderId: order.id,
-                                email: formData.email,
-                                transactionId: transaction.id,
-                            }),
-                        });
-
-                        if (!reconcileResponse.ok) {
-                            const reconcilePayload = await reconcileResponse.json().catch(() => null);
-                            throw new Error(reconcilePayload?.error || 'No pudimos confirmar automaticamente el pago aprobado');
-                        }
-
-                        if (!isCurrent()) return;
-                        useCartStore.getState().replaceSnapshot(fresh.items, []);
-                        router.push(`/checkout/confirmacion?orderId=${order.id}&status=success`);
-                        return;
-                    } catch (reconcileError) {
-                        console.error('Payment reconciliation error:', reconcileError);
-                        if (!isCurrent()) return;
-                        useCartStore.getState().replaceSnapshot(fresh.items, []);
-                        router.push(`/checkout/confirmacion?orderId=${order.id}&status=manual_review`);
-                        return;
-                    }
-
-                } else {
-                    // El webhook se encargará de actualizar el estado, 
-                    // pero podemos redirigir al usuario
-                    router.push(`/checkout/confirmacion?orderId=${order.id}&status=${encodeURIComponent(transaction.status.toLowerCase())}`);
-                }
-            });
+            if (params.reference !== order.order_number) throw new Error('La referencia de pago no coincide con tu orden.');
+            const fields = buildWompiWebFields(params, window.location.origin, order.id);
+            saveReturnContext(window.sessionStorage, { orderId: order.id, email: formData.email,
+                cartFingerprint: cartContentsFingerprint(fresh.items), createdAt: Date.now() });
+            handoffStarted.current = true;
+            try { submitWompiWeb(fields); } catch (error) { handoffStarted.current = false; throw error; }
 
         } catch (error) {
             console.error('Checkout error:', error);
             const message = error instanceof Error ? error.message : 'Hubo un error al procesar tu pedido. Por favor intenta de nuevo.';
-            if (isCurrent()) setCheckoutError(message);
+            if (mounted.current) setCheckoutError(message);
         } finally {
-            submissionInFlight.current = false;
-            if (mounted.current && !resultInFlight.current) setIsProcessing(false);
+            if (!handoffStarted.current) {
+                submissionInFlight.current = false;
+                if (mounted.current) setIsProcessing(false);
+            }
         }
     };
 
@@ -284,25 +208,13 @@ export default function CheckoutClient() {
         if (name in formData) validateField(name, value);
     };
 
-    if (items.length === 0 && !paymentApproved) {
+    if (items.length === 0) {
         return null;
     }
 
     return (
         <>
             <Header />
-            {/* Cargar script de Wompi con Next.js Script */}
-            <Script
-                src="https://checkout.wompi.co/widget.js"
-                strategy="afterInteractive"
-                onLoad={() => {
-                    setWompiLoaded(true);
-                }}
-                onError={() => {
-                    showToast('Error al cargar el sistema de pagos. Por favor, recarga la página.', 'error');
-                }}
-            />
-
             <main className="min-h-screen bg-neutral-50 text-neutral-900">
                 <div className="container-custom py-8">
                     <h1 className="text-3xl md:text-4xl font-display font-bold text-neutral-900 mb-8">

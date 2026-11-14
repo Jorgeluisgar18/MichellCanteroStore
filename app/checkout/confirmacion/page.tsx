@@ -6,42 +6,68 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Button from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { CheckCircle, XCircle, Clock, ArrowRight } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, ArrowRight, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
+import { useCartStore } from '@/store/cartStore';
+import { fetchWithCsrf } from '@/lib/hooks/useCsrfToken';
+import { cartContentsFingerprint, readReturnContext, saveReturnContext, verifyCheckoutReturn, type ReturnState } from '@/lib/checkout/wompi-checkout-web';
 
 interface Order {
     id: string;
     order_number: string;
     total: number;
     payment_status: string;
+    inventory_status: string;
 }
 
 function ConfirmacionContent() {
     const searchParams = useSearchParams();
     const orderId = searchParams.get('orderId');
+    const transactionId = searchParams.get('id');
     const [order, setOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
-    const [fetchError, setFetchError] = useState(false);
+    const [verification, setVerification] = useState<ReturnState>('unverified');
+    const [retry, setRetry] = useState(0);
 
     useEffect(() => {
-        if (orderId) {
-            fetch(`/api/orders/${orderId}`)
-                .then(res => {
-                    if (!res.ok) throw new Error('Error al obtener la orden');
-                    return res.json();
-                })
-                .then(data => {
-                    setOrder(data.data);
-                    setLoading(false);
-                })
-                .catch(() => {
-                    setFetchError(true);
-                    setLoading(false);
-                });
-        } else {
+        let active = true;
+        setLoading(true);
+        setOrder(null);
+        setVerification('unverified');
+        void (async () => {
+            let context = null;
+            try { context = orderId ? readReturnContext(window.sessionStorage, orderId) : null; } catch { /* Storage may be disabled. */ }
+            let result: ReturnState = context && transactionId
+                ? await verifyCheckoutReturn(context, transactionId, fetchWithCsrf) : 'unverified';
+            if (!active) return;
+            let receipt: Order | null = null;
+            if (orderId) {
+                try {
+                    const response = await fetch(`/api/orders/${encodeURIComponent(orderId)}`, { cache: 'no-store' });
+                    const payload = response.ok ? await response.json() : null;
+                    if (payload?.data?.id === orderId && typeof payload.data.payment_status === 'string') receipt = payload.data;
+                } catch { /* A guest cannot read the protected order endpoint. */ }
+            }
+            if (!active) return;
+            if (receipt?.payment_status === 'paid') {
+                result = receipt.inventory_status === 'confirmed' ? 'verified' : 'review';
+            } else if (receipt) {
+                result = receipt.payment_status === 'pending' ? 'pending' : 'review';
+            }
+            if (result === 'verified' && context && !context.cartHandled) {
+                try {
+                    // Consume cleanup before applying it; a later visit must preserve a new cart.
+                    saveReturnContext(window.sessionStorage, { ...context, cartHandled: true });
+                    const current = useCartStore.getState().items;
+                    if (cartContentsFingerprint(current) === context.cartFingerprint) useCartStore.getState().replaceSnapshot(current, []);
+                } catch { /* A damaged local cart must not invalidate a verified server result. */ }
+            }
+            setOrder(receipt);
+            setVerification(result);
             setLoading(false);
-        }
-    }, [orderId]);
+        })();
+        return () => { active = false; };
+    }, [orderId, transactionId, retry]);
 
     if (loading) {
         return (
@@ -52,17 +78,19 @@ function ConfirmacionContent() {
         );
     }
 
-    const isSuccess = order?.payment_status === 'paid';
-    const isPending = order?.payment_status === 'pending';
-    const isFailed = !loading && !isSuccess && !isPending;
+    const isSuccess = verification === 'verified';
+    const isPending = verification === 'pending';
+    const isReview = verification === 'review';
 
-    if (fetchError || !order) {
+    if (verification === 'unverified') {
         return (
             <div className="text-center py-12">
                 <p className="text-neutral-600">
-                    No pudimos cargar los detalles de tu orden.
-                    Por favor revisa tu correo o contacta soporte.
+                    No pudimos confirmar el pago todavía. Si ya pagaste, no lo repitas y contacta soporte.
                 </p>
+                <Button type="button" className="mt-6" leftIcon={<RefreshCw className="w-4 h-4" />} onClick={() => setRetry(value => value + 1)}>
+                    Volver a verificar
+                </Button>
             </div>
         );
     }
@@ -77,10 +105,10 @@ function ConfirmacionContent() {
                                 <CheckCircle className="w-12 h-12 text-green-600" />
                             </div>
                             <h1 className="text-3xl font-display font-bold text-neutral-900 mb-4">
-                                ¡Pedido Confirmado!
+                                ¡Pago Confirmado!
                             </h1>
                             <p className="text-neutral-600 mb-8">
-                                Gracias por tu compra. Hemos recibido tu pedido y estamos preparando todo para el envío.
+                                Gracias por tu compra. Tu pago fue confirmado y tu pedido quedó registrado.
                             </p>
                         </>
                     )}
@@ -97,16 +125,16 @@ function ConfirmacionContent() {
                             </p>
                         </>
                     )}
-                    {isFailed && (
+                    {isReview && (
                         <>
                             <div className="bg-red-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
                                 <XCircle className="w-12 h-12 text-red-600" />
                             </div>
                             <h1 className="text-3xl font-display font-bold text-neutral-900 mb-4">
-                                Hubo un Problema
+                                Pago por verificar
                             </h1>
                             <p className="text-neutral-600 mb-8">
-                                No pudimos confirmar tu pago. Por favor intenta de nuevo o contacta a soporte si crees que es un error.
+                                Tu pedido necesita una revisión antes de continuar. Si ya pagaste, no repitas el pago y contacta soporte.
                             </p>
                         </>
                     )}
@@ -128,11 +156,17 @@ function ConfirmacionContent() {
                                 <div className="flex justify-between">
                                     <span className="text-neutral-600">Estado:</span>
                                     <span className={`font-bold ${isSuccess ? 'text-green-600' : isPending ? 'text-yellow-600' : 'text-red-600'}`}>
-                                        {isSuccess ? 'Pagado' : isPending ? 'Pendiente' : 'Fallido'}
+                                        {isSuccess ? 'Pagado' : isPending ? 'Pendiente' : 'En revisión'}
                                     </span>
                                 </div>
                             </div>
                         </div>
+                    )}
+
+                    {!isSuccess && (
+                        <Button type="button" variant="secondary" className="mb-4" leftIcon={<RefreshCw className="w-4 h-4" />} onClick={() => setRetry(value => value + 1)}>
+                            Volver a verificar
+                        </Button>
                     )}
 
                     <div className="flex flex-col sm:flex-row gap-4">

@@ -1,0 +1,21 @@
+# Hosted Wompi Checkout
+
+The customer leaves the store through a same-tab GET form whose action is fixed to `https://checkout.wompi.co/p/`. Fields follow the [official Colombia Web Checkout contract](https://docs.wompi.co/docs/colombia/widget-checkout-web/): `public-key`, `currency`, `amount-in-cents`, `reference`, `signature:integrity` and `redirect-url`. Signing stays on the existing backend. Optional email prefill is omitted to keep personal information out of the payment URL.
+
+Fresh catalog selections, reviewed amount, returned order total, signed amount and order reference must agree before navigation. Redirects must point to the same store origin and `/checkout/confirmacion?orderId=...`. A configuration pointing at production from a local preview fails closed. The browser submit guard stays held after handoff and resets on `pageshow` when returning through browser history. The widget script is no longer loaded; CSP permits the exact checkout origin for forms, not scripts or frames.
+
+## Verified Return
+
+Before leaving, the current tab stores a per-order context containing order ID, the email required by existing guest reconciliation access, public cart-content fingerprint and creation timestamp. Context expires after 24 hours. No address, phone, private key, integrity secret or full order detail is stored. If storage cannot be saved and read back, payment navigation is blocked. The email is same-tab continuity data, not a new authorization token, and is never placed in the return URL. Browser storage/XSS protections remain important; this context is not encrypted or signed.
+
+Wompi returns a transaction `id`. The page sends it, the matching order ID and stored email to the existing CSRF-protected reconciliation route. That route still verifies buyer access and looks up the actual transaction server-side. Only HTTP 200 with explicit `reconciled`/`already_paid` and matching order ID is accepted as verified. HTTP 202 remains pending; 409 remains unresolved/review. Missing, corrupt, expired or mismatched context and network errors cannot certify a guest payment. URL `status` is ignored.
+
+Protected order reads remain protected. An authenticated receipt may confirm a paid order only when its inventory status is `confirmed`; inventory-review orders do not receive a fulfillment promise. Guests can see the backend-verified result without gaining access to full private order details. A complete secure guest receipt is separate pending work.
+
+The cart is not cleared on departure. After verified return, cleanup is consumed once in the return context before any cart write. The cart is cleared only when current product IDs, selected variants, quantities and unit prices match the saved cart contents. Edits are preserved, and reopening an old verified return cannot clear a newly created identical cart. This comparison does not track an edit history that ultimately restores identical contents before the first verified return. If consuming cleanup cannot be persisted, the cart is retained. The cleanup flag never certifies payment: every return still requires the backend. Context remains until tab closure (expired records are removed when read) so reloading the return can safely recheck the backend. Repeated in-flight checks are deduplicated; unmounted effects do not mutate UI or cart. A newer protected receipt supersedes the earlier reconciliation response, including pending, failed and refunded states.
+
+## Verification And Release Limits
+
+Run `npm test`, `tsc --noEmit --incremental false`, and opt-in `RUN_DB_TESTS=1 npm test` for isolated PostgreSQL fixtures. Transport and return tests mock provider/API responses; no real payment is required. Browser checks must use a scratch copy without env files, local-only backend placeholders and intercepted outbound/API requests. They must never send orders or transactions to production.
+
+This migration removes the embedded-overlay dismissal problem. It does not certify cross-tab payment coordination, persisted creation retry keys, a complete guest receipt, full historical migration bootstrap, quota eligibility or live provider compatibility. Deployment and production configuration remain separately authorized operations. No new service, subscription, dependency, cron or database migration is introduced.

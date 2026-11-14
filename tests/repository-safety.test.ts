@@ -137,12 +137,15 @@ describe('repository safety rules', () => {
         assert.match(checkoutParams, /status:\s*409/);
     });
 
-    it('reconciles approved Wompi widget callbacks before sending buyers to success', () => {
+    it('verifies hosted returns through the backend and never trusts redirect status', () => {
         const checkout = readFileSync(join(process.cwd(), 'app', 'checkout', 'CheckoutClient.tsx'), 'utf8');
-
-        assert.match(checkout, /\/api\/payments\/reconcile/);
-        assert.match(checkout, /transactionId:\s*transaction\.id/);
-        assert.match(checkout, /await\s+fetchWithCsrf\('\/api\/payments\/reconcile'/);
+        const confirmation = readFileSync(join(process.cwd(), 'app/checkout/confirmacion/page.tsx'), 'utf8');
+        const transport = readFileSync(join(process.cwd(), 'lib/checkout/wompi-checkout-web.ts'), 'utf8');
+        assert.doesNotMatch(checkout, /widget\.js|new WidgetCheckout/);
+        assert.match(checkout, /submitWompiWeb/);
+        assert.match(confirmation, /verifyCheckoutReturn\(context, transactionId, fetchWithCsrf\)/);
+        assert.doesNotMatch(confirmation, /searchParams\.get\('status'\)/);
+        assert.match(transport, /response\.status !== 200/);
     });
 
     it('keeps Wompi reconciliation behind server validation and stock confirmation', () => {

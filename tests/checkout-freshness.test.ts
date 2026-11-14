@@ -11,7 +11,7 @@ it('updates changed prices for review, blocks stale reads and never opens paymen
     const loader = Module as unknown as { _load: (name: string, parent: { filename?: string }, main: boolean) => unknown };
     const original = loader._load;
     const oldFetch = globalThis.fetch;
-    const descriptors = ['React', 'window', 'WidgetCheckout'].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)] as const);
+    const descriptors = ['React', 'window', 'document'].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)] as const);
     const oldError = console.error;
     const product = { id: 'p', name: 'Fixture', price: 100, images: [], in_stock: true, stock_quantity: 10, variants: [] } as unknown as Product;
     const store = useCartStore;
@@ -25,22 +25,30 @@ it('updates changed prices for review, blocks stale reads and never opens paymen
     let cursor = 0;
     const dummy = () => null;
     const { STORE_CONFIG: config } = require(join(process.cwd(), 'lib/config.ts'));
-    const widget = class { open() { opened++; } };
+    let restore = () => {};
+    const storage = new Map<string, string>();
+    let storageDenied = false;
+    const form = { action: '', method: '', target: '', acceptCharset: '', style: {}, appendChild() {}, remove() {}, submit() {
+        assert.equal(form.action, 'https://checkout.wompi.co/p/'); assert.equal(form.target, '_self'); opened++;
+    } };
     Object.defineProperty(globalThis, 'React', { configurable: true, value: React });
-    Object.defineProperty(globalThis, 'window', { configurable: true, value: { WidgetCheckout: widget } });
-    Object.defineProperty(globalThis, 'WidgetCheckout', { configurable: true, value: widget });
+    Object.defineProperty(globalThis, 'window', { configurable: true, value: { location: { origin: 'https://store.test' },
+        sessionStorage: { setItem: (key: string, value: string) => { if (storageDenied) throw new Error('denied'); storage.set(key, value); }, getItem: (key: string) => storage.get(key) ?? null },
+        addEventListener(_name: string, listener: () => void) { restore = listener; }, removeEventListener() {},
+    } });
+    Object.defineProperty(globalThis, 'document', { configurable: true, value: { createElement: (name: string) => name === 'form' ? form : {}, body: { appendChild() {} } } });
     globalThis.fetch = async () => read ? read() : new Response(JSON.stringify({ data: current }));
     console.error = () => undefined;
     loader._load = function(name, parent, main) {
         if (name === 'react' && parent.filename?.endsWith('CheckoutClient.tsx')) return { ...React,
             useState(initial: unknown) {
                 const index = cursor++;
-                if (!(index in slots)) slots[index] = index === 1 ? true
-                    : initial && typeof initial === 'object' && 'shippingMethod' in initial ? { ...initial, shippingMethod: 'pickup' } : initial;
+                if (!(index in slots)) slots[index] = initial && typeof initial === 'object' && 'shippingMethod' in initial
+                    ? { ...initial, shippingMethod: 'pickup', email: 'buyer@example.test' } : initial;
                 return [slots[index], (value: unknown) => { slots[index] = value; }];
             },
             useRef(initial: unknown) { const index = cursor++; if (!(index in slots)) slots[index] = { current: initial }; return slots[index]; },
-            useEffect() {},
+            useEffect(effect: () => void) { const index = cursor++; if (!(index in slots)) { slots[index] = true; effect(); } },
         };
         if (name === '@/store/cartStore') return { useCartStore: Object.assign(() => store.getState(), { getState: store.getState }) };
         if (name === 'next/navigation') return { useRouter: () => ({ replace() {}, push() {} }) };
@@ -52,7 +60,8 @@ it('updates changed prices for review, blocks stale reads and never opens paymen
             if (editBeforePayment && url !== '/api/orders') store.getState().updateQuantity('p', 2);
             return new Response(JSON.stringify({ data: url === '/api/orders'
                 ? { id: 'order', order_number: 'ref', total: orderTotal }
-                : { amountInCents: orderTotal * 100 + paramsDelta } }));
+                : { publicKey: 'pub_test_fixture', currency: 'COP', reference: 'ref', signature: 'a'.repeat(64),
+                    redirectUrl: 'https://store.test/checkout/confirmacion?orderId=order', amountInCents: orderTotal * 100 + paramsDelta } }));
         } };
         return original.call(this, name, parent, main);
     };
@@ -78,6 +87,9 @@ it('updates changed prices for review, blocks stale reads and never opens paymen
         orderTotal = 120;
         await submit();
         assert.equal(opened, 1, 'second submission may proceed at the reviewed amount');
+        await submit(); assert.equal(opened, 1, 'handoff keeps the submit guard until document navigation');
+        assert.equal(store.getState().items.length, 1, 'departure must not clear the cart');
+        restore();
         resetCart(); current = product; posts = 0; opened = 0;
         let finish!: (response: Response) => void;
         read = () => new Promise(resolve => { finish = resolve; });
@@ -99,6 +111,9 @@ it('updates changed prices for review, blocks stale reads and never opens paymen
         await submit();
         assert.equal(opened, 0, 'a cart edited while order/parameters load must not open payment');
         editBeforePayment = false;
+        storageDenied = true; resetCart(); posts = 0;
+        await submit(); assert.equal(posts, 2); assert.equal(opened, 0, 'failed continuity storage must stop the payment handoff');
+        storageDenied = false;
         for (const mode of ['deleted', 'offline', 'unavailable']) {
             posts = 0; resetCart();
             read = async () => {

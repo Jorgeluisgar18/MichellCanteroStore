@@ -46,7 +46,7 @@ it('retains retry keys, suppresses overlapping submissions and keeps dismiss but
         if (name === 'react' && parent.filename?.endsWith('CheckoutClient.tsx')) return { ...React,
             useState(initial: unknown) {
                 const index = state++;
-                const value = index === 1 ? true : index === 2 ? 'Fixture error' : initial;
+                const value = index === 1 ? 'Fixture error' : initial;
                 return [value, () => undefined];
             }, useRef: (initial: unknown) => ({ current: initial }), useEffect() {},
         };
