@@ -42,6 +42,7 @@ mcp-config.json
 *.sql.gz
 !supabase/*.sql
 !supabase/migrations/*.sql
+!tests/fixtures/migration-bootstrap/platform.sql
 supabase/legacy_migrations/
 
 # Sentry
