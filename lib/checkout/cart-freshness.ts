@@ -41,5 +41,6 @@ export async function refreshCartCatalog(items: CartItem[], fetcher: typeof fetc
     })));
     if (error) throw new Error(error);
     return { items: next, priceChanged: next.some((item, index) =>
+        // eslint-disable-next-line security/detect-object-injection -- Numeric index from the one-to-one items.map above; no user-controlled property key.
         cartLineTotal(item) !== cartLineTotal(items[index]!)) };
 }

@@ -40,11 +40,11 @@ function transactionData(value: unknown): AuditTransaction {
 export function createSandboxAuditClient(env: Environment, fetcher: typeof fetch = fetch) {
     const credentials = validateSandboxCredentials(env);
     let requests = 0, creations = 0;
-    async function request(path: string, auth: 'merchant' | 'public' | 'private', body?: Data): Promise<ResponseData> {
+    async function request(path: string, authMode: 'merchant' | 'public' | 'private', body?: Data): Promise<ResponseData> {
         if (++requests > 100) throw new SandboxAuditError('request_budget_exhausted');
         const headers: Record<string, string> = { Accept: 'application/json' };
-        if (auth === 'merchant') headers['x-merchant-public-key'] = credentials.publicKey;
-        else headers.Authorization = `Bearer ${auth === 'public' ? credentials.publicKey : credentials.privateKey}`;
+        if (authMode === 'merchant') headers['x-merchant-public-key'] = credentials.publicKey;
+        else headers.Authorization = `Bearer ${authMode === 'public' ? credentials.publicKey : credentials.privateKey}`;
         if (body) headers['Content-Type'] = 'application/json';
         let response: Response, payload: Data | null;
         try {
