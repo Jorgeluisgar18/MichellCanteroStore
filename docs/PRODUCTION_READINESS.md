@@ -4,6 +4,20 @@ Status: NOT READY FOR RELEASE. Local payment/cutover proofs do not certify the d
 
 Publication note: incident identifiers, provider timestamps and local evidence paths below are redacted labels, not executable database values. Private evidence is retained separately.
 
+## GitHub and Hosted Candidate Verification (2026-11-21)
+
+The integration branch is published through commit `3799520735ded7bfd34e681c010f9a65eb991075`. Remote Git verification confirms that `main` remains at `a4020427939e89bcc723dae78bc9bf6626b6eb58`; publishing the branch did not promote it to production.
+
+Vercel's Git integration built that exact commit as preview deployment `dpl_55965AEQxMcKviapMRWGMEfFsHgr`, with state `READY`, no alias error and no production target. Build events confirm output creation and deployment completion. This proves hosted build/deployment completion, not checkout operation, environment isolation or compatibility with the production database. No purchase, payment or database write was performed against this preview.
+
+Fresh local checks passed: 89 tests passed with six opt-in skips, TypeScript passed, and focused runtime ESLint passed. A separate opt-in forward-upgrade run passed one test with zero skips using cached, network-isolated PostgreSQL; its disposable container was removed. These proofs do not replace the remaining hosted customer-flow and operational cutover checks.
+
+The owner explicitly declined formal review for the maintenance candidate only. Native readback confirmed `declined_this_candidate` for target `sha256:a6986561352dbf7e8b0680bf268d7867e563d44af74806ae31b0c6e930f5c48f`. No review approval is claimed, and future reviews remain enabled. The six hosted behavior migrations are still pending; neither the preview nor this decision authorizes applying them without the writer fence and drain.
+
+Read-only project metadata reports Vercel SSO protection enabled with scope `all_except_custom_domains`. Anonymous, redirect-disabled GET probes returned HTTP 302 to `vercel.com` for both the exact preview URL and the previous production deployment's generated URL. The public `www` storefront returned HTTP 200. No cookie, bypass credential or response body was retained. This is evidence for those three requests only, not a complete alias inventory, commerce-method probe or in-flight drain. The public domain still serves the old runtime.
+
+The next bounded transition to evaluate is an old-schema-compatible maintenance bridge on the public domain while generated legacy URLs remain protected. Do not replace this with broad table-privilege revocation: legacy payment issuance signs parameters after reads without a write, and both runtimes share database credentials. A bridge still needs route-level verification, active-request drain, cron handling, bounded webhook recovery and explicit acceptance of a temporary purchase interruption before hosted changes.
+
 ## Release Gates
 
 | Gate | Current evidence | Required next proof |
