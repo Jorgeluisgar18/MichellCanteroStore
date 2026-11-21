@@ -34,6 +34,20 @@ Fresh production metadata still identified `a402042` as READY and the public sto
 
 ### Production Checklist
 
+### Verified Lifetime and Database Preconditions (2026-11-21)
+
+The previous metadata gap was resolved using the installed CLI's supported `vercel inspect <deployment> --format=json`, rather than the newer documentation's `--json` spelling. Inspection of exact production deployment `dpl_DG9FArd7NJLVNzJ5XHx6hGUhTf14` reports `nodejs24.x` and `timeout: 300` for all nine commerce route paths, including both cron writers. This is actual deployment evidence, not a guessed default. Vercel documents that the [maximum duration terminates an overlong invocation](https://vercel.com/docs/functions/configuring-functions/duration).
+
+Read-only Supabase catalog inspection reports `authenticator` statement and lock timeouts of 8 seconds, `anon` statement timeout of 3 seconds and `authenticated` statement timeout of 8 seconds. No timeout override was found on the four existing stock RPCs. The inspection session itself is `postgres` with a two-minute statement timeout and no lock timeout; it is not the Data API session. Supabase documents the [service-role fallback to authenticator settings](https://supabase.com/docs/guides/database/postgres/timeouts). These catalog settings do not prove current PostgREST cache state or bound upstream HTTP/network queues.
+
+Baseline source mapping found no explicit detached commerce continuation in the nine routes. Provider and email calls are awaited but have no application-defined request deadline. The old webhook can await email delivery before its final order update; order creation and compensation span separate database requests. Therefore a database-idle sample taken during that wait is not a completed drain.
+
+At `2026-11-21T18:48:37Z`, a read-only aggregate returned: 28 migrations recorded, none of the six pending release versions present, zero orders without items, zero reserved/live/expired-reserved rows, zero other holders of the inspected commerce relation lock modes and zero authenticator sessions in a transaction. Production was still open. These are preflight observations only; repeat them after closing old admission and settling old invocations. They are not a production-drain certificate or proof that every historical payment/inventory state is correct.
+
+The release sequence must retain two separate barriers: first close all old admission and settle old function lifetimes; then verify that downstream database work has settled and inspect interrupted-flow consistency. The observed 300-second bound applies only after the last possible old invocation start is established. Do not label five minutes from alias reassignment, a client disconnect, missing log lines or an earlier zero-count sample as sufficient proof. If queued starts or any old access path remain uncertain, keep migrations blocked rather than inventing a queue allowance.
+
+### Execution Order
+
 1. Freeze the bridge commit, check its hosted build and approve its exact deployment/environment. Configure the pause only for the intended production deployment, never by silently changing a shared setting. The application reads the setting per request, but Vercel environment changes can require a new deployment.
 2. Before database work, verify the public domain serves the paused bridge: direct commerce mutation requests must receive the expected503 and product browsing must remain available. Verify internal old URLs cannot bypass protection. Include webhooks, both cron methods and authenticated administrative mutation paths in the test plan without sending real payment or inventory mutations.
 3. Establish the actual maximum duration and drain of requests admitted to the previous production revision, including background work. Do not equate alias reassignment, a fixed arbitrary sleep or a local guard test with a proven drain. Keep operators and scripts from writing through bypass credentials or direct SQL during the window.
