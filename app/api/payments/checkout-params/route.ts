@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { commerceMaintenanceResponse } from '@/lib/commerce/maintenance';
 import { supabaseAdmin } from '@/lib/supabase';
 import { createClient } from '@/lib/supabase-server';
 import { captureCheckoutIssue } from '@/lib/observability/checkout';
@@ -13,6 +14,8 @@ const WOMPI_INTEGRITY_SECRET = process.env.WOMPI_INTEGRITY_SECRET;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://michellcanterostore.com';
 
 export async function POST(request: Request) {
+    const maintenance = commerceMaintenanceResponse();
+    if (maintenance) return maintenance;
     try {
         const body = await request.json();
         const { orderId, email } = body;

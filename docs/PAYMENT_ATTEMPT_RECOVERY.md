@@ -1,6 +1,6 @@
 # Payment Attempt Ownership and Recovery
 
-Local implementation only. No production migration or deployment has been performed.
+The new issuance/recovery runtime remains local and is not deployed. Separately authorized production stock-ACL, migration-history and targeted legacy-data corrections are documented in `PRODUCTION_READINESS.md`; they do not authorize this release.
 
 ## Contract
 
@@ -37,19 +37,36 @@ The official [Web Checkout contract](https://docs.wompi.co/docs/colombia/widget-
 
 ### Historical Orders: Approved Controlled Transition (Local Only)
 
-Pending orders created before the issuance guard cannot be classified as never-issued merely because the new marker is absent. The owner approved the controlled transition: pre-cutover pending orders remain verification-only, and new post-cutover orders follow normal atomic issuance. This may interrupt a historical unpaid checkout; it is an explicit safety tradeoff, not proof that every old order had a checkout page. No hosted database has been inspected or changed.
+Pending orders created before the issuance guard cannot be classified as never-issued merely because the new marker is absent. The owner approved the controlled transition: pre-cutover pending orders remain verification-only, and new post-cutover orders follow normal atomic issuance. This may interrupt a historical unpaid checkout; it is an explicit safety tradeoff, not proof that every old order had a checkout page. Hosted metadata and bounded data checks have since been separately authorized; the six behavior migrations and this cutover remain unapplied.
 
 The append-only cutover migration records `legacy_uncertain` separately from `application` issuance. It snapshots pending orders at a locked transactional boundary, preserves existing markers, and does not edit order/payment/inventory states. `issued_at` for a legacy marker means the uncertainty was recorded then, not that a checkout was proven issued then. No age-based or empty-lookup unlock is implemented.
 
 ### Release Runbook (Not Authorization to Execute)
 
-1. Obtain separate production release authorization, including the temporary checkout-issuance pause. Keep browsing available where operationally possible; do not promise a zero-interruption cutover.
-2. Disable all old application payment-parameter issuance, including cached/older deployments; drain requests already executing. A database snapshot alone cannot stop an old runtime from signing parameters outside the new RPC. Keep webhooks able to retry if the migration lock temporarily delays finalization.
-3. Apply prerequisite migrations and the controlled-cutover migration in order during the issuance pause. Its bounded lock/statement timeouts must abort and roll back on contention, not wait indefinitely. Estimate the pending cohort and migration size beforehand using separately authorized read-only production access.
-4. Deploy only the tested application version that uses the claim RPC. Verify guest/auth access, existing-order verification, a controlled new-order flow and incident capture. Never test purchases with real customer money as a deployment smoke test.
-5. Re-enable issuance only after no old version can issue signed parameters. Monitor the legacy cohort through existing bounded reconciliation and payment-exception tooling. Approved payments follow the existing verified finalizer; uncertainty is not payment failure or cancellation.
+Execution is blocked until an effective maintenance boundary, mixed-version handling and eligible hosting are established. The local handler gate below is implemented but not deployed or activated. It cannot fence older runtimes; hiding checkout UI or changing cron schedules is not enforcement.
+
+1. Select an immutable candidate and an eligible hosting route under the owner's zero-paid-service constraint. Preserve unrelated working-tree changes. Obtain separate authorization for the exact deployment, six database migrations, temporary commerce pause and recovery procedure. Keep browsing available where possible; do not promise uninterrupted purchases.
+2. Establish and test enforcement against every old writer: order creation, payment-parameter issuance, reconciliation, webhook processing, payment audit cron, reservation cleanup, order mutation and admin inventory writes. Include direct API requests, old deployment URLs, cached clients and already executing requests. Record the drain evidence before database changes. A later application-only flag cannot fence an older runtime that does not implement it.
+3. Resolve webhook handling before execution. The variant migration rejects legacy stock confirmation for variant reservations; leaving the old webhook/reconciliation handlers writing unchanged is not a compatible bridge. Do not acknowledge an unprocessed payment event with HTTP 200. Wompi's [event documentation](https://docs.wompi.co/docs/colombia/eventos/) specifies at most three retries over the next 24 hours after a non-200 response, not an unlimited durable queue. Define a bounded retry or tested compatible-handler arrangement and follow-up reconciliation before selecting a maintenance window; no new queue or gate is supplied by this document.
+4. Explicitly fence/drain both existing cron writers. Cleanup (`0 0 * * *`) retains its RPC signature but mutates reservations; payment audit (`0 13 * * *`) is a legacy payment writer. Do not let either cross the incompatible schema boundary unchecked. Re-read aggregate cohort/active-hold counts close to the window; prior snapshots are not current locks.
+5. Apply these migrations individually in dependency order while the incompatible writers remain fenced: `20261112182940_atomic_wompi_finalization`, `20261112190344_rotate_payment_audit_queue`, `20261112194949_atomic_order_creation`, `20261112204615_authoritative_variant_inventory`, `20261114213626_single_payment_attempt`, `20261114221037_controlled_payment_cutover`. The stock-ACL migration is already applied and its history aligned; do not replay it. Check each committed version and exact function signatures/ACLs before advancing. Use a mechanism that preserves the intended migration identifiers or an explicitly authorized ledger reconciliation; do not silently recreate the earlier timestamp mismatch.
+6. The cutover migration's lock/statement timeouts must abort its own transaction on contention. Every migration has a separate transaction: failure of migration six does not roll back the preceding five. Stop advancement after any failure and retain the maintenance boundary; do not retry the entire batch blindly.
+7. Deploy only the tested runtime using the new RPCs after its database prerequisites exist. Missing RPCs are not a supported deployment state. Verify actual Data API schema visibility and role permissions, then guest/auth access, existing-order verification and a controlled new-order flow without real customer funds. Old webhook and cron versions must not regain write access during alias or runtime transition.
+8. Resume commerce only after the compatible handlers are active, older writers cannot bypass the boundary and smoke checks pass. Monitor provider retries, the legacy cohort, cron execution and payment exceptions. Approved payments require provider verification and the common finalizer; uncertainty is not payment failure or cancellation.
 
 Legacy follow-up is not an automatic release queue: a row remains marked until payment truth or a separately reviewed provider-backed recovery decision resolves it. Do not delete markers, change an order to failed, create a replacement payment or refund automatically to clear the queue. A public admin recovery UI, proof-backed unlock, universal paid-order audit and provider expiry/revocation proof are not delivered by this migration. Those limits must remain visible at release review.
+
+### Local Commerce Maintenance Gate
+
+`COMMERCE_MAINTENANCE_MODE` is a server-only configuration name, not a request header or a `NEXT_PUBLIC_` variable. Only the exact value `true` enables the local handler gate; unset and other values leave existing handler behavior unchanged. No environment file or remote configuration has been changed to activate it. On deployment platforms, changing configuration may require a new deployment; this is not an instantaneous cross-deployment switch.
+
+The shared `lib/commerce/maintenance.ts` response is checked at the entry of commerce mutation handlers. While paused, it returns HTTP 503 with `code: commerce_maintenance`, `Retry-After: 60` and `Cache-Control: no-store` before parsing a body, route-level authentication, database work, provider requests or notifications. This generic pause response takes precedence over route-level validation/auth responses while enabled; it never grants access. Existing middleware/CSRF remains unchanged. When off, normal authentication, authorization and validation still run.
+
+Covered methods are order POST/PUT/DELETE, product POST/PUT/DELETE, checkout-parameters POST, reconciliation POST, webhook POST and both GET/POST methods of reservation cleanup and pending-payment audit. Cron POST delegates to the guarded GET. Catalog/product GETs and other read-only handlers are not gated. There is no UI banner or storefront shutdown.
+
+This handler gate is not a distributed lock, active-request drain, webhook queue, script guard or database access restriction. It cannot stop direct SQL, offline normalization scripts, already-running calls or an old deployment without the code. A blocked webhook is not acknowledged as processed and has only the provider's bounded retry behavior; a 60-second response header does not override Wompi's retry schedule. A separately tested old-writer fence and drain procedure is still required before applying the six behavior migrations.
+
+Local coverage: `tsx --test tests/commerce-maintenance.test.ts` exercises the exported handlers with business/provider calls blocked, both cron methods, a catalog read and off-mode validation/signature/cron-auth behavior. This is not a hosted browser, provider or operational drain test.
 
 Authorized operators can track the cohort without exposing customer details using a read-only aggregate (do not run against production without separate authorization):
 
@@ -68,4 +85,4 @@ The existing daily bounded reconciliation can recover verified approvals; the or
 
 `npm test` and `tsc --noEmit --incremental false`.
 
-Rollback is one coherent unit: the issuance/recovery application changes and its new append-only migration. Never drop payment exception evidence or blindly roll back a migrated production database. Production rollback needs a separate reviewed plan.
+Rollback depends on the committed boundary. Before any behavior migration, abandoning an unshipped candidate leaves the old runtime/schema unchanged. After the variant migration commits, returning traffic to the old runtime is not a proven safe rollback. Preserve schema, inventory attribution, issuance markers and duplicate-payment evidence; keep unsafe writers fenced and use a separately reviewed forward-recovery or proven compatible-runtime plan. Never drop evidence, run destructive down-migrations or restore a backup automatically. This document does not grant operational recovery authority.

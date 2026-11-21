@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase';
+import { commerceMaintenanceResponse } from '@/lib/commerce/maintenance';
 import { ApiResponse } from '@/lib/api-responses';
 import { createClient } from '@/lib/supabase-server';
 import { captureCheckoutIssue } from '@/lib/observability/checkout';
@@ -85,6 +86,8 @@ export async function GET() {
  * reserved. This prevents paid orders for inventory that cannot be fulfilled.
  */
 export async function POST(request: Request) {
+    const maintenance = commerceMaintenanceResponse();
+    if (maintenance) return maintenance;
     try {
         const { checkRateLimit, getClientIdentifier } = await import('@/lib/middleware/ratelimit');
         const clientId = getClientIdentifier(request);

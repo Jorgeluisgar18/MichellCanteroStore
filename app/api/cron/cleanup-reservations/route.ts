@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { commerceMaintenanceResponse } from '@/lib/commerce/maintenance';
 import { createClient } from '@supabase/supabase-js';
 
 /**
@@ -6,6 +7,8 @@ import { createClient } from '@supabase/supabase-js';
  * This should be called every 5 minutes via Vercel Cron
  */
 export async function GET(request: Request) {
+    const maintenance = commerceMaintenanceResponse();
+    if (maintenance) return maintenance;
     try {
         const cronSecret = process.env.CRON_SECRET;
 

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { commerceMaintenanceResponse } from '@/lib/commerce/maintenance';
 import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
 import {
@@ -54,6 +55,8 @@ export async function PUT(
     request: Request,
     { params }: { params: { id: string } }
 ) {
+    const maintenance = commerceMaintenanceResponse();
+    if (maintenance) return maintenance;
     try {
         const body = await request.json();
         let existingProductCategory: string | null = null;
@@ -286,6 +289,8 @@ export async function DELETE(
     request: Request,
     { params }: { params: { id: string } }
 ) {
+    const maintenance = commerceMaintenanceResponse();
+    if (maintenance) return maintenance;
     try {
         // Validar autenticación usando el cliente del servidor
         const { createClient } = await import('@/lib/supabase-server');

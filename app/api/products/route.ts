@@ -1,4 +1,5 @@
 import { supabase, supabaseAdmin } from '@/lib/supabase';
+import { commerceMaintenanceResponse } from '@/lib/commerce/maintenance';
 import { ApiResponse } from '@/lib/api-responses';
 import { getAdminUser } from '@/lib/auth-utils';
 import { revalidatePath } from 'next/cache';
@@ -115,6 +116,8 @@ export async function GET(request: Request) {
  * Create a new product (Admin Only)
  */
 export async function POST(request: Request) {
+    const maintenance = commerceMaintenanceResponse();
+    if (maintenance) return maintenance;
     try {
         // ✅ Standardized Admin Authorization
         await getAdminUser();

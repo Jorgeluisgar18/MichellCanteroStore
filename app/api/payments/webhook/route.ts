@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { commerceMaintenanceResponse } from '@/lib/commerce/maintenance';
 import { createHash, timingSafeEqual } from 'crypto';
 import {
     formatWebhookTimestampForLog,
@@ -22,6 +23,8 @@ function getNestedValue(source: unknown, path: string): unknown {
 }
 
 export async function POST(request: Request) {
+    const maintenance = commerceMaintenanceResponse();
+    if (maintenance) return maintenance;
     try {
         const secret = process.env.WOMPI_EVENTS_SECRET;
         if (!secret) return NextResponse.json({ error: 'Configuración incompleta' }, { status: 500 });

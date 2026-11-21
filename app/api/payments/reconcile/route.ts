@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { commerceMaintenanceResponse } from '@/lib/commerce/maintenance';
 import { supabaseAdmin } from '@/lib/supabase';
 import { createClient } from '@/lib/supabase-server';
 import { canAccessCheckoutParams } from '@/lib/checkout/safety';
@@ -9,6 +10,8 @@ import { finalizeWompiPayment } from '@/lib/payments/finalize-payment';
 import { getPaymentStatusForWompiStatus, getSuccessfulWompiReconciliationTransaction } from '@/lib/payments/webhook-safety';
 
 export async function POST(request: Request) {
+    const maintenance = commerceMaintenanceResponse();
+    if (maintenance) return maintenance;
     try {
         const { orderId, email, transactionId } = await request.json();
         if (typeof orderId !== 'string' || !orderId || typeof email !== 'string' || !email
