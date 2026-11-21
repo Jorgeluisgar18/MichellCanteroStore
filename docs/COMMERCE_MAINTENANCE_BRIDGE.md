@@ -16,6 +16,8 @@ The focused handler test first failed on the deployed baseline: checkout returne
 
 Independent verification passed52 paused requests with no parsing/auth/database/provider calls and156 disabled-mode comparisons against the exact baseline, matching statuses, bodies, headers and recorded calls. Product list/detail reads remained available, focused test and TypeScript passed, and source hashes were unchanged. Both cron POST exports make their GET modules non-static in the installed Next.js implementation. The parent reran the focused test successfully. This does not certify deployed caching or operational draining.
 
+Commit `4546144` was published on the bridge branch and built as Vercel preview `dpl_GcL8jnLSpssLVEg7fD1H162CE7Px`, state READY. Its owner-authorized formal security, resilience and reliability review returned no findings; the exact native acknowledgement completed. That approval applies to the frozen source candidate, not to production activation, credential/configuration correctness or the operational preconditions below. The pause was not activated during these checks.
+
 Read-only Vercel inspection on2026-11-21 found two custom domains: the apex redirect and public www storefront. The six-alias inventory had no next page: those two custom domains plus four Vercel deployment/branch aliases. Anonymous GET probes of the four Vercel aliases returned302 to Vercel login; empty checkout POST probes returned401. Earlier generated old-production and integration-preview URL probes also redirected to login. These are bounded requests, not proof that every path, bypass mechanism, authenticated operator or already-running request is fenced.
 
 ## Controlled Activation Preconditions
