@@ -22,6 +22,18 @@ Read-only Vercel inspection on2026-11-21 found two custom domains: the apex redi
 
 ## Controlled Activation Preconditions
 
+### Hosted Preview Evidence (2026-11-21)
+
+With separate owner approval, the plain server setting `COMMERCE_MAINTENANCE_MODE=true` was configured only for target `preview` and Git branch `codex/commerce-maintenance-bridge`. Metadata readback showed no production entry. Deployment `dpl_9rT9PmnVrvdsRGRBKPwxcTo2my5N` rebuilt commit `a883df2` and reached READY with no production target.
+
+A separately authorized deployment-specific share link was created with a 23-hour expiry and kept private. No project-wide automation bypass was created; fresh project metadata confirmed its absence. All 13 writer methods returned 503 with the maintenance code, retry value 60 and no-store headers. Requests used empty bodies, synthetic item identifiers, no application user/admin session or provider credentials, and a valid CSRF cookie/header pair. Product listing with limit 1, the returned product's detail and `/tienda` returned 200. These are HTTP handler/read proofs, not a rendered-browser or real payment journey.
+
+The probe initially expected top-level rather than nested CSRF/catalog data and used an outdated in-memory CSRF binding. The resulting order request correctly returned 403; after correcting only the probe state, it returned the expected 503. No runtime or business-data change was needed. No order/payment was created by the probes; no before/after database hash comparison is claimed.
+
+Fresh production metadata still identified `a402042` as READY and the public storefront returned 200. Production environment configuration, aliases and database migrations were not modified. Project metadata reports Fluid enabled, but did not provide an exact per-function duration limit. Neither Preview success nor a guessed wait certifies that old production requests have drained.
+
+### Production Checklist
+
 1. Freeze the bridge commit, check its hosted build and approve its exact deployment/environment. Configure the pause only for the intended production deployment, never by silently changing a shared setting. The application reads the setting per request, but Vercel environment changes can require a new deployment.
 2. Before database work, verify the public domain serves the paused bridge: direct commerce mutation requests must receive the expected503 and product browsing must remain available. Verify internal old URLs cannot bypass protection. Include webhooks, both cron methods and authenticated administrative mutation paths in the test plan without sending real payment or inventory mutations.
 3. Establish the actual maximum duration and drain of requests admitted to the previous production revision, including background work. Do not equate alias reassignment, a fixed arbitrary sleep or a local guard test with a proven drain. Keep operators and scripts from writing through bypass credentials or direct SQL during the window.
