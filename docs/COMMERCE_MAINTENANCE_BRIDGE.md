@@ -32,8 +32,6 @@ The probe initially expected top-level rather than nested CSRF/catalog data and 
 
 Fresh production metadata still identified `a402042` as READY and the public storefront returned 200. Production environment configuration, aliases and database migrations were not modified. Project metadata reports Fluid enabled, but did not provide an exact per-function duration limit. Neither Preview success nor a guessed wait certifies that old production requests have drained.
 
-### Production Checklist
-
 ### Verified Lifetime and Database Preconditions (2026-11-21)
 
 The previous metadata gap was resolved using the installed CLI's supported `vercel inspect <deployment> --format=json`, rather than the newer documentation's `--json` spelling. Inspection of exact production deployment `dpl_DG9FArd7NJLVNzJ5XHx6hGUhTf14` reports `nodejs24.x` and `timeout: 300` for all nine commerce route paths, including both cron writers. This is actual deployment evidence, not a guessed default. Vercel documents that the [maximum duration terminates an overlong invocation](https://vercel.com/docs/functions/configuring-functions/duration).
@@ -46,7 +44,21 @@ At `2026-11-21T18:48:37Z`, a read-only aggregate returned: 28 migrations recorde
 
 The release sequence must retain two separate barriers: first close all old admission and settle old function lifetimes; then verify that downstream database work has settled and inspect interrupted-flow consistency. The observed 300-second bound applies only after the last possible old invocation start is established. Do not label five minutes from alias reassignment, a client disconnect, missing log lines or an earlier zero-count sample as sufficient proof. If queued starts or any old access path remain uncertain, keep migrations blocked rather than inventing a queue allowance.
 
-### Execution Order
+### Reversible Production Rehearsal (2026-11-21)
+
+The owner separately authorized a production pause, bounded drain observation and reopening, explicitly excluding the six behavior migrations. Runtime files in bridge commit `6aff9d0` matched approved `4546144`; the focused maintenance test passed again before activation. The existing original production deployment `dpl_DG9FArd7NJLVNzJ5XHx6hGUhTf14` (`a402042`) was retained as the restoration target.
+
+A temporary Production-only maintenance entry was created, separate from the existing branch-Preview entry. The exact bridge was rebuilt with Production configuration as `dpl_FQtE2E3uiWsNEYepb58DCuHMbwb9`; no Preview build was simply assigned to the public domain. After READY and alias assignment, all 13 public writer methods returned the expected retryable maintenance response, and catalog list, detail and `/tienda` returned 200. Requests contained no real order/payment payload or application user/admin credentials.
+
+Anonymous checks of the original generated deployment URL and main-branch alias redirected to Vercel authentication. Observation began at `2026-11-21T18:58:19.609Z`, after these checks and the public-domain alias inspection. A measured 327 seconds elapsed before the final database sample. Initial, intermediate and final samples showed zero authenticator transactions and zero holders of the inspected commerce write-related relation locks. Initial and final samples also showed no orders without items or live/expired-reserved rows. The 28-entry migration ledger retained digest `6811a05cff663c9eab7a570ffccf44fb`; no migration was applied.
+
+The original Production build was re-promoted without rebuilding. A guarded metadata check identified the unique temporary Production entry before removing it; the Preview entry remained intact. At `2026-11-21T19:04:25.796Z`, an empty checkout request with valid CSRF returned its baseline 400 without the maintenance code or retry header, while catalog and storefront returned 200. The `www` alias pointed to the original deployment and no Production maintenance entry remained. Purchases were reopened before handback.
+
+An independent read-only verifier subsequently confirmed the original alias, READY production source, public homepage 200, absence of the temporary Production entry, preservation of Preview maintenance metadata and the unchanged 28-entry ledger fingerprint with all six pending versions absent. The parent repeated the homepage check successfully. This verifies current restoration, not the independent historical execution of every rehearsal step or provider payment truth.
+
+These are bounded operational observations, not proof of every internal platform queue, operator bypass or provider event. No real purchase, provider lookup, webhook replay, inventory repair or refund was performed. Provider retry delivery during or after the pause was not verified. No whole-business-data before/after hash claim is made. A future migration window must repeat admission and drain checks and account for payment events; this rehearsal does not authorize that release or prove restoration to old code would be safe after incompatible schema changes. The paused trial build retains its own configuration snapshot and must not be promoted unintentionally.
+
+### Migration Window Sequence
 
 1. Freeze the bridge commit, check its hosted build and approve its exact deployment/environment. Configure the pause only for the intended production deployment, never by silently changing a shared setting. The application reads the setting per request, but Vercel environment changes can require a new deployment.
 2. Before database work, verify the public domain serves the paused bridge: direct commerce mutation requests must receive the expected503 and product browsing must remain available. Verify internal old URLs cannot bypass protection. Include webhooks, both cron methods and authenticated administrative mutation paths in the test plan without sending real payment or inventory mutations.
