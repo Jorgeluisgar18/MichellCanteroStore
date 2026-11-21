@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { commerceMaintenanceResponse } from '@/lib/commerce/maintenance';
 import { supabaseAdmin } from '@/lib/supabase';
 import { z } from 'zod';
 
@@ -82,6 +83,8 @@ export async function PUT(
     request: Request,
     { params }: { params: { id: string } }
 ) {
+    const maintenance = commerceMaintenanceResponse();
+    if (maintenance) return maintenance;
     try {
         const { createClient } = await import('@/lib/supabase-server');
         const supabase = createClient();
@@ -150,6 +153,8 @@ export async function DELETE(
     request: Request,
     { params }: { params: { id: string } }
 ) {
+    const maintenance = commerceMaintenanceResponse();
+    if (maintenance) return maintenance;
     try {
         const { createClient } = await import('@/lib/supabase-server');
         const supabase = createClient();

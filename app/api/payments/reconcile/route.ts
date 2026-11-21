@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { commerceMaintenanceResponse } from '@/lib/commerce/maintenance';
 import { supabaseAdmin } from '@/lib/supabase';
 import { createClient } from '@/lib/supabase-server';
 import { canAccessCheckoutParams } from '@/lib/checkout/safety';
@@ -17,6 +18,8 @@ import {
 const WOMPI_PRIVATE_KEY = process.env.WOMPI_PRIVATE_KEY;
 
 export async function POST(request: Request) {
+    const maintenance = commerceMaintenanceResponse();
+    if (maintenance) return maintenance;
     try {
         const body = await request.json();
         const { orderId, email, transactionId } = body;

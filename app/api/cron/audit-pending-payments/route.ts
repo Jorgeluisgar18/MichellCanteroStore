@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { commerceMaintenanceResponse } from '@/lib/commerce/maintenance';
 import { supabaseAdmin } from '@/lib/supabase';
 import { captureCheckoutIssue } from '@/lib/observability/checkout';
 import { logger } from '@/lib/utils/logger';
@@ -157,6 +158,8 @@ async function auditPendingOrder(order: PendingOrder): Promise<'reconciled' | 'm
 }
 
 export async function GET(request: Request) {
+    const maintenance = commerceMaintenanceResponse();
+    if (maintenance) return maintenance;
     const cronSecret = process.env.CRON_SECRET;
 
     if (!cronSecret) {

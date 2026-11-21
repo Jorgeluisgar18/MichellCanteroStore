@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { commerceMaintenanceResponse } from '@/lib/commerce/maintenance';
 import {
     formatWebhookTimestampForLog,
     getOrderStatusForWompiStatus,
@@ -34,6 +35,8 @@ function getTransactionAmountInCents(transaction: Record<string, unknown>): numb
 
 // POST /api/payments/webhook - Manejar notificaciones de Wompi
 export async function POST(request: Request) {
+    const maintenance = commerceMaintenanceResponse();
+    if (maintenance) return maintenance;
     try {
         const { logger } = await import('@/lib/utils/logger');
         const WOMPI_EVENTS_SECRET = process.env.WOMPI_EVENTS_SECRET;
