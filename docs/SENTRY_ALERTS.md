@@ -25,6 +25,12 @@ Configure these environment variables in Vercel Production:
 
 Vercel provides `VERCEL_GIT_COMMIT_SHA`; the app uses it as the Sentry release when `SENTRY_RELEASE` is not set.
 
+## Free-Plan Guardrail
+
+Keep `automaticVercelMonitors: false` in `next.config.js`.
+
+Reason: the project currently has two Vercel Cron routes, while the Sentry Developer/free plan should be treated conservatively for cron monitoring. Do not enable automatic cron monitors or add new Sentry monitors without re-checking the active plan.
+
 ## Alert Rule: Critical Checkout Failures
 
 Create one issue alert for the `javascript-nextjs` project:

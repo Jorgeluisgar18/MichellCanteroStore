@@ -1,102 +1,50 @@
-# Michell Cantero Store - Documentación Técnica y Arquitectura
+# Michell Cantero Store
 
-Michell Cantero Store es una plataforma de comercio electrónico de alto rendimiento desarrollada bajo los más estrictos estándares de ingeniería de software moderno. La arquitectura está orientada a la seguridad transaccional, mantenibilidad, escalabilidad y un rendering optimizado.
+E-commerce colombiano de belleza, moda femenina y accesorios construido con Next.js, Supabase, Wompi y Vercel.
 
-## Especificaciones Tecnológicas Core
+Este repositorio esta optimizado para operar con una regla de negocio importante: toda integracion nueva debe mantenerse dentro de planes gratuitos mientras el proyecto no tenga suscripciones pagas activas.
 
-- **Framework:** Next.js 14 (App Router)
-- **Lenguaje:** TypeScript 5.x (Modo Estricto, Tolerancia Cero a 'any')
-- **Gestión de Estado Global:** Zustand (Orquestación persistente de Auth, Cart y Wishlist)
-- **Base de Datos:** Supabase (PostgreSQL distribuido)
-- **Seguridad a Nivel de Base de Datos:** RLS (Row Level Security) aplicado a todas las tablas sensibles
-- **Autenticación:** Supabase Auth JWT
-- **Middleware de Seguridad:** 
-  - Protección CSRF global (Arquitectura Fail-Closed)
-  - Rate Limiting mediante Upstash Redis
-- **Pasarela de Pagos:** Integración certificada con Wompi API
-- **Estilos:** Tailwind CSS (Arquitectura utility-first)
-- **Monitoreo:** Sentry para trazabilidad de errores y rendimiento
+## Estado Actual
 
-## Arquitectura de Seguridad Implementada
+Estado de entrega (2026-11-21): esta rama contiene un candidato probado localmente, todavia no desplegado. Hay 34 migraciones locales; 28 estan registradas en produccion y seis migraciones de comportamiento siguen pendientes. Sincronizar GitHub no aplica migraciones ni autoriza por si solo el corte de produccion. Ver [preparacion de produccion](docs/PRODUCTION_READINESS.md) y [procedimiento de transicion](docs/PAYMENT_ATTEMPT_RECOVERY.md).
 
-La aplicación cumple y supera los estándares de seguridad contemporáneos para plataformas transaccionales de comercio electrónico:
+- Produccion: Vercel
+- Dominios: `michellcanterostore.com` y `www.michellcanterostore.com`
+- Framework: Next.js 14 App Router
+- Base de datos: Supabase PostgreSQL
+- Auth: Supabase Auth SSR
+- Pagos: Wompi
+- Observabilidad: Sentry + Vercel Speed Insights
+- Rate limit: Upstash Redis
+- Emails transaccionales: Resend
 
-- **Estrategia CSRF Fail-Closed:** Todo punto final (endpoint) bajo el enrutador `/api` que implemente métodos mutables (POST, PUT, DELETE, PATCH) requiere obligatoriamente una validación de token CSRF mediante el patrón "Double-Submit Cookie" constante en el tiempo, mitigando ataques de falsificación y ataques de temporización.
-- **Rate Limiting Configurable:** Defensa a nivel de enrutador y API contra ataques de fuerza bruta, enumeración de usuarios y mitigación de DDoS.
-- **Validación de Integridad de Webhooks:** Verificación de hash criptográfico en las transacciones asíncronas de Wompi, previniendo suplantación de pagos.
-- **Data Validation Layer:** Validación estricta y segura de esquemas de entrada y salida utilizando Zod, mitigando inyecciones y mutación de datos en tiempo de ejecución.
+## Documentacion Principal
 
-## Subsistemas Principales
+La documentacion viva del proyecto esta en:
 
-- **CMS Administrable Headless:** Sistema de gestión de contenidos (Content Management System) interno que permite a los operadores mutar elementos estructurales del UI (Landing Hero, Textos Promocionales, Configuración Global) mediante operaciones optimizadas sin necesidad de tocar el código fuente, garantizando una total independencia operativa.
-- **Motor de Reservas (Inventory State Management):** Previene la race-condition (sobreventa) reservando el stock durante la ventana de tiempo del checkout (TTL 15 minutos).
-- **Idempotency Keys:** Previene mutaciones múltiples y transacciones duplicadas en la capa de órdenes a través del uso de UUIDs únicos generados en cliente.
-- **Jobs Automatizados:** Procesos asíncronos bajo Vercel Cron-Jobs (ej: Limpieza de reservas abandonadas).
+- [PROJECT_CONTEXT.md](./PROJECT_CONTEXT.md): arquitectura, flujos, infraestructura, limites gratis, variables, guardarrailes y auditorias.
+- [docs/SENTRY_ALERTS.md](./docs/SENTRY_ALERTS.md): alertas y triage de errores de checkout.
+- [supabase/README.md](./supabase/README.md): notas operativas de Supabase.
 
-## Estructura del Repositorio
+## Comandos
 
-```text
-MichellCanteroStore/
-├── app/                      
-│   ├── (auth)/              # Arquitectura de autenticación desacoplada
-│   ├── admin/               # CMS Corporativo y panel administrativo
-│   ├── api/                 # Endpoints RESTful con seguridad y validaciones intrínsecas
-│   └── checkout/            # Lógica transaccional de pagos
-├── components/              
-│   ├── layout/             # Componentes estructurales de diseño (Header, Footer, Navigation)
-│   ├── product/            # UI para catálogo e interacciones de usuario (Reviews, Add to cart)
-│   └── ui/                 # Librería propia de design system y bindings atómicos
-├── lib/                     
-│   ├── hooks/              # Funcionalidad reactiva (useCsrfToken, etc)
-│   ├── security/           # Políticas estandarizadas de seguridad y cifrado
-│   ├── validations/        # Modelos Zod
-│   └── supabase/           # Singleton del cliente de BD e interfaces
-├── store/                   # Arquitectura de Zustand para estados globales
-├── supabase/               
-│   └── functions/          # Stored Procedures (PL/pgSQL)
-└── public/                  # Static assets
+```bash
+npm run dev
+npm run type-check
+npm run lint
+npm test -- --runInBand
+npm run build
 ```
 
-## Flujo de Despliegue CI/CD
+## Regla de Operacion
 
-El entorno de producción se gestiona bajo Vercel implementando las siguientes canalizaciones:
+Antes de subir cambios a produccion se debe verificar:
 
-1. **Static Analysis & Type Checking:** Bloqueo de deployments si el linting (ESLint) o la compilación estática (TypeScript `tsc --noEmit`) emiten advertencias o violaciones de tipos.
-2. **Optimización de Activos:** Construcción optimizada y generación paralela de Server Components.
-3. **Health Checking:** Supervisión por endpoints de diagnóstico (ej: `/api/health`).
+1. Tests, type-check, lint y build verdes.
+2. Que no se agreguen servicios, cron jobs, funciones, monitoreo o transformaciones fuera del plan gratis.
+3. Que no se expongan secretos en Git.
+4. Que las rutas de checkout, pago, webhook, stock y ordenes mantengan validaciones de backend.
 
-## Instrucciones para el Entorno de Desarrollo
+## Seguridad
 
-### Requisitos Previos
-
-- Node.js >= 18.17.0
-- Base de datos aprovisionada en Supabase (Postgres)
-- Upstash Redis
-- Credenciales comerciales provistas por Wompi
-
-### Configuración e Inicialización
-
-1. Clonar el repositorio y resolver dependencias:
-   ```bash
-   git clone <repository_url>
-   cd MichellCanteroStore
-   npm ci
-   ```
-
-2. Definir variables de entorno copiando el esqueleto de `.env.example` a `.env.local` e ingresando las claves pertinentes.
-
-3. Inicializar el entorno de desarrollo:
-   ```bash
-   npm run dev
-   ```
-
-## Soporte y Mantenimiento
-
-Toda iteración de infraestructura o refactorización de código debe pasar por auditorías de seguridad, sin importar el alcance del PR.
-Para acceso técnico y consultas operativas, escalar al ingeniero a cargo del repositorio.
-
----
-Copyright 2026 Michell Cantero Store. Patentes y Tecnologías Patentadas Aplicadas.
-
-Desarrollado y Auditado por: Jorge Garcia Valderrama
-Universidad Del Magdalena
+El proyecto usa CSRF fail-closed, rate limiting, RLS en Supabase, validacion Zod, webhooks Wompi firmados, service role solo en rutas server-side, Sentry con redaccion de datos sensibles y guardarrailes en pruebas para evitar regresiones.

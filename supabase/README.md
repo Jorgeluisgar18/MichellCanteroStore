@@ -1,271 +1,119 @@
-# Configuración de Supabase para Michell Cantero Store
+# Supabase - Michell Cantero Store
 
-## 📋 Pasos para Configurar Supabase
+Este directorio contiene la historia de base de datos del proyecto y debe tratarse como parte critica del checkout.
 
-### 1. Crear Proyecto en Supabase
+## Estado Actual
 
-1. Ve a [https://supabase.com](https://supabase.com)
-2. Crea una cuenta o inicia sesión
-3. Click en "New Project"
-4. Completa:
-   - **Name:** michell-cantero-store
-   - **Database Password:** (guarda esta contraseña de forma segura)
-   - **Region:** South America (São Paulo) - más cercano a Colombia
-   - **Pricing Plan:** Free (suficiente para empezar)
-5. Click en "Create new project"
-6. Espera 2-3 minutos mientras se crea el proyecto
+- Proveedor: Supabase PostgreSQL.
+- Plan objetivo: Free, mientras no exista suscripcion paga.
+- Migraciones versionadas: `supabase/migrations/*.sql`.
+- Edge Functions: no se usan actualmente.
+- Storage principal auditado: bucket `page-images`.
+- Uso historico medido en auditoria de junio de 2026 (no representa una medicion actual):
+  - Database size aproximado: 14 MB de 500 MB.
+  - Storage aproximado: 147 MB de 1 GB.
+  - Auth users: 6.
 
----
+## Reglas Criticas
 
-### 2. Obtener Credenciales
+1. No modificar produccion manualmente sin reflejarlo en una migracion.
+2. No borrar migraciones historicas.
+3. No exponer `SUPABASE_SERVICE_ROLE_KEY` en cliente, documentos o commits.
+4. Las escrituras criticas de ordenes deben pasar por backend.
+5. RLS debe permanecer activo en tablas sensibles.
+6. Storage image transformations de Supabase no deben usarse en plan gratis; las imagenes se optimizan con Next/Vercel de forma limitada.
 
-Una vez creado el proyecto:
+## Tablas Principales
 
-1. Ve a **Settings** (⚙️) → **API**
-2. Copia las siguientes credenciales:
+- `profiles`
+- `products`
+- `orders`
+- `order_items`
+- `stock_reservations`
+- `addresses`
+- `reviews`
+- `newsletter`
+- `audit_logs`
+- `page_content`
 
-```
-Project URL: https://xxxxxxxxxxxxx.supabase.co
-anon public key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-service_role key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
+## Checkout, Ordenes y Stock
 
----
+El flujo de compra depende de:
 
-### 3. Configurar Variables de Entorno
+- `orders`
+- `order_items`
+- `stock_reservations`
+- funciones SQL de reserva/confirmacion/expiracion de stock
+- rutas backend con `service_role`
 
-1. Crea el archivo `.env.local` en la raíz del proyecto:
+Regla: una orden no debe pasar a `payment_status = 'paid'` si la confirmacion de stock falla.
+
+## RLS
+
+Estado esperado:
+
+- Usuarios autenticados pueden leer sus propias ordenes.
+- Admins pueden gestionar pedidos desde el panel.
+- `anon` y `authenticated` no deben tener grants publicos de escritura directa sobre `orders` u `order_items`.
+- Las politicas historicas duplicadas fueron consolidadas.
+
+Prueba de seguridad relacionada:
 
 ```bash
-cp .env.local.example .env.local
+npm test -- tests/repository-safety.test.ts --runInBand
 ```
 
-2. Edita `.env.local` y agrega tus credenciales:
+## Migraciones
+
+Las migraciones son fuente de verdad para estructura y seguridad.
+
+Estado al 2026-11-21: 34 migraciones locales, primeras 28 registradas en produccion y seis migraciones de comportamiento pendientes. El ensayo local utiliza un prerrequisito historico explicito de auditoria; la reproduccion desde cero con solo migraciones aun no es completa. Ver [limites del bootstrap y de la validacion](../docs/PRODUCTION_READINESS.md). No ejecutar los fixtures locales ni precargar el SQL de auditoria sobre una base alojada existente.
+
+Convencion:
+
+```text
+YYYYMMDDHHMMSS_descripcion.sql
+```
+
+Antes de crear una migracion:
+
+1. Confirmar si afecta checkout, stock, pagos o RLS.
+2. Escribir SQL idempotente cuando aplique.
+3. Probar local o en rama/dev antes de produccion.
+4. Agregar prueba si cambia un contrato critico.
+
+## Storage
+
+Uso actual:
+
+- CMS y contenido: `page-images`.
+- Imagenes publicas consultadas desde Next Image.
+
+Reglas:
+
+- Mantener buckets y policies documentados en migraciones.
+- Evitar transformaciones desde Supabase Storage en plan gratis.
+- Preferir URLs estables y cache largo para reducir transformaciones en Vercel.
+
+## Variables Necesarias
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://xxxxxxxxxxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 ```
 
-⚠️ **IMPORTANTE:** Nunca subas `.env.local` a Git. Ya está en `.gitignore`.
+Nunca commitear valores reales.
 
----
+## Auditoria Recomendada
 
-### 4. Ejecutar Schema SQL
+Revisar periodicamente:
 
-1. En Supabase, ve a **SQL Editor** (icono de base de datos)
-2. Click en "New query"
-3. Copia todo el contenido de `supabase/schema.sql`
-4. Pega en el editor
-5. Click en "Run" (▶️)
-6. Verifica que aparezca: "Success. No rows returned"
-
-Esto creará:
-- ✅ 4 tablas (profiles, products, orders, order_items)
-- ✅ Políticas RLS
-- ✅ Triggers automáticos
-- ✅ Funciones auxiliares
-
----
-
-### 5. Migrar Productos
-
-Ejecuta el script de migración para transferir los productos del JSON a Supabase:
-
-```bash
-# Instalar tsx si no lo tienes
-npm install -D tsx
-
-# Ejecutar migración
-npx tsx scripts/migrate-products.ts
-```
-
-Deberías ver:
-```
-🚀 Iniciando migración de productos...
-📦 Productos a migrar: 12
-📝 Insertando productos...
-✅ Migración completada exitosamente!
-📊 Productos insertados: 12
-```
-
----
-
-### 6. Verificar Datos
-
-1. En Supabase, ve a **Table Editor**
-2. Selecciona la tabla `products`
-3. Deberías ver los 12 productos migrados
-4. Verifica también las tablas `profiles`, `orders`, `order_items`
-
----
-
-### 7. Configurar Storage (Opcional - para imágenes)
-
-Si quieres subir imágenes directamente a Supabase:
-
-1. Ve a **Storage**
-2. Click en "Create a new bucket"
-3. Nombre: `product-images`
-4. Public bucket: ✅ (activado)
-5. Click en "Create bucket"
-
-Políticas de Storage:
-```sql
--- Permitir lectura pública
-CREATE POLICY "Public Access"
-ON storage.objects FOR SELECT
-USING ( bucket_id = 'product-images' );
-
--- Solo admins pueden subir
-CREATE POLICY "Admin Upload"
-ON storage.objects FOR INSERT
-WITH CHECK (
-  bucket_id = 'product-images' AND
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND role = 'admin'
-  )
-);
-```
-
----
-
-### 8. Crear Primer Usuario Admin
-
-Después de registrarte en la aplicación:
-
-1. Ve a **Table Editor** → `profiles`
-2. Busca tu usuario por email
-3. Edita el campo `role` de `customer` a `admin`
-4. Guarda los cambios
-
-Ahora tendrás acceso al dashboard administrativo.
-
----
-
-### 9. Configurar Autenticación
-
-En Supabase, ve a **Authentication** → **Settings**:
-
-**Email Auth:**
-- ✅ Enable Email Signup
-- ✅ Enable Email Confirmations (opcional para producción)
-- Confirm email: Desactivado (para desarrollo)
-
-**Site URL:**
-```
-https://michellcanterostore.com
-```
-
-**Redirect URLs:**
-```
-https://michellcanterostore.com/**
-http://localhost:3001/**
-```
-
----
-
-### 10. Probar Conexión
-
-Ejecuta el proyecto:
-
-```bash
-npm run dev
-```
-
-Prueba:
-1. ✅ Registro de usuario
-2. ✅ Login
-3. ✅ Ver productos (deberían cargarse desde Supabase)
-4. ✅ Crear orden
-
----
-
-## 🔒 Seguridad
-
-### Políticas RLS Activas
-
-- ✅ **Productos:** Todos pueden leer, solo admin puede modificar
-- ✅ **Órdenes:** Usuarios ven solo las suyas, admin ve todas
-- ✅ **Perfiles:** Usuarios ven solo el suyo, admin ve todos
-- ✅ **Order Items:** Heredan permisos de órdenes
-
-### Verificar RLS
-
-En SQL Editor, ejecuta:
-
-```sql
-SELECT tablename, rowsecurity 
-FROM pg_tables 
-WHERE schemaname = 'public';
-```
-
-Todas las tablas deben tener `rowsecurity = true`.
-
----
-
-## 📊 Monitoreo
-
-### Ver Logs
-
-1. Ve a **Logs** en Supabase
-2. Selecciona:
-   - **Postgres Logs:** Queries de base de datos
-   - **Auth Logs:** Login/registro
-   - **API Logs:** Requests a la API
-
-### Métricas
-
-1. Ve a **Reports**
-2. Monitorea:
-   - Database size
-   - API requests
-   - Active users
-   - Storage usage
-
----
-
-## 🚨 Troubleshooting
-
-### Error: "relation does not exist"
-- ✅ Ejecuta el schema.sql completo
-- ✅ Verifica que estás en el proyecto correcto
-
-### Error: "JWT expired"
-- ✅ Regenera las API keys en Settings → API
-
-### Error: "Row Level Security"
-- ✅ Verifica que las políticas RLS estén creadas
-- ✅ Usa `supabaseAdmin` para operaciones que requieren bypass de RLS
-
-### Productos no aparecen
-- ✅ Ejecuta el script de migración
-- ✅ Verifica en Table Editor que existan datos
-- ✅ Revisa la consola del navegador por errores
-
----
-
-## 📚 Recursos
-
-- [Documentación Supabase](https://supabase.com/docs)
-- [Row Level Security](https://supabase.com/docs/guides/auth/row-level-security)
-- [Next.js Integration](https://supabase.com/docs/guides/getting-started/quickstarts/nextjs)
-
----
-
-## ✅ Checklist de Configuración
-
-- [ ] Proyecto creado en Supabase
-- [ ] Variables de entorno configuradas
-- [ ] Schema SQL ejecutado
-- [ ] Productos migrados
-- [ ] Primer usuario admin creado
-- [ ] Autenticación configurada
-- [ ] Conexión probada
-- [ ] RLS verificado
-
----
-
-¡Listo! Tu backend de Supabase está configurado y funcionando. 🎉
+- Database size.
+- Storage usage.
+- Egress.
+- Auth MAU.
+- RLS policies.
+- Grants de `orders` y `order_items`.
+- Estado de migraciones historicas.
+- Ordenes `pending` que puedan tener pago aprobado en Wompi.
