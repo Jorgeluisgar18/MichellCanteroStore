@@ -85,6 +85,12 @@ The official [Vercel Terms, Hobby Plan section](https://vercel.com/legal/terms) 
 
 An official [Netlify announcement](https://www.netlify.com/blog/introducing-netlify-free-plan/) explicitly permits commercial projects on Free. That older announcement is not the source for current quotas: the current [credit-based billing FAQ](https://docs.netlify.com/manage/accounts-and-billing/billing/billing-for-credit-based-plans/billing-faq-for-credit-based-plans/) says exhausted Free credits pause projects. Netlify is only a candidate for a compatibility/usage assessment, not an adopted provider or a guarantee of uninterrupted free operation. Changing provider requires approval and verification of Next.js rendering, functions, scheduling, images, redirects and observability.
 
+## Candidate Build in GitHub Codespaces
+
+Commit `c2dd2aa` completed `npm run build:prod` on an ephemeral 2-core Linux Codespace with Node 20.20.2 and synthetic service configuration (exit 0, 40/40 static pages). Static generation logged connection refusals for the intentionally unavailable loopback Supabase endpoint; this is not hosted integration evidence.
+
+The shell-dependent `npm test` glob failed to discover tests there. Explicit file enumeration on the same commit produced 89 passes, six opt-in database skips and zero failures. The repository now uses Node to discover `tests/**/*.test.ts` before invoking the existing test runner, including root-level files, without shell expansion. No hosted deployment or live payment was performed.
+
 ## Evidence Boundaries
 
 The 2026-11-15 font-authorized retry did not launch a build: the prior JavaScript network hooks do not establish process-wide isolation against native modules/subprocesses. A cached `node:22` Docker image can provide actual `--network=none` isolation, but a read-only dependency probe found only Windows SWC locally; Linux SWC and WASM bindings are unavailable. Next.js itself is readable from the container. Public-font permission does not authorize package-registry downloads, so no compiler package was fetched or installed. A Docker-based retry needs separately approved, integrity-checked Linux artifacts already pinned in the lockfile, kept in temporary storage without application dependency changes. No new compilation defect or build success is established by this probe.
