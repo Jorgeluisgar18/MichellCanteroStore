@@ -1,6 +1,15 @@
 import type { WompiReconciliationTransaction } from '@/lib/payments/webhook-safety';
 
-const WOMPI_BASE_URL = 'https://production.wompi.co/v1';
+function wompiBaseUrl(privateKey: string): string {
+    const environment = process.env.WOMPI_API_ENV ?? 'production';
+    if (environment === 'production' && privateKey.startsWith('prv_prod_')) {
+        return 'https://production.wompi.co/v1';
+    }
+    if (environment === 'sandbox' && process.env.VERCEL_ENV !== 'production' && privateKey.startsWith('prv_test_')) {
+        return 'https://sandbox.wompi.co/v1';
+    }
+    throw new Error('Invalid Wompi API configuration');
+}
 
 interface WompiTransactionResponse {
     data?: WompiReconciliationTransaction | null;
@@ -25,7 +34,7 @@ export async function getWompiTransactionById(input: {
     transactionId: string;
     privateKey: string;
 }): Promise<WompiReconciliationTransaction | null> {
-    const response = await fetch(`${WOMPI_BASE_URL}/transactions/${encodeURIComponent(input.transactionId)}`, {
+    const response = await fetch(`${wompiBaseUrl(input.privateKey)}/transactions/${encodeURIComponent(input.transactionId)}`, {
         method: 'GET',
         headers: {
             Authorization: `Bearer ${input.privateKey}`,
@@ -53,7 +62,7 @@ export async function getWompiTransactionsByReference(input: {
     reference: string;
     privateKey: string;
 }): Promise<WompiReconciliationTransaction[]> {
-    const url = new URL(`${WOMPI_BASE_URL}/transactions`);
+    const url = new URL(`${wompiBaseUrl(input.privateKey)}/transactions`);
     url.searchParams.set('reference', input.reference);
 
     const response = await fetch(url.toString(), {

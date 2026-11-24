@@ -41,6 +41,12 @@ Pending orders created before the issuance guard cannot be classified as never-i
 
 The append-only cutover migration records `legacy_uncertain` separately from `application` issuance. It snapshots pending orders at a locked transactional boundary, preserves existing markers, and does not edit order/payment/inventory states. `issued_at` for a legacy marker means the uncertainty was recorded then, not that a checkout was proven issued then. No age-based or empty-lookup unlock is implemented.
 
+### Sandbox Transaction Verification
+
+Server-side Wompi lookups default to Production and require a `prv_prod_` private key. In an isolated test environment, set `WOMPI_API_ENV=sandbox` and use the corresponding `prv_test_` private key, Sandbox public and integrity keys, and Sandbox events secret. Vercel Production rejects Sandbox mode. Unrecognized modes or mismatched keys fail before a provider request. The incoming webhook does not choose the lookup environment.
+
+Use a separate local database, keep real email credentials out of the test environment, and configure the HTTPS event URL only in Wompi Sandbox. This setting does not create or expose a webhook endpoint, and it does not alter the Production dashboard or its secrets.
+
 ### Release Runbook (Not Authorization to Execute)
 
 Execution is blocked until an effective maintenance boundary, mixed-version handling and eligible hosting are established. The local handler gate below is implemented but not deployed or activated. It cannot fence older runtimes; hiding checkout UI or changing cron schedules is not enforcement.

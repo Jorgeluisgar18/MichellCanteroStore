@@ -39,7 +39,7 @@ it('preserves payment route responses and delegates every write to the atomic RP
         },
     };
     process.env.WOMPI_EVENTS_SECRET = 'local-signature-secret';
-    process.env.WOMPI_PRIVATE_KEY = 'local-provider-fixture';
+    process.env.WOMPI_PRIVATE_KEY = 'prv_prod_fixture';
     process.env.CRON_SECRET = 'local-cron-secret';
     process.env.RESEND_API_KEY = 'local-email-fixture';
     globalThis.fetch = async (input) => {

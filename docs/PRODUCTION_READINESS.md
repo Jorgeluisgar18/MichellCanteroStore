@@ -31,6 +31,14 @@ The next bounded transition to evaluate is an old-schema-compatible maintenance 
 | Provider reissuance | Hosted expiry observation inconclusive. | No automatic unlock/reissuance is enabled. Do not advertise that capability until provider-backed evidence exists. |
 | Final hosted checks | No hosted end-to-end verification for this candidate. | Exact target/commit/environment approval, credential-presence checks without secret disclosure, callback/cron/alert checks and controlled Sandbox E2E. |
 
+## Sandbox Webhook and Scheduled Recovery
+
+A controlled Wompi Sandbox purchase on 2026-11-22 reached the isolated application's exact `/api/payments/webhook` route and received HTTP 200. The same order became paid, one reservation was confirmed, and stock fell from three to two without a browser return or a reconciliation request. An earlier attempt received HTTP 404 because the configured URL omitted the last character of the route. Verify the complete saved URL after reloading the provider dashboard.
+
+Two separate local runs rebuilt all 34 migrations with synthetic platform fixtures and reused an already-approved Sandbox transaction. An authenticated call to the audit handler recovered the pending order after the eligibility window, both with an active reservation and after the cleanup handler had released an expired reservation. In each run the first audit reconciled one order, the second found none, and final inventory was deducted exactly once. Unauthorized audit requests returned HTTP 401. No new payments were created for these audit runs.
+
+These results verify provider delivery in Sandbox and the candidate's audit handler, not Vercel's hosted scheduler, hosted secrets or production permissions. Review actual cron execution and alerts without invoking the production route as a probe.
+
 ## Targeted Production ACL Change
 
 On 2026-11-19 (America/Bogota), the owner explicitly authorized only the stock-RPC execution restriction on Supabase project `SUPABASE-PROJECT-REF`, with subsequent metadata verification. Vercel metadata had identified the active production revision as `a4020427939e89bcc723dae78bc9bf6626b6eb58`; local inspection of that revision found server-side consumers. The owner confirmed that `SUPABASE_SERVICE_ROLE_KEY` is configured for Production. This is an operator confirmation, not decrypted-key validation or a live checkout test.

@@ -238,6 +238,6 @@ describe('Wompi API adapter contract', () => {
 
         assert.match(wompiAdapter, /getWompiTransactionsByReference/);
         assert.match(wompiAdapter, /searchParams\.set\('reference'/);
-        assert.match(wompiAdapter, /new URL\(`\$\{WOMPI_BASE_URL\}\/transactions`\)/);
+        assert.match(wompiAdapter, /new URL\(`\$\{wompiBaseUrl\(input\.privateKey\)\}\/transactions`\)/);
     });
 });
