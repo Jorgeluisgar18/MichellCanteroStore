@@ -1,17 +1,19 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ProductGrid from '@/components/product/ProductGrid';
 import Button from '@/components/ui/Button';
 import ScrollReveal from '@/components/ui/ScrollReveal';
-import { SlidersHorizontal, X, ChevronDown, Loader2, Search as SearchIcon, ArrowRight } from 'lucide-react';
+import { SlidersHorizontal, X, ChevronDown, Loader2, Search as SearchIcon, ArrowRight, RotateCw } from 'lucide-react';
 import type { Product } from '@/types';
 import { usePageContent } from '@/lib/hooks/usePageContent';
+import { loadStorefrontProducts, matchesStorefrontSelection } from '@/lib/catalog/storefront-products';
 
 function TiendaContent() {
+    const router = useRouter();
     const searchParams = useSearchParams();
     const searchQuery = searchParams.get('search') || '';
     const filterParam = searchParams.get('filter') || '';
@@ -23,7 +25,8 @@ function TiendaContent() {
     const [priceMax, setPriceMax] = useState<number>(500000);
     const [activeMax, setActiveMax] = useState<number>(500000);
     const [products, setProducts] = useState<Product[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
+    const [loadAttempt, setLoadAttempt] = useState(0);
     const { get, getImage } = usePageContent('tienda');
 
     const bannerTitle = get('banner', 'title', 'Nuestra Tienda');
@@ -31,11 +34,11 @@ function TiendaContent() {
     const bannerImage = getImage('banner', 'image_url', '');
 
     useEffect(() => {
+        const controller = new AbortController();
         const fetchProducts = async () => {
             try {
-                const res = await fetch('/api/products', { cache: 'no-store' });
-                const data = await res.json();
-                const all: Product[] = data.data.products || [];
+                const all = await loadStorefrontProducts(controller.signal);
+                if (controller.signal.aborted) return;
                 setProducts(all);
                 const prices = all.map((p) => p.price).filter(Boolean);
                 if (prices.length) {
@@ -43,22 +46,20 @@ function TiendaContent() {
                     setPriceMax(max);
                     setActiveMax(max);
                 }
+                setLoadState('ready');
             } catch (error) {
+                if (controller.signal.aborted) return;
                 console.error('Error fetching products:', error);
-            } finally {
-                setLoading(false);
+                setLoadState('error');
             }
         };
-        fetchProducts();
-    }, []);
+        void fetchProducts();
+        return () => controller.abort();
+    }, [loadAttempt]);
 
     // Filter + search + sort
     const filtered = products
-        .filter((p) => {
-            if (filterParam === 'new') return p.is_new;
-            if (categoryParam) return p.category?.toLowerCase() === categoryParam.toLowerCase();
-            return true;
-        })
+        .filter((p) => matchesStorefrontSelection(p, filterParam, categoryParam))
         .filter((p) => {
             if (!searchQuery) return true;
             const q = searchQuery.toLowerCase();
@@ -82,6 +83,18 @@ function TiendaContent() {
 
     const formatPrice = (v: number) =>
         '$' + v.toLocaleString('es-CO', { maximumFractionDigits: 0 });
+
+    const clearFilters = () => {
+        setActiveMax(priceMax);
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete('search');
+        params.delete('filter');
+        params.delete('category');
+        const query = params.toString();
+        if (query !== searchParams.toString()) {
+            router.replace(query ? `/tienda?${query}` : '/tienda', { scroll: false });
+        }
+    };
 
     return (
         <>
@@ -117,9 +130,11 @@ function TiendaContent() {
                             Filtros
                             {showFilters ? <X className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                         </button>
-                        <span className="text-sm text-neutral-500">
-                            <span className="font-semibold text-neutral-800">{sorted.length}</span> productos
-                        </span>
+                        {loadState === 'ready' && (
+                            <span className="text-sm text-neutral-500">
+                                <span className="font-semibold text-neutral-800">{sorted.length}</span> productos
+                            </span>
+                        )}
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -171,17 +186,27 @@ function TiendaContent() {
                 )}
 
                 {/* Products Grid */}
-                {loading ? (
-                    <div className="flex flex-col items-center justify-center py-24">
+                {loadState === 'loading' ? (
+                    <div role="status" className="flex flex-col items-center justify-center py-24">
                         <Loader2 className="w-12 h-12 animate-spin text-primary-500 mb-4" />
                         <p className="text-neutral-400 text-sm">Cargando catálogo...</p>
+                    </div>
+                ) : loadState === 'error' ? (
+                    <div className="flex flex-col items-center justify-center py-24 text-center">
+                        <p role="alert" className="text-neutral-800 mb-4">No pudimos cargar el catálogo.</p>
+                        <Button variant="primary" onClick={() => {
+                            setLoadState('loading');
+                            setLoadAttempt((attempt) => attempt + 1);
+                        }} className="rounded-full">
+                            <RotateCw aria-hidden="true" className="w-4 h-4 mr-2" /> Reintentar
+                        </Button>
                     </div>
                 ) : sorted.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-24 text-center">
                         <SearchIcon className="w-16 h-16 text-neutral-200 mb-4" />
                         <h3 className="text-xl font-display font-bold text-neutral-800 mb-2">Sin resultados</h3>
                         <p className="text-neutral-500 mb-6">Intenta ajustar los filtros o el término de búsqueda</p>
-                        <Button variant="primary" onClick={() => { setActiveMax(priceMax); }} className="rounded-full">
+                        <Button variant="primary" onClick={clearFilters} className="rounded-full">
                             Limpiar filtros <ArrowRight className="w-4 h-4 ml-1" />
                         </Button>
                     </div>

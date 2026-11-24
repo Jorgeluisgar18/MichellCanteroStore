@@ -11,31 +11,26 @@ interface ProductImageProps extends Omit<ImageProps, 'onError'> {
 const ProductImage: React.FC<ProductImageProps> = ({
     src,
     alt,
-    fallbackSrc = 'https://placehold.co/600x600/f5f5f5/a3a3a3?text=Sin+Imagen',
+    fallbackSrc,
     className,
     ...props
 }) => {
-    const [imgSrc, setImgSrc] = useState(src);
-    const [hasError, setHasError] = useState(false);
+    const initialSrc = src || fallbackSrc;
+    const [imgSrc, setImgSrc] = useState(initialSrc);
 
     // Update internal state if external src changes
     useEffect(() => {
-        setImgSrc(src);
-        setHasError(false);
-    }, [src]);
+        setImgSrc(initialSrc);
+    }, [initialSrc]);
 
     const handleError = () => {
-        if (!hasError) {
-            setImgSrc(fallbackSrc);
-            setHasError(true);
-        }
+        setImgSrc((failedSrc) => failedSrc !== fallbackSrc ? fallbackSrc : undefined);
     };
 
-    // If both original and fallback fail, show a generic placeholder
-    if (hasError && (imgSrc === fallbackSrc || !imgSrc)) {
+    if (!imgSrc) {
         return (
             <div
-                className={`w-full h-full flex flex-col items-center justify-center bg-neutral-100 text-neutral-400 gap-2 ${className}`}
+                className={`w-full h-full flex flex-col items-center justify-center bg-neutral-100 text-neutral-400 gap-2 ${className ?? ''}`}
             >
                 <ImageIcon className="w-8 h-8 opacity-20" />
                 <span className="text-xs font-medium opacity-40">Imagen no disponible</span>
@@ -46,7 +41,7 @@ const ProductImage: React.FC<ProductImageProps> = ({
     return (
         <Image
             {...props}
-            src={imgSrc || fallbackSrc}
+            src={imgSrc}
             alt={alt}
             className={className}
             onError={handleError}
