@@ -1,6 +1,11 @@
 {
   "framework": "nextjs",
   "buildCommand": "npm run build",
+  "git": {
+    "deploymentEnabled": {
+      "codex/store-polish-integration": false
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/cleanup-reservations",
